@@ -25,7 +25,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     log.info("Starting gateway")
 
-    gateway_task = loop.create_task(dicexual.gateway_server())
+    gateway_task = loop.create_task(dicexual.gateway_server(app))
     web.run_app(app, port=8000)
     gateway_task.cancel()
     loop.close()

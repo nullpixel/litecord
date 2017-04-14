@@ -10,6 +10,7 @@ from .basics import OP, GATEWAY_VERSION
 log = logging.getLogger(__name__)
 
 sessions = {}
+_valid_tokens = []
 
 class Connection:
     def __init__(self, ws, path):
@@ -22,7 +23,7 @@ class Connection:
         return {
             'op': OP["HELLO"],
             'd': {
-                'heartbeat_interval': 1000,
+                'heartbeat_interval': 3000,
                 '_trace': [],
             }
         }
@@ -140,7 +141,7 @@ class Connection:
 
         self.ws.close(4000)
 
-async def gateway_server():
+async def gateway_server(app):
     async def hello(websocket, path):
         log.info("Got new client, opening connection")
         connection = Connection(websocket, path)
@@ -148,6 +149,7 @@ async def gateway_server():
         log.info("Stopped connection", exc_info=True)
 
     log.info("Starting websocket server")
+    #app.add_route('/channels/{channel_id}/messages', )
     start_server = websockets.serve(hello, '0.0.0.0', 12000)
     await start_server
     log.info("Finished gateway")
