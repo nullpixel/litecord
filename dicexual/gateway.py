@@ -1,6 +1,7 @@
 import json
 import websockets
 import logging
+import asyncio
 
 from .basics import OP
 
@@ -10,21 +11,71 @@ class Connection:
     def __init__(self, ws, path):
         self.ws = ws
         self.path = path
+        self._seq = 0
 
     def basic_hello(self):
         return {
             'op': OP["HELLO"],
             'd': {
-                'heartbeat_interval': 40000,
+                'heartbeat_interval': 1000,
                 '_trace': [],
             }
         }
+
+    async def send_json(self, obj):
+        res = await self.ws.send(json.dumps(obj))
+        return res
+
+    async def send_op(self, op, data={}):
+        payload = {
+            'op': op,
+            'd': data,
+        }
+        return (await self.send_json(payload))
+
+    async def send_dispatch(self, evt_name, evt_data={}):
+        payload = {
+            'op': OP["DISPATCH"],
+            's': self._seq,
+            't': evt_name,
+            'd': evt_data,
+        }
+        self._seq += 1
+
+    async def process_recv(self, payload):
+        op = payload.get('op')
+        data = payload.get('d')
+        if (op is None) or (data is None):
+            log.info("Got erroneous data from client")
+            self.ws.close(4001)
+            return False
+
+        seq = payload.get('s')
+        evt = payload.get('t')
+
+        if op == OP['HEARTBEAT']:
+            log.debug('[hb] Sending ACK')
+            await self.send_op(OP['HEARTBEAT_ACK'], {})
+
+        return True
 
     async def run(self):
         # send OP HELLO
         log.info("Sending OP HELLO")
         await self.ws.send(json.dumps(self.basic_hello()))
-        self.ws.close(1000, 'Exited?')
+
+        try:
+            while True:
+                payload = json.loads(await self.ws.recv())
+                continue_processing = await self.process_recv(payload)
+                if not continue_processing:
+                    log.info("Stopped processing")
+                    break
+        except:
+            self.ws.close(4000)
+            return
+
+        self.ws.close(4000)
 
 async def gateway_server():
     async def hello(websocket, path):
