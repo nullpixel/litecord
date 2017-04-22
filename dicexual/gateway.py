@@ -148,8 +148,11 @@ async def gateway_server(app):
         await connection.run()
         log.info("Stopped connection", exc_info=True)
 
-    log.info("Starting websocket server")
-    #app.add_route('/channels/{channel_id}/messages', )
+    log.info("Starting server")
+
+    #app.add_route('/channels', self.channel_handler)
+    #app.add_route('')
+
     start_server = websockets.serve(hello, '0.0.0.0', 12000)
     await start_server
     log.info("Finished gateway")
