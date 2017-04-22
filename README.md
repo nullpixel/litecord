@@ -6,9 +6,9 @@ Discord's gateway.
 
 # Usage
 
-wow you really want to use it?
-ok
-make sure you have Python 3.6, `aiohttp` and `websockets`
+wow you *really* want to use it?
+ok then.
+make sure you have Python 3.6, `aiohttp` and `websockets`.
 
 Then you just run dicexual.py, simple.
 It will fire up 2 servers, a REST one and a WS one:
