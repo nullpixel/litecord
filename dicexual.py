@@ -11,6 +11,12 @@ log = logging.getLogger('init')
 
 app = web.Application()
 
+DATABASES = {
+    'users': 'db/users.json',
+    'guilds': 'db/guilds.json',
+    'messages': 'db/messages.json',
+}
+
 async def give_gateway(request):
     log.info('Giving gateway URL')
     return web.Response(text=json.dumps({"url": "ws://0.0.0.0:12000"}))
@@ -25,7 +31,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     log.info("Starting gateway")
 
-    gateway_task = loop.create_task(dicexual.gateway_server(app))
+    gateway_task = loop.create_task(dicexual.gateway_server(app, DATABASES))
     web.run_app(app, port=8000)
     gateway_task.cancel()
     loop.close()

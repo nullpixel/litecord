@@ -4,8 +4,11 @@ import logging
 import asyncio
 import uuid
 import traceback
+import json
+import sys
 
 from .basics import OP, GATEWAY_VERSION
+from .server import DicexualServer
 
 log = logging.getLogger(__name__)
 
@@ -13,11 +16,12 @@ sessions = {}
 _valid_tokens = []
 
 class Connection:
-    def __init__(self, ws, path):
+    def __init__(self, server, ws, path):
         self.ws = ws
         self.path = path
         self._seq = 0
         self.properties = {}
+        self.server = server
 
     def basic_hello(self):
         return {
@@ -141,18 +145,24 @@ class Connection:
 
         self.ws.close(4000)
 
-async def gateway_server(app):
-    async def hello(websocket, path):
+async def gateway_server(app, databases):
+    server = DicexualServer()
+    server.db_paths = databases
+    if not server.init():
+        log.error("We had an error initializing the Dicexual Server.")
+        sys.exit(1)
+
+    async def henlo(websocket, path):
         log.info("Got new client, opening connection")
-        connection = Connection(websocket, path)
+        connection = Connection(server, websocket, path)
         await connection.run()
         log.info("Stopped connection", exc_info=True)
 
     log.info("Starting server")
 
     #app.add_route('/channels', self.channel_handler)
-    #app.add_route('')
 
-    start_server = websockets.serve(hello, '0.0.0.0', 12000)
+    # start WS
+    start_server = websockets.serve(henlo, '0.0.0.0', 12000)
     await start_server
     log.info("Finished gateway")
