@@ -10,8 +10,8 @@ wow you really want to use it?
 ok
 make sure you have Python 3.6, `aiohttp` and `websockets`
 
-Then you just run dicexual.py, simple
-It will run 2 servers, a REST one and a WS one:
+Then you just run dicexual.py, simple.
+It will fire up 2 servers, a REST one and a WS one:
  * REST: `http://0.0.0.0:8000`
  * WS: `ws://0.0.0.0:12000`
 
