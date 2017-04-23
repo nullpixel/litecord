@@ -25,6 +25,13 @@ def _snowflake(timestamp):
     res = f'{b_epoch}{b_id}'
     return int(res[2:], 2)
 
+def _snowflake_raw(timestamp, process_id):
+    since_epoch = int(timestamp - EPOCH)
+    b_epoch = '{0:038b}'.format(since_epoch)
+    b_id = '{0:011b}'.format(process_id)
+    res = f'{b_epoch}{b_id}'
+    return int(res[2:], 2)
+
 def snowflake_time(snowflake):
     b_snowflake = '{0:049b}'.format(snowflake)
     since_epoch = int(b_snowflake[:37], 2)
