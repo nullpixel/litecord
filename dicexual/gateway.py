@@ -10,10 +10,14 @@ import sys
 from .basics import OP, GATEWAY_VERSION
 from .server import DicexualServer
 
+MAX_TRIES = 10
+
 log = logging.getLogger(__name__)
 
-sessions = {}
-_valid_tokens = []
+session_data = {}
+token_to_session = {}
+
+valid_tokens = []
 
 class Connection:
     def __init__(self, server, ws, path):
@@ -37,8 +41,8 @@ class Connection:
     def gen_sessid(self):
         tries = 0
         new_id = str(uuid.uuid4().fields[-1])[:5]
-        while new_id in sessions:
-            if tries >= TWEETID_MAX_TRIES:
+        while new_id in session_data:
+            if tries >= MAX_TRIES:
                 return None
 
             new_id = str(uuid.uuid4().fields[-1])[:5]
@@ -114,13 +118,20 @@ class Connection:
 
             self.user = user_object
             self.session_id = self.gen_sessid()
+            self.token = token
+
+            try:
+                valid_tokens.index(self.token)
+            except:
+                valid_tokens.append(self.token)
 
             self.properties['token'] = token
             self.properties['os'] = prop['$os']
             self.properties['browser'] = prop['$browser']
             self.properties['large'] = large
 
-            sessions[self.session_id] = self
+            session_data[self.session_id] = self
+            token_to_session[self.token] = self.session_id
 
             log.info("New session %s", self.session_id)
 
@@ -150,6 +161,11 @@ class Connection:
                 continue_processing = await self.process_recv(payload)
                 if not continue_processing:
                     log.info("Stopped processing")
+
+                    token_to_session.pop(self.token)
+                    valid_tokens.remove(self.token)
+                    session_data.pop(self.session_id)
+
                     break
         except Exception as err:
             log.error('Error at run()', exc_info=True)
@@ -159,7 +175,8 @@ class Connection:
         self.ws.close(4000)
 
 async def gateway_server(app, databases):
-    server = DicexualServer()
+    server = DicexualServer(valid_tokens, token_to_session, session_data)
+
     server.db_paths = databases
     if not server.init():
         log.error("We had an error initializing the Dicexual Server.")
@@ -175,6 +192,10 @@ async def gateway_server(app, databases):
 
     #app.add_route('/api/channels', self.channel_handler)
     app.router.add_post('/api/auth/login', server.login)
+    app.router.add_route('*', '/api/users/@me', server.h_users_me)
+
+    # does this work
+    #app.router.add_route('*', '/api/users/*', server.h_users) ???????
 
     # start WS
     start_server = websockets.serve(henlo, '0.0.0.0', 12000)

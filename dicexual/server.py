@@ -6,12 +6,14 @@ import hashlib
 
 from aiohttp import web
 from .snowflake import get_raw_token
+from .utils import strip_user_data
 
 log = logging.getLogger(__name__)
 
 def _err(msg):
     return web.Response(text=json.dumps({
-        'error': msg
+        'code': 0,
+        'message': msg
     }))
 
 def _json(obj):
@@ -24,9 +26,13 @@ def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
 class DicexualServer:
-    def __init__(self):
+    def __init__(self, valid_tokens, session_dict, sessions):
         self.db_paths = None
         self.db = {}
+
+        self.valid_tokens = valid_tokens
+        self.session_dict = session_dict
+        self.sessions = sessions
 
     def db_init_all(self):
         for database_id in self.db_paths:
@@ -59,6 +65,9 @@ class DicexualServer:
             if len(pwd['hash']) < 1 and len(pwd['salt']) > 0:
                 pwd['hash'] = pwd_hash(pwd['plain'], pwd['salt'])
                 pwd['plain'] = None
+
+            # a helper
+            user['email'] = user_email
 
         self.db_save(['users'])
 
@@ -105,6 +114,40 @@ class DicexualServer:
         self.db_save(['tokens'])
 
         return _json({"token": _token})
+
+    async def check_request(self, request):
+        auth_header = request.headers['Authorization']
+        print(auth_header)
+        if len(auth_header) < 1:
+            return _err('401: Unauthorized, Malformed request')
+
+        token_type, token_value = auth_header.split()
+        if token_type != 'Bot':
+            return _err('401: Unauthorized, Invalid token type')
+
+        # check if token is valid
+        try:
+            self.valid_tokens.index(token_value)
+        except:
+            return _err(f'401: Unauthorized, Invalid token {token_value!r}')
+
+        return _json({
+            'code': 1,
+            'token': token_value,
+        })
+
+    async def h_users_me(self, request):
+        _error = await self.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        token = _error_json['token']
+        session_id = self.session_dict[token]
+        user = self.sessions[session_id].user
+
+        user = strip_user_data(user)
+        return _json(user)
 
     def init(self):
         if not self.db_init_all():
