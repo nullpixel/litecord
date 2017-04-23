@@ -25,5 +25,12 @@ def _snowflake(timestamp):
     res = f'{b_epoch}{b_id}'
     return int(res[2:], 2)
 
+def snowflake_time(snowflake):
+    b_snowflake = '{0:049b}'.format(snowflake)
+    since_epoch = int(b_snowflake[:37], 2)
+
+    timestamp = EPOCH + since_epoch
+    return timestamp
+
 def get_snowflake():
     return _snowflake(time.time())
