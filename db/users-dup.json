@@ -1,0 +1,41 @@
+{
+    "luna@localhost": {
+        "id": 149260046337,
+        "name": "Luna",
+        "discrim": "1337",
+        "password": {
+            "plain": "fuck",
+            "hash": "",
+            "salt": ""
+        },
+        "avatar": "",
+        "bot": false,
+        "verified": true
+    },
+    "jack@null.net": {
+        "id": 149260046338,
+        "name": "Jack",
+        "discrim": "0000",
+        "password": {
+            "plain": "child",
+            "hash": "",
+            "salt": ""
+        },
+        "avatar": "",
+        "bot": false,
+        "verified": true
+    },
+    "iamtheworst@programmer.net": {
+        "id": 149260046339,
+        "name": "lold",
+        "discrim": "0000",
+        "password": {
+            "plain": "thonk",
+            "hash": "",
+            "salt": ""
+        },
+        "avatar": "",
+        "bot": false,
+        "verified": true
+    }
+}
