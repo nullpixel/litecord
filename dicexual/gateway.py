@@ -68,14 +68,7 @@ class Connection:
         return (await self.send_json(payload))
 
     async def get_myself(self):
-        return {
-            'id': 1,
-            'username': 'fucker',
-            'discriminator': '6969',
-            'avatar': 'fuck',
-            'bot': True,
-            'mfa_enabled': False,
-        }
+        return self.user
 
     async def process_recv(self, payload):
         op = payload.get('op')
@@ -120,13 +113,13 @@ class Connection:
                     user_object = db_users[user_email]
 
             self.user = user_object
+            self.session_id = self.gen_sessid()
+
             self.properties['token'] = token
             self.properties['os'] = prop['$os']
             self.properties['browser'] = prop['$browser']
             self.properties['large'] = large
 
-            self.user = await self.get_myself()
-            self.session_id = self.gen_sessid()
             sessions[self.session_id] = self
 
             log.info("New session %s", self.session_id)
