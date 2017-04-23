@@ -20,7 +20,9 @@ class Connection:
         self.ws = ws
         self.path = path
         self._seq = 0
+
         self.properties = {}
+        self.user = None
         self.server = server
 
     def basic_hello(self):
@@ -100,6 +102,24 @@ class Connection:
                 self.ws.close(4001)
                 return
 
+            db_tokens = self.server.db['tokens']
+            db_users = self.server.db['users']
+
+            if token not in db_tokens:
+                log.warning('token not found')
+                self.ws.close(4001)
+                return
+
+            user_object = None
+            token_user_id = db_tokens[token]
+
+            for user_email in db_users:
+                user_id = db_users[user_email]['id']
+                if token_user_id == user_id:
+                    # We found a valid token
+                    user_object = db_users[user_email]
+
+            self.user = user_object
             self.properties['token'] = token
             self.properties['os'] = prop['$os']
             self.properties['browser'] = prop['$browser']
