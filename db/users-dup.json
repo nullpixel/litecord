@@ -2,7 +2,7 @@
     "luna@localhost": {
         "id": 149260046337,
         "username": "Luna",
-        "discrim": "1337",
+        "discriminator": "1337",
         "password": {
             "plain": "fuck",
             "hash": "",
@@ -15,7 +15,7 @@
     "jack@null.net": {
         "id": 149260046338,
         "username": "Jack",
-        "discrim": "0000",
+        "discriminator": "0000",
         "password": {
             "plain": "child",
             "hash": "",
@@ -28,7 +28,7 @@
     "iamtheworst@programmer.net": {
         "id": 149260046339,
         "username": "lold",
-        "discrim": "0000",
+        "discriminator": "0000",
         "password": {
             "plain": "thonk",
             "hash": "",
