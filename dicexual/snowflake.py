@@ -6,7 +6,7 @@ process_id = 0
 EPOCH = 1420081200
 _id_in_process = 1
 
-def get_token():
+async def get_raw_token():
     global process_id
     now = int(time.time())
     _str = f'{now}{process_id}'

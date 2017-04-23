@@ -2,15 +2,17 @@ import json
 import logging
 from aiohttp import web
 
-from .snowflake import get_token
+from .snowflake import get_raw_token
 
 log = logging.getLogger(__name__)
 
 def _err(msg):
-    return web.Response(text=f'{"error": {msg!r}}')
+    return web.Response(text=json.dumps({
+        'error': msg
+    }))
 
 def _json(obj):
-    return web.Response(text=f'{json.dumps(obj)}')
+    return web.Response(text=json.dumps(obj))
 
 class DicexualServer:
     def __init__(self):
@@ -56,10 +58,26 @@ class DicexualServer:
 
         tokens = self.db['tokens']
         account_id = user['id']
-        tokens[account_id] = get_token()
+
+        # check if there is already a token related to the user
+        _old_token = None
+        for token in tokens:
+            if tokens[token] == account_id:
+                _old_token = token
+
+        # make a new one
+        _token = await get_raw_token()
+        while _token in tokens:
+            _token = await get_raw_token()
+
+        # overwrite the previous one if any
+        if _old_token is not None:
+            tokens.pop(_old_token)
+
+        tokens[_token] = account_id
         self.db_save(['tokens'])
 
-        return _json({"token": tokens[account_id]})
+        return _json({"token": _token})
 
     def init(self):
         if not self.db_init_all():
