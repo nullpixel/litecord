@@ -56,15 +56,9 @@ class DicexualServer:
 
         tokens = self.db['tokens']
         account_id = user['id']
-
-        # if the user logged in and out, we create a new token
-        if account_id in tokens:
-            tokens.pop(account_id)
-
-        if account_id not in tokens:
-            tokens[account_id] = get_token()
-
+        tokens[account_id] = get_token()
         self.db_save(['tokens'])
+
         return _json({"token": tokens[account_id]})
 
     def init(self):
