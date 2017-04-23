@@ -160,7 +160,8 @@ async def gateway_server(app, databases):
 
     log.info("Starting server")
 
-    #app.add_route('/channels', self.channel_handler)
+    #app.add_route('/api/channels', self.channel_handler)
+    app.router.add_post('/api/auth/login', server.login)
 
     # start WS
     start_server = websockets.serve(henlo, '0.0.0.0', 12000)

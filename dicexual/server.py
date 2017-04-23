@@ -1,7 +1,14 @@
 import json
 import logging
+from aiohttp import web
 
 log = logging.getLogger(__name__)
+
+def _err(msg):
+    return web.Response(text=f'{"error": {msg!r}}')
+
+def _json(obj):
+    return web.Response(text=f'{json.dumps(obj)}')
 
 class DicexualServer:
     def __init__(self):
@@ -18,6 +25,28 @@ class DicexualServer:
                 return False
 
         return True
+
+    async def login(self, request):
+        try:
+            json = await request.json()
+        except Exception as err:
+            # error parsing json
+            return _err("error parsing")
+
+        email = json.get('email')
+        password = json.get('password')
+        if email is None or password is None:
+            return _err("malformed packet")
+
+        users = self.db['users']
+        if email not in users:
+            return _err("fail on login")
+
+        user = users[email]
+        if password != user['password']['plain']:
+            return _err("fail on login")
+
+        return _json({"token": "meme"})
 
     def init(self):
         if not self.db_init_all():
