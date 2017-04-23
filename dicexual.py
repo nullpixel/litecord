@@ -15,6 +15,7 @@ DATABASES = {
     'users': 'db/users.json',
     'guilds': 'db/guilds.json',
     'messages': 'db/messages.json',
+    'tokens': 'db/tokens.json',
 }
 
 async def give_gateway(request):

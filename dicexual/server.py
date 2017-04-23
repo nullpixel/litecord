@@ -2,6 +2,8 @@ import json
 import logging
 from aiohttp import web
 
+from .snowflake import get_token
+
 log = logging.getLogger(__name__)
 
 def _err(msg):
@@ -26,6 +28,12 @@ class DicexualServer:
 
         return True
 
+    def db_save(self, list_db):
+        for database_id in list_db:
+            path = self.db_paths[database_id]
+            db_object = self.db[database_id]
+            json.dump(db_object, open(path, 'w'))
+
     async def login(self, request):
         try:
             json = await request.json()
@@ -46,7 +54,18 @@ class DicexualServer:
         if password != user['password']['plain']:
             return _err("fail on login")
 
-        return _json({"token": "meme"})
+        tokens = self.db['tokens']
+        account_id = user['id']
+
+        # if the user logged in and out, we create a new token
+        if account_id in tokens:
+            tokens.pop(account_id)
+
+        if account_id not in tokens:
+            tokens[account_id] = get_token()
+
+        self.db_save(['tokens'])
+        return _json({"token": tokens[account_id]})
 
     def init(self):
         if not self.db_init_all():

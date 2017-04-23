@@ -138,8 +138,8 @@ class Connection:
                 if not continue_processing:
                     log.info("Stopped processing")
                     break
-        except:
-            print(traceback.format_exc())
+        except Exception as err:
+            log.error('Error at run()', exc_info=True)
             self.ws.close(4000)
             return
 
