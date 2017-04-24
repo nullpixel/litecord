@@ -136,18 +136,39 @@ class DicexualServer:
             'token': token_value,
         })
 
-    async def h_users_me(self, request):
+    async def h_users(self, request):
         _error = await self.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
             return _error
 
+        user_id = request.match_info['user_id']
+
+        # get data about the current user
         token = _error_json['token']
         session_id = self.session_dict[token]
         user = self.sessions[session_id].user
-
         user = strip_user_data(user)
-        return _json(user)
+
+        if user_id == '@me':
+            return _json(user)
+        else:
+            if not user['bot']:
+                return _err("403: Forbidden")
+
+            print(f"Finding user {user_id!r}")
+            users = self.db['users']
+            userdata = None
+            for _user_email in users:
+                _user_id = users[_user_email]['id']
+                if str(_user_id) == user_id:
+                    userdata = users[_user_email]
+
+            print(userdata)
+
+            if userdata is None:
+                return _err("user not found")
+            return _json(strip_user_data(userdata))
 
     def init(self):
         if not self.db_init_all():

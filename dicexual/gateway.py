@@ -192,7 +192,11 @@ async def gateway_server(app, databases):
 
     #app.add_route('/api/channels', self.channel_handler)
     app.router.add_post('/api/auth/login', server.login)
-    app.router.add_route('*', '/api/users/@me', server.h_users_me)
+    app.router.add_route('*', '/api/users/{user_id}', server.h_users)
+
+    #app.router.add_patch('/api/users/@me', server.h_patch_me)
+    #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)
+    #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
 
     # does this work
     #app.router.add_route('*', '/api/users/*', server.h_users) ???????
