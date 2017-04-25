@@ -156,15 +156,17 @@ class DicexualServer:
             if not user['bot']:
                 return _err("403: Forbidden")
 
-            print(f"Finding user {user_id!r}")
+            log.info(f'searching for user {user_id!r}')
             users = self.db['users']
             userdata = None
+
+            # yeah, I have to search through all users
+            #  TODO: create other dictionaries that have other relationships with users
+            #  like ID => user, and name => list of users
             for _user_email in users:
                 _user_id = users[_user_email]['id']
                 if str(_user_id) == user_id:
                     userdata = users[_user_email]
-
-            print(userdata)
 
             if userdata is None:
                 return _err("user not found")
