@@ -24,6 +24,7 @@ class Connection:
         self.ws = ws
         self.path = path
         self._seq = 0
+        self.token = None
 
         self.properties = {}
         self.user = None
@@ -79,7 +80,7 @@ class Connection:
         data = payload.get('d')
         if (op is None) or (data is None):
             log.info("Got erroneous data from client")
-            self.ws.close(4001)
+            await self.ws.close(4001)
             return False
 
         seq = payload.get('s')
@@ -96,15 +97,15 @@ class Connection:
 
             if (token is None) or (prop is None) or (large is None):
                 log.warning('Erroneous IDENTIFY')
-                self.ws.close(4001)
+                await self.ws.close(4001)
                 return
 
             db_tokens = self.server.db['tokens']
             db_users = self.server.db['users']
 
             if token not in db_tokens:
-                log.warning('token not found')
-                self.ws.close(4001)
+                log.warning('Invalid token, closing with 4004')
+                await self.ws.close(4004, 'Authentication failed..')
                 return
 
             user_object = None
@@ -145,7 +146,7 @@ class Connection:
 
         elif op == OP['RESUME']:
             log.warning("We don't suport RESUMEs yet")
-            self.ws.close(4001)
+            await self.ws.close(4001)
             return False
 
         return True
@@ -162,17 +163,18 @@ class Connection:
                 if not continue_processing:
                     log.info("Stopped processing")
 
-                    token_to_session.pop(self.token)
-                    valid_tokens.remove(self.token)
-                    session_data.pop(self.session_id)
+                    if self.token is not None:
+                        token_to_session.pop(self.token)
+                        valid_tokens.remove(self.token)
+                        session_data.pop(self.session_id)
 
                     break
         except Exception as err:
             log.error('Error at run()', exc_info=True)
-            self.ws.close(4000)
+            await self.ws.close(4000)
             return
 
-        self.ws.close(4000)
+        await self.ws.close(4000)
 
 async def gateway_server(app, databases):
     server = DicexualServer(valid_tokens, token_to_session, session_data)
