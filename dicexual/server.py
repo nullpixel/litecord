@@ -7,6 +7,7 @@ import hashlib
 from aiohttp import web
 from .snowflake import get_raw_token
 from .utils import strip_user_data
+from .guild import GuildManager
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class DicexualServer:
         self.valid_tokens = valid_tokens
         self.session_dict = session_dict
         self.sessions = sessions
+        self.guild_man = None
 
     def db_init_all(self):
         for database_id in self.db_paths:
@@ -172,7 +174,39 @@ class DicexualServer:
                 return _err("user not found")
             return _json(strip_user_data(userdata))
 
+    async def h_guild_post_message(self, request):
+        '''
+        DicexualServer.h_guild_post_message
+
+        Handle POSTS to `/guild/{guild_id}/messages` and dispatches MESSAGE_CREATE events
+        to the respective clients
+        '''
+
+        guild_id = request.match_info['guild_id']
+
+        # find the guild
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err('guild not found')
+
+        # store message somewhere... idfk where or how
+
+        # dispatching events should be something along those lines
+
+        # users = list of all users in the guild
+        # for user in users:
+        #  get gateway.Connection that represents the user
+        #  check if the Client is actually there
+        #  await connection.dispatch('MESSAGE_CREATE', {data goes here})
+
+        return _err('not implemented')
+
     def init(self):
         if not self.db_init_all():
             return False
+
+        self.guild_man = GuildManager(self)
+        if not self.guild_man.init():
+            return False
+
         return True

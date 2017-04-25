@@ -24,7 +24,9 @@ class Connection:
         self.ws = ws
         self.path = path
         self._seq = 0
+
         self.token = None
+        self.identified = False
 
         self.properties = {}
         self.user = None
@@ -41,12 +43,12 @@ class Connection:
 
     def gen_sessid(self):
         tries = 0
-        new_id = str(uuid.uuid4().fields[-1])[:5]
+        new_id = str(uuid.uuid4().fields[-1])
         while new_id in session_data:
             if tries >= MAX_TRIES:
                 return None
 
-            new_id = str(uuid.uuid4().fields[-1])[:5]
+            new_id = str(uuid.uuid4().fields[-1])
             tries += 1
 
         return new_id
@@ -134,19 +136,21 @@ class Connection:
             session_data[self.session_id] = self
             token_to_session[self.token] = self.session_id
 
+            self.identified = True
+            guild_list = self.server.guild_man.get_guilds(self.user['id'])
+
             log.info("New session %s", self.session_id)
 
             await self.send_dispatch('READY', {
                 'v': GATEWAY_VERSION,
                 'user': self.user,
                 'private_channels': [],
-                'guilds': [],
+                'guilds': guild_list,
                 'session_id': self.session_id,
             })
 
         elif op == OP['RESUME']:
-            log.warning("We don't suport RESUMEs yet")
-            await self.ws.close(4001)
+            await self.ws.close(4001, 'Resuming not implemented')
             return False
 
         return True
