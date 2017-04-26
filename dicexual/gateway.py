@@ -36,7 +36,7 @@ class Connection:
         return {
             'op': OP["HELLO"],
             'd': {
-                'heartbeat_interval': 3000,
+                'heartbeat_interval': 20000,
                 '_trace': [],
             }
         }
@@ -137,7 +137,7 @@ class Connection:
             token_to_session[self.token] = self.session_id
 
             self.identified = True
-            guild_list = self.server.guild_man.get_guilds(self.user['id'])
+            guild_list = await self.server.guild_man.get_guilds(self.user['id'])
 
             log.info("New session %s", self.session_id)
 
@@ -194,8 +194,6 @@ async def gateway_server(app, databases):
         await connection.run()
         log.info("Stopped connection", exc_info=True)
 
-    log.info("Starting server")
-
     #app.add_route('/api/channels', self.channel_handler)
     app.router.add_post('/api/auth/login', server.login)
     app.router.add_get('/api/users/{user_id}', server.h_users)
@@ -207,6 +205,6 @@ async def gateway_server(app, databases):
     #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
 
     # start WS
+    log.info("Starting WS")
     start_server = websockets.serve(henlo, '0.0.0.0', 12000)
     await start_server
-    log.info("Finished gateway")
