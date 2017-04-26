@@ -139,6 +139,11 @@ class DicexualServer:
         })
 
     async def h_users(self, request):
+        '''
+        DicexualServer.h_users
+
+        Handle `GET /users/{user_id}`
+        '''
         _error = await self.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
@@ -242,6 +247,44 @@ class DicexualServer:
         return _json({
             "code": 1,
             "message": "success"
+        })
+
+    async def h_patch_me(self, request):
+        '''
+        DicexualServer.h_patch_me
+
+        Handle `PATCH /users/@me` requests
+        '''
+        _error = await self.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        try:
+            payload = await request.json()
+        except:
+            return _err("error parsing")
+
+        # get data about the current user
+        token = _error_json['token']
+        session_id = self.session_dict[token]
+        user = self.sessions[session_id].user
+        user = strip_user_data(user)
+
+        users = self.db['users']
+        for user_email in users:
+            user_obj = users[user_email]
+            if user_obj['id'] == user['id']:
+                new_username = payload['username']
+                new_discrim = await self.get_discrim(new_username)
+                user_obj['username'] = payload['username']
+                user_obj['discriminator'] = new_discrim
+                user_obj['avatar'] = payload['avatar']
+                return _json(strip_user_data(user_obj))
+
+        return _json({
+            'code': 500,
+            'message': 'Internal Server Error'
         })
 
     async def h_guild_post_message(self, request):
