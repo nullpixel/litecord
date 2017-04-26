@@ -11,4 +11,4 @@ class GuildManager:
 
     def init(self):
         log.warning("Nothing implemented in Guild management")
-        return False
+        return True

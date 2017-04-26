@@ -5,8 +5,8 @@ import base64
 import hashlib
 
 from aiohttp import web
-from .snowflake import get_raw_token
-from .utils import strip_user_data
+from .snowflake import get_raw_token, get_snowflake
+from .utils import strip_user_data, random_digits
 from .guild import GuildManager
 
 log = logging.getLogger(__name__)
@@ -173,6 +173,76 @@ class DicexualServer:
             if userdata is None:
                 return _err("user not found")
             return _json(strip_user_data(userdata))
+
+    async def get_discrim(self, username):
+        users = self.db['users']
+
+        used_discrims = [users[user_email]['discriminator'] for user_email in \
+            users if users[user_email]['username'] == username]
+
+        # only 8000 discrims per user
+        if len(used_discrims) >= 8000:
+            return None
+
+        discrim = str(random_digits(4))
+
+        while True:
+            try:
+                # list.index raises IndexError if the element isn't found
+                used_discrims.index(discrim)
+                discrim = str(random_digits(4))
+            except ValueError:
+                return discrim
+
+
+    async def h_add_user(self, request):
+        '''
+        DicexualServer.h_add_user: POST /users/add
+
+        Handles user adding, receives a stripped down version of a user object.
+        This endpoint requires no authentication.
+        '''
+
+        try:
+            payload = await request.json()
+        except:
+            return _err("error parsing")
+
+        email =     payload.get('email')
+        password =  payload.get('password')
+        username =  payload.get('username')
+        if email is None or password is None or username is None:
+            return _err("malformed payload")
+
+        users = self.db['users']
+        if email in users:
+            return _err("email already used")
+
+        discrim = await self.get_discrim(username)
+        _salt = get_random_salt()
+
+        new_user = {
+            "id": get_snowflake(),
+            "username": username,
+            "discriminator": discrim,
+            "password": {
+                "plain": None,
+                "hash": pwd_hash(password, _salt),
+                "salt": _salt
+            },
+            "avatar": "",
+            "bot": False,
+            "verified": True
+        }
+
+        users[email] = new_user
+
+        self.db_save(['users'])
+
+        return _json({
+            "code": 1,
+            "message": "success"
+        })
 
     async def h_guild_post_message(self, request):
         '''

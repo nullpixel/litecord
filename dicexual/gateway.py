@@ -200,6 +200,8 @@ async def gateway_server(app, databases):
     app.router.add_post('/api/auth/login', server.login)
     app.router.add_get('/api/users/{user_id}', server.h_users)
 
+    app.router.add_post('/api/users/add', server.h_add_user)
+
     #app.router.add_patch('/api/users/@me', server.h_patch_me)
     #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)
     #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
