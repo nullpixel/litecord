@@ -1,1 +1,1 @@
-**[TODO: How to create users in dickord, manually]**
+**[TODO: How to create users in litecord, manually]**

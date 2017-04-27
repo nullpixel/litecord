@@ -1,1 +1,1 @@
-**[TODO: How connecting works in dicexual]**
+**[TODO: How connecting works in litecord]**

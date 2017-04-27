@@ -26,7 +26,7 @@ def get_random_salt(size=32):
 def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
-class DicexualServer:
+class LitecordServer:
     def __init__(self, valid_tokens, session_dict, sessions):
         self.db_paths = None
         self.db = {}
@@ -140,7 +140,7 @@ class DicexualServer:
 
     async def h_users(self, request):
         '''
-        DicexualServer.h_users
+        LitecordServer.h_users
 
         Handle `GET /users/{user_id}`
         '''
@@ -202,7 +202,7 @@ class DicexualServer:
 
     async def h_add_user(self, request):
         '''
-        DicexualServer.h_add_user: POST /users/add
+        LitecordServer.h_add_user: POST /users/add
 
         Handles user adding, receives a stripped down version of a user object.
         This endpoint requires no authentication.
@@ -251,7 +251,7 @@ class DicexualServer:
 
     async def h_patch_me(self, request):
         '''
-        DicexualServer.h_patch_me
+        LitecordServer.h_patch_me
 
         Handle `PATCH /users/@me` requests
         '''
@@ -289,7 +289,7 @@ class DicexualServer:
 
     async def h_guild_post_message(self, request):
         '''
-        DicexualServer.h_guild_post_message
+        LitecordServer.h_guild_post_message
 
         Handle POSTS to `/guild/{guild_id}/messages` and dispatches MESSAGE_CREATE events
         to the respective clients

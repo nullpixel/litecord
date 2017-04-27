@@ -8,7 +8,7 @@ import json
 import sys
 
 from .basics import OP, GATEWAY_VERSION
-from .server import DicexualServer
+from .server import LitecordServer
 
 MAX_TRIES = 10
 
@@ -181,11 +181,11 @@ class Connection:
         await self.ws.close(4000)
 
 async def gateway_server(app, databases):
-    server = DicexualServer(valid_tokens, token_to_session, session_data)
+    server = LitecordServer(valid_tokens, token_to_session, session_data)
 
     server.db_paths = databases
     if not server.init():
-        log.error("We had an error initializing the Dicexual Server.")
+        log.error("We had an error initializing the Litecord Server.")
         sys.exit(1)
 
     async def henlo(websocket, path):

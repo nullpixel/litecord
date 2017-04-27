@@ -4,7 +4,7 @@ import asyncio
 import json
 
 import aiohttp
-import dicexual
+import litecord
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('init')
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     log.info("Starting gateway")
 
-    gateway_task = loop.create_task(dicexual.gateway_server(app, DATABASES))
+    gateway_task = loop.create_task(litecord.gateway_server(app, DATABASES))
     web.run_app(app, port=8000)
     gateway_task.cancel()
     loop.close()
