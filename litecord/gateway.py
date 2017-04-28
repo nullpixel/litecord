@@ -32,6 +32,13 @@ class Connection:
         self.user = None
         self.server = server
 
+        self.op_handlers = {
+            OP['HEARTBEAT']: self.heartbeat_handler,
+            OP['IDENTIFY']: self.identify_handler,
+        }
+
+        self.event_handlers = {}
+
     def basic_hello(self):
         return {
             'op': OP["HELLO"],
@@ -77,82 +84,115 @@ class Connection:
     async def get_myself(self):
         return self.user
 
+    async def heartbeat_handler(self, data):
+        await self.send_op(OP['HEARTBEAT_ACK'], {})
+        return True
+
+    async def identify_handler(self, data):
+        log.info('[identify] got identify')
+
+        token = data.get('token')
+        prop = data.get('properties')
+        large = data.get('large_threshold')
+
+        # sanity test
+        if (token is None) or (prop is None) or (large is None):
+            log.warning('Erroneous IDENTIFY')
+            await self.ws.close(4001)
+            return
+
+        # get DB objects
+        db_tokens = self.server.db['tokens']
+        db_users = self.server.db['users']
+
+        if token not in db_tokens:
+            log.warning('Invalid token, closing with 4004')
+            await self.ws.close(4004, 'Authentication failed..')
+            return
+
+        user_object = None
+        token_user_id = db_tokens[token]
+
+        # check if the token is valid
+        for user_email in db_users:
+            user_id = db_users[user_email]['id']
+            if token_user_id == user_id:
+                # We found a valid token
+                user_object = db_users[user_email]
+
+        self.user = user_object
+        self.session_id = self.gen_sessid()
+        self.token = token
+
+        try:
+            valid_tokens.index(self.token)
+        except:
+            valid_tokens.append(self.token)
+
+        self.properties['token'] = token
+        self.properties['os'] = prop.get('$os')
+        self.properties['browser'] = prop.get('$browser')
+        self.properties['large'] = large
+
+        session_data[self.session_id] = self
+        token_to_session[self.token] = self.session_id
+
+        self.identified = True
+        guild_list = await self.server.guild_man.get_guilds(self.user['id'])
+
+        log.info("New session %s", self.session_id)
+
+        await self.send_dispatch('READY', {
+            'v': GATEWAY_VERSION,
+            'user': self.user,
+            'private_channels': [],
+            'guilds': guild_list,
+            'session_id': self.session_id,
+        })
+
+        return True
+
     async def process_recv(self, payload):
+        '''
+        Connection.process_recv(payload)
+
+        Process a payload received by the client.
+        The format for payloads in the websocket goes as follows
+        ```
+        {
+            "op": op number,
+            "d": data for that op,
+            "s": sequence number, //optional
+            "t": event name, //optional
+        }
+        ```
+        '''
+
+        # first, we get data we actually need
         op = payload.get('op')
         data = payload.get('d')
         if (op is None) or (data is None):
-            log.info("Got erroneous data from client")
+            log.info("Got erroneous data from client, closing with 4001")
             await self.ws.close(4001)
             return False
 
-        seq = payload.get('s')
-        evt = payload.get('t')
+        sequence_number = payload.get('s')
+        event_name = payload.get('t')
 
-        if op == OP['HEARTBEAT']:
-            log.debug('[hb] Sending ACK')
-            await self.send_op(OP['HEARTBEAT_ACK'], {})
-        elif op == OP['IDENTIFY']:
-            log.info('[identify] got identify')
-            token = data.get('token')
-            prop = data.get('properties')
-            large = data.get('large_threshold')
+        if op == OP['DISPATCH']:
+            # wooo, we got a DISPATCH
+            if event_name in self.event_handlers:
+                evt_handler = self.event_handlers[op]
+                return (await evt_handler(data, sequence_number, event_name))
+            else:
+                # don't even try to check in op_handlers.
+                return True
 
-            if (token is None) or (prop is None) or (large is None):
-                log.warning('Erroneous IDENTIFY')
-                await self.ws.close(4001)
-                return
+        if op in self.op_handlers:
+            handler = self.op_handlers[op]
+            return (await handler(data))
 
-            db_tokens = self.server.db['tokens']
-            db_users = self.server.db['users']
-
-            if token not in db_tokens:
-                log.warning('Invalid token, closing with 4004')
-                await self.ws.close(4004, 'Authentication failed..')
-                return
-
-            user_object = None
-            token_user_id = db_tokens[token]
-
-            for user_email in db_users:
-                user_id = db_users[user_email]['id']
-                if token_user_id == user_id:
-                    # We found a valid token
-                    user_object = db_users[user_email]
-
-            self.user = user_object
-            self.session_id = self.gen_sessid()
-            self.token = token
-
-            try:
-                valid_tokens.index(self.token)
-            except:
-                valid_tokens.append(self.token)
-
-            self.properties['token'] = token
-            self.properties['os'] = prop['$os']
-            self.properties['browser'] = prop['$browser']
-            self.properties['large'] = large
-
-            session_data[self.session_id] = self
-            token_to_session[self.token] = self.session_id
-
-            self.identified = True
-            guild_list = await self.server.guild_man.get_guilds(self.user['id'])
-
-            log.info("New session %s", self.session_id)
-
-            await self.send_dispatch('READY', {
-                'v': GATEWAY_VERSION,
-                'user': self.user,
-                'private_channels': [],
-                'guilds': guild_list,
-                'session_id': self.session_id,
-            })
-
-        elif op == OP['RESUME']:
-            await self.ws.close(4001, 'Resuming not implemented')
-            return False
-
+        # if the op is non existant, we just ignore
         return True
 
     async def run(self):
