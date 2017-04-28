@@ -6,19 +6,12 @@ import hashlib
 
 from aiohttp import web
 from .snowflake import get_raw_token, get_snowflake
-from .utils import strip_user_data, random_digits
+from .utils import strip_user_data, random_digits, _json, _err
 from .guild import GuildManager
 
+from .api import users
+
 log = logging.getLogger(__name__)
-
-def _err(msg):
-    return web.Response(text=json.dumps({
-        'code': 0,
-        'message': msg
-    }))
-
-def _json(obj):
-    return web.Response(text=json.dumps(obj))
 
 def get_random_salt(size=32):
     return base64.b64encode(os.urandom(size)).decode()
@@ -138,47 +131,6 @@ class LitecordServer:
             'token': token_value,
         })
 
-    async def h_users(self, request):
-        '''
-        LitecordServer.h_users
-
-        Handle `GET /users/{user_id}`
-        '''
-        _error = await self.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
-        user_id = request.match_info['user_id']
-
-        # get data about the current user
-        token = _error_json['token']
-        session_id = self.session_dict[token]
-        user = self.sessions[session_id].user
-        user = strip_user_data(user)
-
-        if user_id == '@me':
-            return _json(user)
-        else:
-            if not user['bot']:
-                return _err("403: Forbidden")
-
-            log.info(f'searching for user {user_id!r}')
-            users = self.db['users']
-            userdata = None
-
-            # yeah, I have to search through all users
-            #  TODO: create other dictionaries that have other relationships with users
-            #  like ID => user, and name => list of users
-            for _user_email in users:
-                _user_id = users[_user_email]['id']
-                if str(_user_id) == user_id:
-                    userdata = users[_user_email]
-
-            if userdata is None:
-                return _err("user not found")
-            return _json(strip_user_data(userdata))
-
     async def get_discrim(self, username):
         users = self.db['users']
 
@@ -199,93 +151,6 @@ class LitecordServer:
             except ValueError:
                 return discrim
 
-
-    async def h_add_user(self, request):
-        '''
-        LitecordServer.h_add_user: POST /users/add
-
-        Handles user adding, receives a stripped down version of a user object.
-        This endpoint requires no authentication.
-        '''
-
-        try:
-            payload = await request.json()
-        except:
-            return _err("error parsing")
-
-        email =     payload.get('email')
-        password =  payload.get('password')
-        username =  payload.get('username')
-        if email is None or password is None or username is None:
-            return _err("malformed payload")
-
-        users = self.db['users']
-        if email in users:
-            return _err("email already used")
-
-        discrim = await self.get_discrim(username)
-        _salt = get_random_salt()
-
-        new_user = {
-            "id": get_snowflake(),
-            "username": username,
-            "discriminator": discrim,
-            "password": {
-                "plain": None,
-                "hash": pwd_hash(password, _salt),
-                "salt": _salt
-            },
-            "avatar": "",
-            "bot": False,
-            "verified": True
-        }
-
-        users[email] = new_user
-
-        self.db_save(['users'])
-
-        return _json({
-            "code": 1,
-            "message": "success"
-        })
-
-    async def h_patch_me(self, request):
-        '''
-        LitecordServer.h_patch_me
-
-        Handle `PATCH /users/@me` requests
-        '''
-        _error = await self.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
-        try:
-            payload = await request.json()
-        except:
-            return _err("error parsing")
-
-        # get data about the current user
-        token = _error_json['token']
-        session_id = self.session_dict[token]
-        user = self.sessions[session_id].user
-        user = strip_user_data(user)
-
-        users = self.db['users']
-        for user_email in users:
-            user_obj = users[user_email]
-            if user_obj['id'] == user['id']:
-                new_username = payload['username']
-                new_discrim = await self.get_discrim(new_username)
-                user_obj['username'] = payload['username']
-                user_obj['discriminator'] = new_discrim
-                user_obj['avatar'] = payload['avatar']
-                return _json(strip_user_data(user_obj))
-
-        return _json({
-            'code': 500,
-            'message': 'Internal Server Error'
-        })
 
     async def h_guild_post_message(self, request):
         '''
@@ -317,6 +182,8 @@ class LitecordServer:
     def init(self):
         if not self.db_init_all():
             return False
+
+        self.users_endpoint = users.UsersEndpoint(self)
 
         self.guild_man = GuildManager(self)
         if not self.guild_man.init():

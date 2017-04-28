@@ -243,8 +243,8 @@ class Connection:
 
         # first, we get data we actually need
         op = payload.get('op')
-        data = payload.get('d')
-        if (op is None) or (data is None):
+        data = payload.get('d', 'NO_DATA')
+        if (op is None) or (data == 'NO_DATA'):
             log.info("Got erroneous data from client, closing with 4001")
             await self.ws.close(4001)
             return False
@@ -315,10 +315,10 @@ async def gateway_server(app, databases):
 
     #app.add_route('/api/channels', self.channel_handler)
     app.router.add_post('/api/auth/login', server.login)
-    app.router.add_get('/api/users/{user_id}', server.h_users)
+    app.router.add_get('/api/users/{user_id}', server.users_endpoint.h_users)
 
-    app.router.add_post('/api/users/add', server.h_add_user)
-    app.router.add_patch('/api/users/@me', server.h_patch_me)
+    app.router.add_post('/api/users/add', server.users_endpoint.h_add_user)
+    app.router.add_patch('/api/users/@me', server.users_endpoint.h_patch_me)
 
     #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)
     #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
