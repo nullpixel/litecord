@@ -23,23 +23,43 @@ class Connection:
     def __init__(self, server, ws, path):
         self.ws = ws
         self.path = path
+
+        # sequence stuff
         self._seq = 0
 
+        # the last event client received, used for resuming
+        # TODO: Resuming:
+        #  check if the different between last_seq and _seq is higher than 50
+        #  if it is, we do session invalidation
+        self.last_seq = None
+
+        # token the connection is using
         self.token = None
+
+        # flag that says if the connection is a good connection and it is identified
         self.identified = False
 
+        # connection properties
         self.properties = {}
+
+        # the user the connection currently represents
         self.user = None
+
+        # reference to LitecordServer
         self.server = server
 
+        # OP handlers
         self.op_handlers = {
             OP['HEARTBEAT']: self.heartbeat_handler,
             OP['IDENTIFY']: self.identify_handler,
         }
 
+        # Event handlers
+        #  Fired when a client sends an OP 0 DISPATCH
         self.event_handlers = {}
 
     def basic_hello(self):
+        '''Returns a valid OP 10 Hello packet'''
         return {
             'op': OP["HELLO"],
             'd': {
@@ -49,6 +69,7 @@ class Connection:
         }
 
     def gen_sessid(self):
+        '''Generate a Session ID for a new connection'''
         tries = 0
         new_id = str(uuid.uuid4().fields[-1])
         while new_id in session_data:
@@ -61,21 +82,30 @@ class Connection:
         return new_id
 
     async def send_json(self, obj):
+        '''Send a JSON object through the websocket connection'''
         res = await self.ws.send(json.dumps(obj))
         return res
 
     async def send_op(self, op, data={}):
+        '''Send an arbritary OP through the websocket connection'''
         payload = {
+            # op is always an int
+            # data can be a dict, int or bool
             'op': op,
             'd': data,
         }
         return (await self.send_json(payload))
 
     async def send_dispatch(self, evt_name, evt_data={}):
+        '''Send a DISPATCH packet through the websocket connection'''
         payload = {
             'op': OP["DISPATCH"],
+
+            # always an int
             's': self._seq,
+            # always a str
             't': evt_name,
+
             'd': evt_data,
         }
         self._seq += 1
@@ -85,10 +115,23 @@ class Connection:
         return self.user
 
     async def heartbeat_handler(self, data):
+        '''
+        Connection.heartbeat_handler(data)
+
+        Handles HEARTBEAT packets, sends a OP 11 Heartbeat ACK
+        '''
+        self.last_seq = data
         await self.send_op(OP['HEARTBEAT_ACK'], {})
         return True
 
     async def identify_handler(self, data):
+        '''
+        Connection.identify_handler(data)
+
+        Handle an OP 2 Identify from a client.
+        It checks the token given by the client, and if it is valid,
+        the server creates the session and dispatches a READY event to the client.
+        '''
         log.info('[identify] got identify')
 
         token = data.get('token')
@@ -120,6 +163,11 @@ class Connection:
                 # We found a valid token
                 user_object = db_users[user_email]
 
+        if user_object is None:
+            log.warning('No users related to that token')
+            await self.ws.close(4004, 'Authentication failed..')
+            return
+
         self.user = user_object
         self.session_id = self.gen_sessid()
         self.token = token
@@ -129,7 +177,8 @@ class Connection:
         except:
             valid_tokens.append(self.token)
 
-        self.properties['token'] = token
+        # lol properties
+        self.properties['token'] = self.token
         self.properties['os'] = prop.get('$os')
         self.properties['browser'] = prop.get('$browser')
         self.properties['large'] = large
@@ -137,7 +186,10 @@ class Connection:
         session_data[self.session_id] = self
         token_to_session[self.token] = self.session_id
 
+        # set identified to true so we know this connection is 👌 good 👌
         self.identified = True
+
+        # TODO: guild manager
         guild_list = await self.server.guild_man.get_guilds(self.user['id'])
 
         log.info("New session %s", self.session_id)
@@ -196,6 +248,12 @@ class Connection:
         return True
 
     async def run(self):
+        '''
+        Connection.run()
+
+        Runs the websocket and sends messages
+        to be processed by `Connection.process_recv`
+        '''
         # send OP HELLO
         log.info("Sending OP HELLO")
         await self.ws.send(json.dumps(self.basic_hello()))
