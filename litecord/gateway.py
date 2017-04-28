@@ -52,6 +52,7 @@ class Connection:
         self.op_handlers = {
             OP['HEARTBEAT']: self.heartbeat_handler,
             OP['IDENTIFY']: self.identify_handler,
+            OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
         }
 
         # Event handlers
@@ -194,6 +195,7 @@ class Connection:
 
         log.info("New session %s", self.session_id)
 
+        # self.presence.update_presence(PRESENCE.online)
         await self.send_dispatch('READY', {
             'v': GATEWAY_VERSION,
             'user': self.user,
@@ -203,6 +205,25 @@ class Connection:
         })
 
         return True
+
+    async def req_guild_handler(self, data):
+        '''
+        Connection.req_guild_handler(data)
+
+        Dummy handler for OP 8 Request Guild Members
+        '''
+        guild_id = data.get('guild_id')
+        query = data.get('query')
+        limit = data.get('limit')
+        if guild_id is None or query is None or limit is None:
+            await self.ws.close(4001)
+            return False
+
+        await self.dispatch('GUILD_MEMBERS_CHUNK', {
+            'guild_id': guild_id,
+            #'members': await self.presence.offline_members(guild_id),
+            'members': [],
+        })
 
     async def process_recv(self, payload):
         '''
