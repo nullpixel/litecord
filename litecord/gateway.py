@@ -53,6 +53,7 @@ class Connection:
             OP['HEARTBEAT']: self.heartbeat_handler,
             OP['IDENTIFY']: self.identify_handler,
             OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
+            OP['STATUS_UPDATE']: self.status_handler,
         }
 
         # Event handlers
@@ -268,6 +269,20 @@ class Connection:
         # if the op is non existant, we just ignore
         return True
 
+    async def status_handler(self, data):
+        '''
+        Connection.status_handler(data)
+
+        Handles OP 3 Status Update packets
+        '''
+
+        idle_since = data.get('idle_since', 'nothing')
+        game = data.get('game')
+        if game is not None:
+            game_name = game.get('name')
+            if game_name is not None:
+                await self.presence.status_update(, game_name)
+
     async def run(self):
         '''
         Connection.run()
@@ -281,9 +296,14 @@ class Connection:
 
         try:
             while True:
+                # receive something from WS
                 payload = json.loads(await self.ws.recv())
-                continue_processing = await self.process_recv(payload)
-                if not continue_processing:
+
+                # process it
+                continue_flag = await self.process_recv(payload)
+
+                # if process_recv tells us to stop, we clean everything
+                if not continue_flag:
                     log.info("Stopped processing")
 
                     if self.token is not None:
@@ -293,8 +313,9 @@ class Connection:
 
                     break
         except Exception as err:
+            # if any error we just close with 4000
             log.error('Error at run()', exc_info=True)
-            await self.ws.close(4000)
+            await self.ws.close(4000, 'Unexpected error')
             return
 
         await self.ws.close(4000)

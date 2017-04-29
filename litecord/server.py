@@ -11,6 +11,8 @@ from .guild import GuildManager
 
 from .api import users
 
+from .objects import User
+
 log = logging.getLogger(__name__)
 
 def get_random_salt(size=32):
@@ -23,6 +25,8 @@ class LitecordServer:
     def __init__(self, valid_tokens, session_dict, sessions):
         self.db_paths = None
         self.db = {}
+
+        self.cache = {}
 
         self.valid_tokens = valid_tokens
         self.session_dict = session_dict
@@ -50,6 +54,15 @@ class LitecordServer:
 
     def dbload_users(self):
         users = self.db['users']
+
+        # init cache objects
+        self.cache['id->raw_user'] = {}
+        self.cache['id->user'] = {}
+
+        # reference them
+        id_to_raw_user = self.cache['id->raw_user']
+        id_to_user = self.cache['id->user']
+
         for user_email in users:
             user = users[user_email]
             pwd = user['password']
@@ -64,7 +77,20 @@ class LitecordServer:
             # a helper
             user['email'] = user_email
 
+            # cache objects
+            id_to_raw_user[user['id']] = user
+            id_to_user[user['id']] = User(user)
+
         self.db_save(['users'])
+
+    # helpers
+    async def get_raw_user(self, user_id):
+        users = self.cache['id->raw_user']
+        return users.get(user_id)
+
+    async def get_user(self, user_id):
+        users = self.cache['id->user']
+        return users.get(user_id)
 
     async def login(self, request):
         try:

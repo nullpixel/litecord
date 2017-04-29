@@ -8,6 +8,37 @@ class PresenceManager:
     def __init__(self, server):
         self.server = server
 
+    async def status_update(self, user_id, game_name):
+        '''
+        PresenceManager.status_update(user_id, game_name)
+
+        Updates an user's status and sends respective PRESENCE_UPDATE events
+        This is just a dummy implementation. PresenceManager.update_presence should be better.
+        '''
+
+        user = await self.server.get_user(user_id)
+        for guild in user.guilds:
+            guild_members = guild.members
+            if len(guild_members) < 2:
+                return
+
+            for member in guild_members:
+                connection = member.connection
+                if connection is None:
+                    continue
+
+                await connection.dispatch('PRESENCE_UPDATE', {
+                    'user': user.as_json,
+                    'roles': [],
+                    'game': {
+                        'name': game_name
+                        'type': 0
+                        #'url': 'meme',
+                    },
+                    'guild_id': guild.id,
+                    'status': 'online',
+                })
+
     async def update_presence(self, user_id, status):
         '''
         PresenceManager.update_presence(user_id, status)
