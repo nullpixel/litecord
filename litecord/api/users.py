@@ -3,12 +3,14 @@ users.py - All handlers under /users/*
 '''
 
 import json
+import logging
 from ..utils import _err, _json, strip_user_data
+
+log = logging.getLogger(__name__)
 
 class UsersEndpoint:
     def __init__(self, server):
         self.server = server
-        print('meme')
 
     async def h_users(self, request):
         '''
@@ -32,8 +34,9 @@ class UsersEndpoint:
         if user_id == '@me':
             return _json(user)
         else:
-            if not user['bot']:
-                return _err("403: Forbidden")
+            # If we want to be full discord-like, uncomment this
+            #if not user['bot']:
+            #    return _err("403: Forbidden")
 
             log.info(f'searching for user {user_id!r}')
             users = self.server.db['users']

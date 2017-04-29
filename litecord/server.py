@@ -84,11 +84,11 @@ class LitecordServer:
         self.db_save(['users'])
 
     # helpers
-    async def get_raw_user(self, user_id):
+    def get_raw_user(self, user_id):
         users = self.cache['id->raw_user']
         return users.get(user_id)
 
-    async def get_user(self, user_id):
+    def get_user(self, user_id):
         users = self.cache['id->user']
         return users.get(user_id)
 
