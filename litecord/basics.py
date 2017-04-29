@@ -1,5 +1,3 @@
-import json
-
 GATEWAY_VERSION = 69
 
 OP = {

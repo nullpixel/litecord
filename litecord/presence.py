@@ -31,8 +31,8 @@ class PresenceManager:
                     'user': user.as_json,
                     'roles': [],
                     'game': {
-                        'name': game_name
-                        'type': 0
+                        'name': game_name,
+                        'type': 0,
                         #'url': 'meme',
                     },
                     'guild_id': guild.id,
