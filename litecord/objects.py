@@ -9,7 +9,7 @@ class Guild(LitecordObject):
         self.members = []
 
 class User(LitecordObject):
-    def __init__(self, server, user):
+    def __init__(self, server, _user):
         LitecordObject.__init__(self, server)
         self._user = _user
         self.user_id = _user['id']

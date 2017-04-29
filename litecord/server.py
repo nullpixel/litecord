@@ -79,7 +79,7 @@ class LitecordServer:
 
             # cache objects
             id_to_raw_user[user['id']] = user
-            id_to_user[user['id']] = User(user)
+            id_to_user[user['id']] = User(self, user)
 
         self.db_save(['users'])
 

@@ -281,7 +281,7 @@ class Connection:
         if game is not None:
             game_name = game.get('name')
             if game_name is not None:
-                await self.presence.status_update(, game_name)
+                await self.presence.status_update(self.user['id'], game_name)
 
     async def run(self):
         '''
