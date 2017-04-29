@@ -1,4 +1,4 @@
-dicexual
+# Litecord
 =========
 
 An implementation of Discord's backend.
@@ -18,7 +18,7 @@ ok then.
 sudo pip3.6 install -U aiohttp websockets
 ```
 
-Then you just run `dicexual.py`, simple.
+Then you just run `litecord.py`, simple.
 It will fire up 2 servers, a REST one and a WS one:
  * REST runs at `http://0.0.0.0:8000`
  * WS runs at `ws://0.0.0.0:12000`
@@ -26,5 +26,5 @@ It will fire up 2 servers, a REST one and a WS one:
 For now the REST API can give you the address to the WS one through the `/api/gateway` endpoint,
 so you just need to change your gateway path(in your preferred library).
 
-Check [this](https://git.memework.org/lnmds/dicexual/issues/2) for the list of implemented things in `dicexual`
+Check [this](https://git.memework.org/lnmds/litecord/issues/2) for the list of implemented things in `litecord`
 Also, don't issue `"there is no voice"` things. There won't be.
