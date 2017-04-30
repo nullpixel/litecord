@@ -150,8 +150,8 @@ class Guild(LitecordObject):
             'mfa_level': -1, # TODO
 
             # only in GUILD_CREATE but we can send them in testing env
-            'joined_at': self,
-            'large': self.,
+            # TODO: 'joined_at': self.created_at,
+            'large': self.large,
             'unavailable': self.,
             'member_count': self.,
             'voice_states': [],
