@@ -47,6 +47,7 @@ class Connection:
 
         # reference to LitecordServer
         self.server = server
+        self.presence = server.presence
 
         # OP handlers
         self.op_handlers = {
@@ -282,6 +283,7 @@ class Connection:
             game_name = game.get('name')
             if game_name is not None:
                 await self.presence.status_update(self.user['id'], game_name)
+                return True
 
     async def run(self):
         '''

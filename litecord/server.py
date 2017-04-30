@@ -8,6 +8,7 @@ from aiohttp import web
 from .snowflake import get_raw_token, get_snowflake
 from .utils import strip_user_data, random_digits, _json, _err
 from .guild import GuildManager
+from .presence import PresenceManager
 
 from .api import users
 
@@ -32,6 +33,7 @@ class LitecordServer:
         self.session_dict = session_dict
         self.sessions = sessions
         self.guild_man = None
+        self.presence = PresenceManager(self)
 
     def db_init_all(self):
         for database_id in self.db_paths:

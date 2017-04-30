@@ -152,8 +152,8 @@ class Guild(LitecordObject):
             # only in GUILD_CREATE but we can send them in testing env
             # TODO: 'joined_at': self.created_at,
             'large': self.large,
-            'unavailable': self.,
-            'member_count': self.,
+            'unavailable': False,
+            'member_count': self.member_count,
             'voice_states': [],
 
             # arrays of stuff

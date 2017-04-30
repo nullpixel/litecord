@@ -5,6 +5,9 @@ Sends PRESENCE_UPDATE to clients when needed
 '''
 
 import logging
+
+from .objects import Presence
+
 log = logging.getLogger(__name__)
 
 class PresenceManager:
@@ -32,10 +35,11 @@ class PresenceManager:
         Returns a bool on success/failure.
         '''
 
-        presence = self.get_presence(user_id)
-        if presence is None:
-            log.warning(f'tried to change presence for {user_id}, failed because presence doesn\'t exist.')
-            return False
+        user = self.server.get_user(user_id)
+        if user_id not in self.presences:
+            self.presences[user_id] = Presence(user, game_name)
+
+        presence = self.presences[user_id]
 
         presence.game = {
             'name': game_name,
@@ -44,7 +48,7 @@ class PresenceManager:
         }
         log.info(f'{user_id} is now playing {game_name}, updating presences')
 
-        user = await self.server.get_user(user_id)
+        # TODO: make this work
         for guild in user.guilds:
             guild_members = guild.members
             if len(guild_members) < 2:
