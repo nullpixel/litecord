@@ -1,0 +1,17 @@
+{
+    "150501171201": {
+        "id": 150501171201,
+        "name": "Memes",
+        "owner_id": 149260046337,
+        "region": "00meme",
+        "features": ["meme"],
+        "channels": {
+            "id": {
+                TODO_THIS
+            }
+        },
+        "members": [
+            150501171201,
+        ],
+    }
+}

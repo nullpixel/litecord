@@ -78,6 +78,7 @@ class Channel(LitecordObject):
     def __init__(self, server, _channel):
         LitecordObject.__init__(self, server)
         self._data = _channel
+        # TODO: parse channel data
 
 class Guild(LitecordObject):
     def __init__(self, server, _guild_data):
