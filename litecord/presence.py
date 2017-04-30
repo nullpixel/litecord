@@ -4,9 +4,23 @@ presence.py - presence management
 Sends PRESENCE_UPDATE to clients when needed
 '''
 
+import logging
+log = logging.getLogger(__name__)
+
 class PresenceManager:
     def __init__(self, server):
         self.server = server
+        self.presences = {}
+
+    def get_presence(self, user_id):
+        try:
+            return self.presences[user_id]
+        except KeyError:
+            return None
+
+    def add_presence(self, user_id, game=None):
+        user = self.server.get_user(user_id)
+        self.presences[user_id] = Presence(user, game)
 
     async def status_update(self, user_id, game_name):
         '''
@@ -14,7 +28,21 @@ class PresenceManager:
 
         Updates an user's status and sends respective PRESENCE_UPDATE events
         This is just a dummy implementation. PresenceManager.update_presence should be better.
+
+        Returns a bool on success/failure.
         '''
+
+        presence = self.get_presence(user_id)
+        if presence is None:
+            log.warning(f'tried to change presence for {user_id}, failed because presence doesn\'t exist.')
+            return False
+
+        presence.game = {
+            'name': game_name,
+            'type': 0,
+            #'url': 'meme',
+        }
+        log.info(f'{user_id} is now playing {game_name}, updating presences')
 
         user = await self.server.get_user(user_id)
         for guild in user.guilds:
@@ -27,17 +55,8 @@ class PresenceManager:
                 if connection is None:
                     continue
 
-                await connection.dispatch('PRESENCE_UPDATE', {
-                    'user': user.as_json,
-                    'roles': [],
-                    'game': {
-                        'name': game_name,
-                        'type': 0,
-                        #'url': 'meme',
-                    },
-                    'guild_id': guild.id,
-                    'status': 'online',
-                })
+                await connection.dispatch('PRESENCE_UPDATE', presence.as_json)
+            return True
 
     async def update_presence(self, user_id, status):
         '''

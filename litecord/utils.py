@@ -25,5 +25,15 @@ def _err(msg):
         'message': msg
     }))
 
+date_handler = lambda obj: (
+    obj.isoformat()
+    if isinstance(obj, datetime.datetime)
+    or isinstance(obj, datetime.date)
+    else None
+)
+
+def dt_to_json(dt):
+    return json.dumps(dt, default=date_handler)
+
 def _json(obj):
     return web.Response(text=json.dumps(obj))
