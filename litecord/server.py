@@ -10,7 +10,7 @@ from .utils import strip_user_data, random_digits, _json, _err
 from .guild import GuildManager
 from .presence import PresenceManager
 
-from .api import users
+from .api import users, guilds
 
 from .objects import User, Guild
 
@@ -220,8 +220,9 @@ class LitecordServer:
             log.info('Creating PresenceManager')
             self.presence = PresenceManager(self)
 
-            log.info('Initializing /users/ endpoint')
+            log.info('Initializing endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
+            self.guilds_endpoint = guilds.GuildsEndpoint(self)
 
             return True
         except:
