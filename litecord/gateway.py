@@ -191,9 +191,7 @@ class Connection:
 
         # set identified to true so we know this connection is 👌 good 👌
         self.identified = True
-
-        # TODO: guild manager
-        guild_list = await self.server.guild_man.get_guilds(self.user['id'])
+        guild_list = self.server.guild_man.get_guilds(self.user['id'])
 
         log.info("New session %s", self.session_id)
 

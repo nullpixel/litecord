@@ -8,6 +8,12 @@ class LitecordObject:
     def __init__(self, server):
         self.server = server
 
+    @property
+    def guild_man(self):
+        # This property is needed for things to work
+        # since guild_man is None when initializing databases
+        return self.server.guild_man
+
 class Presence:
     def __init__(self, user, game=None, guild_id=None):
         self.game = game
@@ -28,13 +34,14 @@ class User(LitecordObject):
     def __init__(self, server, _user):
         LitecordObject.__init__(self, server)
         self._user = _user
-        self.user_id = _user['id']
+        self.id = _user['id']
 
     @property
     def guilds(self):
         '''Get all guilds a user is in'''
-        for guild in []:
-            yield guild
+        for guild in self.guild_man.all_guilds():
+            if self.id in guild.member_ids:
+                yield guild
 
     @property
     def as_json(self):
@@ -47,7 +54,7 @@ class User(LitecordObject):
         for session_id in self.server.session_data:
             connection = self.server.session_data[session_id]
             if connection.identified:
-                if connection.user['id'] == self.user_id:
+                if connection.user['id'] == self.id:
                     return connection
         return None
 

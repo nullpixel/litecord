@@ -33,7 +33,6 @@ class LitecordServer:
         self.session_dict = session_dict
         self.sessions = sessions
         self.guild_man = None
-        self.presence = PresenceManager(self)
 
     def db_init_all(self):
         for database_id in self.db_paths:
@@ -208,13 +207,23 @@ class LitecordServer:
         return _err('not implemented')
 
     def init(self):
-        if not self.db_init_all():
+        try:
+            log.info('Initializing server state')
+            if not self.db_init_all():
+                return False
+
+            log.info('Initializing GuildManager')
+            self.guild_man = GuildManager(self)
+            if not self.guild_man.init():
+                return False
+
+            log.info('Creating PresenceManager')
+            self.presence = PresenceManager(self)
+
+            log.info('Initializing /users/ endpoint')
+            self.users_endpoint = users.UsersEndpoint(self)
+
+            return True
+        except:
+            log.error('Error when initializing LitecordServer', exc_info=True)
             return False
-
-        self.users_endpoint = users.UsersEndpoint(self)
-
-        self.guild_man = GuildManager(self)
-        if not self.guild_man.init():
-            return False
-
-        return True
