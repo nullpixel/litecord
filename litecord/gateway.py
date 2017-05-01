@@ -196,11 +196,12 @@ class Connection:
         log.info("New session %s", self.session_id)
 
         # self.presence.update_presence(PRESENCE.online)
+        await self.presence.status_update(self.user['id'], 'meme')
         await self.send_dispatch('READY', {
             'v': GATEWAY_VERSION,
             'user': self.user,
             'private_channels': [],
-            'guilds': guild_list,
+            'guilds': [guild.as_json for guild in guild_list],
             'session_id': self.session_id,
         })
 

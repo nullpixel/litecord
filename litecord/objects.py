@@ -51,8 +51,8 @@ class User(LitecordObject):
     @property
     def connection(self):
         '''Get the user's `Connection` if any'''
-        for session_id in self.server.session_data:
-            connection = self.server.session_data[session_id]
+        for session_id in self.server.sessions:
+            connection = self.server.sessions[session_id]
             if connection.identified:
                 if connection.user['id'] == self.id:
                     return connection
@@ -64,7 +64,7 @@ class Member(LitecordObject):
         self.user = user
         self.guild = guild
 
-        self.id = self.user['id']
+        self.id = self.user.id
         self.nick = None
         self.joined_at = datetime.datetime.now()
         self.voice_deaf = False
@@ -73,7 +73,7 @@ class Member(LitecordObject):
     @property
     def as_json(self):
         return {
-            'user': strip_user_data(self.user),
+            'user': self.user.as_json,
             'nick': self.nick,
             'roles': [],
             'joined_at': dt_to_json(self.joined_at),
@@ -82,10 +82,40 @@ class Member(LitecordObject):
         }
 
 class Channel(LitecordObject):
+    '''
+    Channel - represents a Text Channel
+    '''
     def __init__(self, server, _channel):
         LitecordObject.__init__(self, server)
         self._data = _channel
-        # TODO: parse channel data
+        self.id = _channel['id']
+        self.guild_id = _channel['guild_id']
+        self.name = _channel['name']
+        self.type = _channel['type']
+        self.position = _channel['position']
+        self.is_private = False
+        self.topic = _channel['topic']
+
+        # TODO: messages
+        self.last_message_id = -1
+
+    @property
+    def as_json(self):
+        return {
+            'id': self.id,
+            'guild_id': self.guild_id,
+            'name': self.name,
+            'type': self.type,
+            'position': self.position,
+            'is_private': self.is_private,
+            'permission_overwrites': [],
+            'topic': self.topic,
+            'last_message_id': self.last_message_id,
+
+            # NOTE: THIS IS VOICE, WON'T BE USED.
+            #'bitrate': self.bitrate,
+            #'user_limit': self.user_limit,
+        }
 
 class Guild(LitecordObject):
     def __init__(self, server, _guild_data):
@@ -109,6 +139,9 @@ class Guild(LitecordObject):
 
         for channel_id in self._channel_data:
             channel_data = _guild_data['channels'][channel_id]
+            channel_data['guild_id'] = self.id
+            channel_data['id'] = channel_id
+
             channel = Channel(server, channel_data)
             self.channels[channel_id] = channel
 
@@ -118,6 +151,8 @@ class Guild(LitecordObject):
 
         for member_id in self.member_ids:
             user = self.server.get_user(member_id)
+            if user is None:
+                log.warning(f"user {member_id} not found")
             member = Member(server, self, user)
             self.members[member_id] = member
 
@@ -128,8 +163,9 @@ class Guild(LitecordObject):
     @property
     def online_members(self):
         '''Get all members that have a connection'''
-        for member in self.members:
-            if member.connection is not None:
+        for member_id in self.members:
+            member = self.members[member_id]
+            if member.user.connection is not None:
                 yield member
 
     @property
@@ -157,7 +193,9 @@ class Guild(LitecordObject):
             'features': self.features,
             'mfa_level': -1, # TODO
 
-            # only in GUILD_CREATE but we can send them in testing env
+            # those events are only in GUILD_CREATE
+            # but we can send them anyways :DDDDDD
+
             # TODO: 'joined_at': self.created_at,
             'large': self.large,
             'unavailable': False,

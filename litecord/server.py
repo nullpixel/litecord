@@ -12,7 +12,7 @@ from .presence import PresenceManager
 
 from .api import users
 
-from .objects import User
+from .objects import User, Guild
 
 log = logging.getLogger(__name__)
 

@@ -18,6 +18,8 @@ class PresenceManager:
 
     def get_presence(self, user_id):
         try:
+            log.warning(f'Presence not found for user {user_id}')
+            print(self.presences)
             return self.presences[user_id]
         except KeyError:
             return None

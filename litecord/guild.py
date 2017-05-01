@@ -8,6 +8,7 @@ class GuildManager:
         self.server = server
         self.guild_db = server.db['guilds']
         self.guilds = {}
+        self.channels = {}
 
     def get_guild(self, guild_id):
         return self.guilds.get(guild_id)
@@ -18,10 +19,16 @@ class GuildManager:
 
     def all_guilds(self):
         for guild_id in self.guilds:
-            yield self.guilds(guild_id)
+            yield self.guilds[guild_id]
 
     def init(self):
         for guild_id in self.guild_db:
             guild_data = self.guild_db[guild_id]
-            self.guilds[guild_id] = Guild(self.server, guild_data)
+
+            guild = Guild(self.server, guild_data)
+            self.guilds[guild_id] = guild
+
+            for channel_id in guild.channels:
+                self.channels[channel_id] = guild.channels[channel_id]
+
         return True

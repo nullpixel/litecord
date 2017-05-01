@@ -1,1 +1,20 @@
-{}
+{
+    "150501171201": {
+        "id": 150501171201,
+        "name": "Memes",
+        "owner_id": 149260046337,
+        "region": "00meme",
+        "features": ["meme"],
+        "channels": {
+            "150595502081": {
+                "name": "meme_machine",
+                "type": "text",
+                "position": 0,
+                "topic": "I'm a motherfuckin' meme machine."
+            }
+        },
+        "members": [
+            149260046337
+        ]
+    }
+}
