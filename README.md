@@ -5,6 +5,13 @@ An implementation of Discord's backend.
 
 This has real shitty code, good luck
 
+With litecord you can run your own "Discord", locally, by yourself, but with limitations
+ * You can't use the official discord client with it, use [Atomic Discord](https://git.memework.org/heatingdevice/atomic-discord) instead.
+ * Not very good code, expect the unexpected when running your server or accessing one.
+ * Voice doesn't work nor is planned to be implemented into Litecord.
+ * This is written in Python and it wasn't made to be resilient, don't DDoS a Litecord server
+ * Ratelimits doesn't exist, yet.
+
 # Usage
 
 wow you *really* want to use it?

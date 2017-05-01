@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import logging
 from aiohttp import web
 import asyncio
@@ -19,7 +20,6 @@ DATABASES = {
 }
 
 async def give_gateway(request):
-    log.info('Giving gateway URL')
     return web.Response(text=json.dumps({"url": "ws://0.0.0.0:12000"}))
 
 async def index(request):
