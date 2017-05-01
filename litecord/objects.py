@@ -71,6 +71,10 @@ class Member(LitecordObject):
         self.voice_mute = False
 
     @property
+    def connection(self):
+        return self.user.connection
+
+    @property
     def as_json(self):
         return {
             'user': self.user.as_json,

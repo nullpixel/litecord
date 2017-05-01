@@ -99,7 +99,7 @@ class Connection:
         }
         return (await self.send_json(payload))
 
-    async def send_dispatch(self, evt_name, evt_data={}):
+    async def dispatch(self, evt_name, evt_data={}):
         '''Send a DISPATCH packet through the websocket connection'''
         payload = {
             'op': OP["DISPATCH"],
@@ -197,7 +197,7 @@ class Connection:
 
         # self.presence.update_presence(PRESENCE.online)
         await self.presence.status_update(self.user['id'], 'meme')
-        await self.send_dispatch('READY', {
+        await self.dispatch('READY', {
             'v': GATEWAY_VERSION,
             'user': self.user,
             'private_channels': [],

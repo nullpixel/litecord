@@ -51,13 +51,8 @@ class PresenceManager:
         }
         log.info(f'{user_id} is now playing {game_name}, updating presences')
 
-        # TODO: make this work
         for guild in user.guilds:
-            guild_members = guild.members
-            if len(guild_members) < 2:
-                return
-
-            for member in guild_members:
+            for member in guild.online_members:
                 connection = member.connection
                 if connection is None:
                     continue
