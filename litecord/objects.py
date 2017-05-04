@@ -17,25 +17,43 @@ class LitecordObject:
 
 class Presence:
     def __init__(self, user, game=None, guild_id=None):
-        self.game = game
+        _default = {
+            'status': 'online',
+            'type': 0,
+            'name': None,
+            'url': None,
+        }
+
+        # merge the two, with game overwriting _default
+        self.game = {**_default, **game}
         self.user = user
         self.guild_id = guild_id
+
+        if self.game['status'] not in ('online', 'offline', 'idle'):
+            log.warning(f'Presence for {self.user!r} with unknown status')
 
     @property
     def as_json(self):
         return {
+            # Discord sends an incomplete user object with all optional fields(excluding id)
+            # we are lazy, so we send the same user object you'd receive in other normal events :^)
             'user': self.user.as_json,
             'roles': [],
-            'game': self.game or None,
+            'game': self.game.get('name'),
             'guild_id': self.guild_id,
             'status': 'online',
         }
 
 class User(LitecordObject):
-    def __init__(self, server, _user):
+    def __init__(self, server, _data):
         LitecordObject.__init__(self, server)
-        self._user = _user
-        self.id = _user['id']
+        self._data = _data
+        self.id = _data['id']
+        self.username = self._data['username']
+        self.discriminator = self._data['discriminator']
+
+    def __repr__(self):
+        return f'User({self.id}, {self.username}#{self.discriminator})'
 
     @property
     def guilds(self):
@@ -47,7 +65,7 @@ class User(LitecordObject):
     @property
     def as_json(self):
         '''Return the user as ready for JSON dump'''
-        return strip_user_data(self._user)
+        return strip_user_data(self._data)
 
     @property
     def connection(self):

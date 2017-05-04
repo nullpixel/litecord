@@ -197,7 +197,7 @@ class Connection:
         log.info("New session %s", self.session_id)
 
         # self.presence.update_presence(PRESENCE.online)
-        await self.presence.status_update(self.user['id'], 'meme')
+        await self.presence.status_update(self.user['id'])
         all_guild_list = [guild for guild in guild_list]
         guild_list = []
 
@@ -319,7 +319,9 @@ class Connection:
         if game is not None:
             game_name = game.get('name')
             if game_name is not None:
-                await self.presence.status_update(self.user['id'], game_name)
+                await self.presence.status_update(self.user['id'], {
+                    'name': game_name,
+                })
                 return True
 
     async def run(self):
