@@ -197,11 +197,22 @@ class Connection:
 
         # self.presence.update_presence(PRESENCE.online)
         await self.presence.status_update(self.user['id'], 'meme')
+        all_guild_list = [guild for guild in guild_list]
+        guild_list = []
+
+        for guild in all_guild_list:
+            guild_json = guild.as_json
+
+            if len(guild.members) > large:
+                guild_json['members'] = [m.as_json for m in gulid.online_members]
+
+            guild_list.append(guild_json)
+
         await self.dispatch('READY', {
             'v': GATEWAY_VERSION,
             'user': self.user,
             'private_channels': [],
-            'guilds': [guild.as_json for guild in guild_list],
+            'guilds': guild_list,
             'session_id': self.session_id,
         })
 
