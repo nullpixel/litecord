@@ -217,3 +217,50 @@ class Guild(LitecordObject):
             'presences': [self.server.presence.get_presence(member.id).as_json \
                 for member in self.online_members],
         }
+
+class Message:
+    def __init__(self, server, channel, user, _message_data):
+        LitecordObject.__init__(self, server)
+        self._data = _message_data
+
+        self.id = _message_data['id']
+        self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))
+
+        self.channel = channel
+        self.channel_id = channel.id
+
+        self.user = user
+        self.member = self.channel.server.members.get(self.user.id)
+
+        if self.member is None:
+            log.warning("Message being created with invalid userID")
+
+        self.content = _message_data['content']
+        self.edited_at = None
+
+    def edit(self, new_content, timestamp=None):
+        if timestamp is None:
+            timestamp = datetime.datetime.now()
+
+        self.edited_at = timestamp
+        self.content = new_content
+
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'channel_id': str(self.channel_id),
+            'author': self.user.as_json,
+            'content': self.content,
+            'timestamp': dt_to_json(self.timestamp),
+            'edited_timestamp': self.edited_at or None,
+            'tts': False,
+            'mention_everyone': '@everyone' in self.content,
+            'mentions': [], # TODO
+            'mention_roles': [], # TODO?
+            'attachments': [], # TODO
+            'embeds': [], # TODO
+            'reactions': [], # TODO
+            'pinned': False, # TODO
+            #'webhook_id': '',
+        }
