@@ -1,6 +1,7 @@
 import logging
 import datetime
 from .utils import strip_user_data, dt_to_json
+from .snowflake import snowflake_time
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +133,9 @@ class Guild(LitecordObject):
             'splash': '',
         }
 
+        creation_timestamp = snowflake_time(self.id)
+        self.created_at = datetime.datetime.fromtimestamp(creation_timestamp)
+
         self.owner_id = _guild_data['owner_id']
         self.region = _guild_data['region']
         self.roles = []
@@ -200,7 +204,7 @@ class Guild(LitecordObject):
             # those events are only in GUILD_CREATE
             # but we can send them anyways :DDDDDD
 
-            # TODO: 'joined_at': self.created_at,
+            'joined_at': dt_to_json(self.created_at),
             'large': self.large,
             'unavailable': False,
             'member_count': self.member_count,
