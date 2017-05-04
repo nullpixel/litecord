@@ -47,4 +47,8 @@ class GuildsEndpoint:
 
         guild_id = request.match_info['guild_id']
 
-        return _json('Not Implemented')
+        guild = self.server.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err('404: Not Found')
+
+        return _json([channel.as_json for channel in guild.channels])
