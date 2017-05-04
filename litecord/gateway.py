@@ -9,6 +9,7 @@ import sys
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
+from .utils import chunk_list
 
 MAX_TRIES = 10
 
@@ -222,19 +223,45 @@ class Connection:
         '''
         Connection.req_guild_handler(data)
 
-        Dummy handler for OP 8 Request Guild Members
+        Handle OP 8 Request Guild Members.
+        Sends a Guild Members Chunk event as response.
         '''
         guild_id = data.get('guild_id')
         query = data.get('query')
         limit = data.get('limit')
+
         if guild_id is None or query is None or limit is None:
             await self.ws.close(4001)
             return False
 
+        if limit > 1000: limit = 1000
+        if limit <= 0: limit = 1000
+
+        all_members = [member.as_json for member in guild.members]
+        member_list = []
+
+        # NOTE: this is inneficient
+        if len(query) > 0:
+            for member in all_members:
+                if member.user.username.startswith(query):
+                    member_list.append(member)
+        else:
+            # if no query provided, just give it all
+            member_list = all_members
+
+        if len(member_list) > 1000:
+            # we split the list into chunks of size 1000
+            # and send them all in the event
+            for chunk in chunk_list(member_list, 1000):
+                await self.dispatch('GUILD_MEMBERS_CHUNK', {
+                    'guild_id': guild_id,
+                    'members': chunk,
+                })
+            return
+
         await self.dispatch('GUILD_MEMBERS_CHUNK', {
             'guild_id': guild_id,
-            #'members': await self.presence.offline_members(guild_id),
-            'members': [],
+            'members': chunk,
         })
 
     async def process_recv(self, payload):

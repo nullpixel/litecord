@@ -38,3 +38,9 @@ def dt_to_json(dt):
 
 def _json(obj):
     return web.Response(text=json.dumps(obj))
+
+# Modification of https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+def chunk_list(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
