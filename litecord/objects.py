@@ -108,11 +108,17 @@ class Channel(LitecordObject):
     '''
     Channel - represents a Text Channel
     '''
-    def __init__(self, server, _channel):
+    def __init__(self, server, _channel, guild=None):
         LitecordObject.__init__(self, server)
         self._data = _channel
         self.id = _channel['id']
         self.guild_id = _channel['guild_id']
+
+        if guild is None:
+            self.guild = self.server.guild_man.get_guild(self.guild_id)
+        else:
+            self.guild = guild
+
         self.name = _channel['name']
         self.type = _channel['type']
         self.position = _channel['position']
@@ -168,7 +174,7 @@ class Guild(LitecordObject):
             channel_data['guild_id'] = self.id
             channel_data['id'] = channel_id
 
-            channel = Channel(server, channel_data)
+            channel = Channel(server, channel_data, self)
             self.channels[channel_id] = channel
 
         # list of snowflakes

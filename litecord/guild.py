@@ -13,6 +13,9 @@ class GuildManager:
     def get_guild(self, guild_id):
         return self.guilds.get(guild_id)
 
+    def get_channel(self, channel_id):
+        return self.channels.get(channel_id)
+
     def get_guilds(self, user_id):
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]

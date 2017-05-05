@@ -10,7 +10,7 @@ from .utils import strip_user_data, random_digits, _json, _err
 from .guild import GuildManager
 from .presence import PresenceManager
 
-from .api import users, guilds
+from .api import users, guilds, channels
 
 from .objects import User, Guild
 
@@ -94,8 +94,8 @@ class LitecordServer:
         return users.get(user_id)
 
     def _user(self, token):
-        session_id = self.server.session_dict[token]
-        user_id = self.server.sessions[session_id].user['id']
+        session_id = self.session_dict[token]
+        user_id = self.sessions[session_id].user['id']
         user = self.get_user(user_id)
         return user
 
@@ -232,6 +232,9 @@ class LitecordServer:
 
             self.guilds_endpoint = guilds.GuildsEndpoint(self)
             self.guilds_endpoint.register(app)
+
+            self.channels_endpoint = channels.ChannelsEndpoint(self)
+            self.channels_endpoint.register(app)
 
             return True
         except:
