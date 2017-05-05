@@ -21,6 +21,23 @@ token_to_session = {}
 valid_tokens = []
 
 class Connection:
+    """Represents a websocket connection to litecord
+
+    Attributes:
+        ws:
+            The actual websocket connection
+        last_seq:
+            An integer representing the last event the client received.
+            See `Connection.heartbeat_handler` for more details.
+        token:
+            The token this connection is using.
+        identified:
+            A boolean showing if the client had a successful IDENTIFY or not.
+        properties:
+            Dictionary with connection properties like OS, browser and the large_threshold.
+        user:
+            Becomes a raw user object if the connection is properly identified.
+    """
     def __init__(self, server, ws, path):
         self.ws = ws
         self.path = path
@@ -34,16 +51,9 @@ class Connection:
         #  if it is, we do session invalidation
         self.last_seq = None
 
-        # token the connection is using
         self.token = None
-
-        # flag that says if the connection is a good connection and it is identified
         self.identified = False
-
-        # connection properties
         self.properties = {}
-
-        # the user the connection currently represents
         self.user = None
 
         # reference to LitecordServer
@@ -64,7 +74,7 @@ class Connection:
         self.event_handlers = {}
 
     def basic_hello(self):
-        '''Returns a valid OP 10 Hello packet'''
+        """Returns a JSON serializable OP 10 Hello packet."""
         return {
             'op': OP["HELLO"],
             'd': {
@@ -74,7 +84,7 @@ class Connection:
         }
 
     def gen_sessid(self):
-        '''Generate a Session ID for a new connection'''
+        """Generate a new Session ID."""
         tries = 0
         new_id = str(uuid.uuid4().fields[-1])
         while new_id in session_data:
@@ -87,12 +97,21 @@ class Connection:
         return new_id
 
     async def send_json(self, obj):
-        '''Send a JSON object through the websocket connection'''
+        """Send a JSON payload through the websocket.
+
+        Args:
+            obj: any JSON serializable object
+        """
         res = await self.ws.send(json.dumps(obj))
         return res
 
     async def send_op(self, op, data={}):
-        '''Send an arbritary OP through the websocket connection'''
+        """Send a packet through the websocket.
+
+        Args:
+            op: Integer representing the packet's OP
+            data: any JSON serializable object
+        """
         payload = {
             # op is always an int
             # data can be a dict, int or bool
@@ -102,7 +121,12 @@ class Connection:
         return (await self.send_json(payload))
 
     async def dispatch(self, evt_name, evt_data={}):
-        '''Send a DISPATCH packet through the websocket connection'''
+        """Send a DISPATCH packet through the websocket.
+
+        Args:
+            evt_name: Event name, follows the same pattern as Discord's event names
+            evt_data: any JSON serializable object
+        """
         payload = {
             'op': OP["DISPATCH"],
 
@@ -117,33 +141,38 @@ class Connection:
         return (await self.send_json(payload))
 
     async def get_myself(self):
+        """Get the raw user that this connection represents."""
         return self.user
 
     async def heartbeat_handler(self, data):
-        '''
-        Connection.heartbeat_handler(data)
+        """Handle OP 1 Heartbeat packets.
 
-        Handles HEARTBEAT packets, sends a OP 11 Heartbeat ACK
-        '''
+        Saves the last event received by the client in `Connection.last_seq`
+        Sends a OP 11 Heartbeat ACK packet
+
+        Args:
+            data: An integer or None
+        """
         self.last_seq = data
         await self.send_op(OP['HEARTBEAT_ACK'], {})
         return True
 
     async def identify_handler(self, data):
-        '''
-        Connection.identify_handler(data)
+        """Handle an OP 2 Identify sent by the client.
 
-        Handle an OP 2 Identify from a client.
-        It checks the token given by the client, and if it is valid,
-        the server creates the session and dispatches a READY event to the client.
-        '''
-        log.info('[identify] got identify')
+        Checks if the token given in the packet is valid, and if it is,
+        dispatched a READY event.
+
+        Args:
+            data: A dictionary, https://discordapp.com/developers/docs/topics/gateway#gateway-identify
+        """
+        log.info('[identify] identifying connection')
 
         token = data.get('token')
         prop = data.get('properties')
         large = data.get('large_threshold')
 
-        # sanity test
+        # check if the client isn't trying to fuck us over
         if (token is None) or (prop is None) or (large is None):
             log.warning('Erroneous IDENTIFY')
             await self.ws.close(4001)
@@ -221,12 +250,10 @@ class Connection:
         return True
 
     async def req_guild_handler(self, data):
-        '''
-        Connection.req_guild_handler(data)
+        """Handle OP 8 Request Guild Members.
 
-        Handle OP 8 Request Guild Members.
-        Sends a Guild Members Chunk event as response.
-        '''
+        Sends a Guild Members Chunk event(https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
+        """
         guild_id = data.get('guild_id')
         query = data.get('query')
         limit = data.get('limit')
@@ -266,20 +293,11 @@ class Connection:
         })
 
     async def process_recv(self, payload):
-        '''
-        Connection.process_recv(payload)
+        """Process a payload sent by the client.
 
-        Process a payload received by the client.
-        The format for payloads in the websocket goes as follows
-        ```
-        {
-            "op": op number,
-            "d": data for that op,
-            "s": sequence number, //optional
-            "t": event name, //optional
-        }
-        ```
-        '''
+        The client has to send a payload in this format:
+        https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
+        """
 
         # first, we get data we actually need
         op = payload.get('op')
@@ -309,11 +327,10 @@ class Connection:
         return True
 
     async def status_handler(self, data):
-        '''
-        Connection.status_handler(data)
+        """Handle OP 3 Status Update packets
 
-        Handles OP 3 Status Update packets
-        '''
+        Checks the payload format and if it is OK, calls `PresenceManager.status_update`
+        """
 
         idle_since = data.get('idle_since', 'nothing')
         game = data.get('game')
@@ -326,12 +343,11 @@ class Connection:
                 return True
 
     async def guild_sync_handler(self, data):
-        '''
-        Connection.guild_sync_handler(data)
+        """Handle OP 12 Guild Sync packets
 
-        Handle OP 12 Guild Sync
-        This is an undocumented OP, all things here are based on assumptions
-        '''
+        This is an undocumented OP on Discord's API docs.
+        This OP is sent by the client to request member and presence information.
+        """
 
         if not isinstance(data, list):
             log.error('[guild_sync] client didn\'t send a list')
@@ -348,22 +364,19 @@ class Connection:
             })
 
     async def run(self):
-        '''
-        Connection.run()
+        """Starts basic handshake with the client
 
-        Runs the websocket and sends messages
-        to be processed by `Connection.process_recv`
-        '''
+        This only starts when the websocket server notices a new client.
+        The server sends an OP 10 Hello packet to the client, and after that
+        it relays payloads sent by the client to `Connection.process_recv`
+        """
         # send OP HELLO
         log.info("Sending OP HELLO")
         await self.ws.send(json.dumps(self.basic_hello()))
 
         try:
             while True:
-                # receive something from WS
                 payload = json.loads(await self.ws.recv())
-
-                # process it
                 continue_flag = await self.process_recv(payload)
 
                 # if process_recv tells us to stop, we clean everything
@@ -381,7 +394,11 @@ class Connection:
         await self.ws.close(1000)
 
     def cleanup(self):
-        # only works if the connection is already identified
+        """Remove the connection from being found
+
+        The cleanup only happens if the connection is identified.
+        This method can only be called once.
+        """
         if self.token is not None:
             token_to_session.pop(self.token)
             valid_tokens.remove(self.token)
@@ -389,6 +406,28 @@ class Connection:
             self.token = None
 
 async def gateway_server(app, databases):
+    """Main function to start the websocket server
+
+    This function initializes a LitecordServer object, which
+    initializes databases, fills caches, etc.
+
+    When running, for each new client, a `Connection` object is created to represent it,
+    its `.run()` method is called and the connection will live forever until it gets closed.
+
+    This function registers the `/api/auth/login` route.
+
+    Args:
+        databases: A dictionary with database path data.
+            Example:
+            ```
+            {
+                'users': 'db/users.json',
+                'guilds': 'db/guilds.json',
+                'messages': 'db/messages.json',
+                'tokens': 'db/tokens.json',
+            }
+            ```
+    """
     server = LitecordServer(valid_tokens, token_to_session, session_data)
 
     server.db_paths = databases
