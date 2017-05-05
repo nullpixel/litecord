@@ -15,6 +15,20 @@ class ChannelsEndpoint:
         _r = app.router
         _r.add_get('/api/channels/{channel_id}', self.h_get_channel)
 
+        # NOTE: needs message management
+        #_r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
+        #_r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
+
+        #_r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
+        #_r.add_patch('/api/channels/{channel_id}/messages/{message_id}',
+        #               self.h_patch_message)
+
+        #_r.add_delete('/api/channels/{channel_id}/messages/{message_id}',
+        #                self.h_delete_message)
+
+        # NOTE: needs typing stuff, maybe in presence manager?
+        #_r.add_post('/api/channels/{channel_id}/typing', self.h_post_typing)
+
     async def h_get_channel(self, request):
         '''
         ChannelsEndpoint.h_get_channel

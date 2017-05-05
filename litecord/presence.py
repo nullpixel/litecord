@@ -5,6 +5,7 @@ Sends PRESENCE_UPDATE to clients when needed
 '''
 
 import logging
+import time
 
 from .objects import Presence
 
@@ -50,6 +51,26 @@ class PresenceManager:
 
         for guild in user.guilds:
             for member in guild.online_members:
-                connection = member.connection
-                if connection is not None:
-                    await connection.dispatch('PRESENCE_UPDATE', presence.as_json)
+                conn = member.connection
+                if conn:
+                    await conn.dispatch('PRESENCE_UPDATE', presence.as_json)
+
+    async def typing_start(self, user_id, channel_id):
+        '''
+        PresenceManager.typing_start(user_id, channel_id)
+
+        Sends a TYPING_START to relevant clients
+        '''
+        typing_timestamp = int(time.time())
+        channel = self.server.guild_man.get_channel(channel_id)
+
+        # TODO: don't send events to people who can't read the channel
+        #  Requires permission stuff
+        for member in channel.guild.online_members:
+            conn = member.connection
+            if conn:
+                await conn.dispatch('TYPING_START', {
+                    'channel_id': channel_id,
+                    'user_id': user_id,
+                    'timestamp': typing_timestamp,
+                })
