@@ -1,6 +1,6 @@
 {
     "luna@localhost": {
-        "id": 149260046337,
+        "id": "149260046337",
         "username": "Luna",
         "discriminator": "1337",
         "password": {
@@ -13,7 +13,7 @@
         "verified": true
     },
     "jack@null.net": {
-        "id": 149260046338,
+        "id": "149260046338",
         "username": "Jack",
         "discriminator": "0000",
         "password": {
@@ -26,7 +26,7 @@
         "verified": true
     },
     "iamtheworst@programmer.net": {
-        "id": 149260046339,
+        "id": "149260046339",
         "username": "lold",
         "discriminator": "0000",
         "password": {
