@@ -23,6 +23,20 @@ def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
 class LitecordServer:
+    """Main class for the Litecord server.
+
+    Attributes:
+        db_paths: A dictionary with database file paths,
+            See `gateway_server` for more explanation.
+        db: A dictionary that relates database IDs with actual database objects.
+        cache: An internal dictionary that relates IDs to objects/raw objects.
+        valid_tokens: List of valid tokens(strings),
+            A valid token is a token that was used in a connection and it is still,
+            being used in that connection
+        session_dict: A dictionary relating tokens to their respective `Connection`.
+        sessions: A dictionary relating session IDs to their respective `Connection` object.
+        guild_man: An instance of `GuildManager`.
+    """
     def __init__(self, valid_tokens, session_dict, sessions):
         self.db_paths = None
         self.db = {}
@@ -35,12 +49,17 @@ class LitecordServer:
         self.guild_man = None
 
     def db_init_all(self):
+        """Initialize all declared databases in `self.db_paths`."""
         for database_id in self.db_paths:
             db_path = self.db_paths[database_id]
             try:
                 self.db[database_id] = json.load(open(db_path, 'r'))
-                if hasattr(self, f'dbload_{database_id}'):
-                    getattr(self, f'dbload_{database_id}')()
+
+                # usually load functions put stuff in cache
+                # so that other parts of the code doesn't become too complicated
+                db_load_function = getattr(self, f'dbload_{database_id}', None)
+                if db_load_function is not None:
+                    db_load_function()
             except:
                 log.error(f"Error loading database {database_id} at {db_path}", exc_info=True)
                 return False
@@ -48,15 +67,20 @@ class LitecordServer:
         return True
 
     def db_save(self, list_db):
+        """Save one database into its file."""
         for database_id in list_db:
             path = self.db_paths[database_id]
             db_object = self.db[database_id]
             json.dump(db_object, open(path, 'w'))
 
     def dbload_users(self):
+        """Load users database.
+
+        Creates the `id->raw_user` and `id->user` dictionaries in `self.cache`.
+        """
         users = self.db['users']
 
-        # init cache objects
+        # create cache objects
         self.cache['id->raw_user'] = {}
         self.cache['id->user'] = {}
 
@@ -86,20 +110,41 @@ class LitecordServer:
 
     # helpers
     def get_raw_user(self, user_id):
+        """Get a raw user object using the user's ID."""
         users = self.cache['id->raw_user']
         return users.get(user_id)
 
     def get_user(self, user_id):
+        """Get a `User` object using the user's ID."""
         users = self.cache['id->user']
         return users.get(user_id)
 
     def _user(self, token):
+        """Get a user object from its token.
+
+        This is a helper function to save lines of code in endpoint objects.
+        """
         session_id = self.session_dict[token]
         user_id = self.sessions[session_id].user['id']
         user = self.get_user(user_id)
         return user
 
     async def login(self, request):
+        """Login a user through the `POST:/auth/login` endpoint.
+
+        Input: a JSON object:
+            {
+                "email": "the email of the user",
+                "password": "the plaintext password of the user",
+            }
+
+        Output: Another JSON object:
+            {
+                "token": "user token"
+            }
+            With the token you can connect to the gateway and send an IDENTIFY payload
+
+        """
         try:
             json = await request.json()
         except Exception as err:
@@ -144,6 +189,16 @@ class LitecordServer:
         return _json({"token": _token})
 
     async def check_request(self, request):
+        """Checks a request to the API.
+
+        This function checks if the request has the required methods
+        to do any authenticated request to Litecord's API.
+
+        More information at:
+        https://discordapp.com/developers/docs/reference#authentication
+
+        NOTE: This function doesn't check for OAuth2 Bearer tokens.
+        """
         auth_header = request.headers['Authorization']
         print(auth_header)
         if len(auth_header) < 1:
@@ -165,6 +220,7 @@ class LitecordServer:
         })
 
     async def get_discrim(self, username):
+        """Generate a discriminator from a username"""
         users = self.db['users']
 
         used_discrims = [users[user_email]['discriminator'] for user_email in \
@@ -186,12 +242,10 @@ class LitecordServer:
 
 
     async def h_guild_post_message(self, request):
-        '''
-        LitecordServer.h_guild_post_message
+        """Dummy handler for `POST:/guild/{guild_id}/messages`
 
-        Handle POSTS to `/guild/{guild_id}/messages` and dispatches MESSAGE_CREATE events
-        to the respective clients
-        '''
+        TODO: remove this
+        """
 
         guild_id = request.match_info['guild_id']
 
@@ -213,6 +267,10 @@ class LitecordServer:
         return _err('not implemented')
 
     def init(self, app):
+        """Initialize the server.
+
+        Loads databases, managers and endpoints.
+        """
         try:
             log.info('Initializing server state')
             if not self.db_init_all():
