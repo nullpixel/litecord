@@ -21,6 +21,9 @@ class UsersEndpoint:
 
         _r.add_get('/api/users/@me/settings', self.h_get_me_settings)
 
+        #_r.add_get('/api/users/@me/guilds', server.h_users_me_guild)
+        #_r.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
+
     async def h_users(self, request):
         '''
         LitecordServer.h_users

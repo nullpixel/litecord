@@ -32,6 +32,9 @@ class Presence:
         if self.game['status'] not in ('online', 'offline', 'idle'):
             log.warning(f'Presence for {self.user!r} with unknown status')
 
+    def __repr__(self):
+        return f'Presence({self.user!r}, {self.game["status"]!r}, {self.game["name"]!r})'
+
     @property
     def as_json(self):
         return {
@@ -41,7 +44,7 @@ class Presence:
             'roles': [],
             'game': self.game.get('name'),
             'guild_id': self.guild_id,
-            'status': 'online',
+            'status': self.game.get('status'),
         }
 
 class User(LitecordObject):
@@ -115,7 +118,7 @@ class Channel(LitecordObject):
         self.guild_id = _channel['guild_id']
 
         if guild is None:
-            self.guild = self.server.guild_man.get_guild(self.guild_id)
+            self.guild = self.guild_man.get_guild(self.guild_id)
         else:
             self.guild = guild
 

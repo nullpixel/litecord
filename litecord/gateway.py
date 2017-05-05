@@ -197,7 +197,7 @@ class Connection:
 
         log.info("New session %s", self.session_id)
 
-        # self.presence.update_presence(PRESENCE.online)
+        # this sets to a default of online
         await self.presence.status_update(self.user['id'])
         all_guild_list = [guild for guild in guild_list]
         guild_list = []
@@ -369,20 +369,24 @@ class Connection:
                 # if process_recv tells us to stop, we clean everything
                 if not continue_flag:
                     log.info("Stopped processing")
-
-                    if self.token is not None:
-                        token_to_session.pop(self.token)
-                        valid_tokens.remove(self.token)
-                        session_data.pop(self.session_id)
-
+                    self.cleanup()
                     break
         except Exception as err:
             # if any error we just close with 4000
-            log.error('Error at run()', exc_info=True)
-            await self.ws.close(4000, 'Unexpected error')
+            log.error('Error while running the connection', exc_info=True)
+            await self.ws.close(4000, f'Unexpected error: {err!r}')
+            self.cleanup()
             return
 
-        await self.ws.close(4000)
+        await self.ws.close(1000)
+
+    def cleanup(self):
+        # only works if the connection is already identified
+        if self.token is not None:
+            token_to_session.pop(self.token)
+            valid_tokens.remove(self.token)
+            session_data.pop(self.session_id)
+            self.token = None
 
 async def gateway_server(app, databases):
     server = LitecordServer(valid_tokens, token_to_session, session_data)
@@ -394,16 +398,14 @@ async def gateway_server(app, databases):
 
     async def henlo(websocket, path):
         log.info("Got new client, opening connection")
-        connection = Connection(server, websocket, path)
-        await connection.run()
+        conn = Connection(server, websocket, path)
+        await conn.run()
         log.info("Stopped connection", exc_info=True)
 
+        # do cleanup shit!!
+        conn.cleanup()
+
     app.router.add_post('/api/auth/login', server.login)
-
-    #app.add_route('/api/channels', self.channel_handler)
-
-    #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)
-    #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
 
     # start WS
     log.info("Starting WS")
