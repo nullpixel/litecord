@@ -206,7 +206,7 @@ class LitecordServer:
 
         return _err('not implemented')
 
-    def init(self):
+    def init(self, app):
         try:
             log.info('Initializing server state')
             if not self.db_init_all():
@@ -222,7 +222,10 @@ class LitecordServer:
 
             log.info('Initializing endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
+            self.users_endpoint.register(app)
+
             self.guilds_endpoint = guilds.GuildsEndpoint(self)
+            self.guilds_endpoint.register(app)
 
             return True
         except:

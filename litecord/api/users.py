@@ -12,6 +12,16 @@ class UsersEndpoint:
     def __init__(self, server):
         self.server = server
 
+    def register(self, app):
+        _r = app.router
+        _r.add_post('/api/auth/login', self.server.login)
+        _r.add_get('/api/users/{user_id}', self.h_users)
+
+        _r.add_post('/api/users/add', self.h_add_user)
+        _r.add_patch('/api/users/@me', self.h_patch_me)
+
+        _r.add_get('/api/users/@me/settings', self.h_get_me_settings)
+
     async def h_users(self, request):
         '''
         LitecordServer.h_users

@@ -12,6 +12,12 @@ class GuildsEndpoint:
     def __init__(self, server):
         self.server = server
 
+    def register(self, app):
+        _r = app.router
+        _r.add_get('/api/guilds/{guild_id}', self.h_guilds)
+        _r.add_get('/api/guilds/{guild_id}/channels', self.h_get_guild_channels)
+        _r.add_get('/api/guilds/{guild_id}/members/{user_id}', self.h_guild_members)
+
     async def h_post_guilds(self, request):
         pass
 
@@ -52,3 +58,27 @@ class GuildsEndpoint:
             return _err('404: Not Found')
 
         return _json([channel.as_json for channel in guild.channels])
+
+    async def h_guild_members(self, request):
+        '''
+        GuildsEndpoint.h_guild_members
+
+        Handle `GET /guilds/{guild_id}/members/{user_id}`
+        '''
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        guild_id = request.match_info['guild_id']
+        user_id = request.match_info['user_id']
+
+        guild = self.server.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err('404: Not Found')
+
+        if user_id not in guild.members:
+            return _err('404: Not Found')
+
+        return _json(guild.members[user_id].as_json)
