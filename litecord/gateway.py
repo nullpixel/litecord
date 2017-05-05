@@ -56,6 +56,7 @@ class Connection:
             OP['IDENTIFY']: self.identify_handler,
             OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
             OP['STATUS_UPDATE']: self.status_handler,
+            OP['GUILD_SYNC']: self.guild_sync_handler,
         }
 
         # Event handlers
@@ -282,8 +283,8 @@ class Connection:
 
         # first, we get data we actually need
         op = payload.get('op')
-        data = payload.get('d', 'NO_DATA')
-        if (op is None) or (data == 'NO_DATA'):
+        data = payload.get('d')
+        if (op is None):
             log.info("Got erroneous data from client, closing with 4001")
             await self.ws.close(4001)
             return False
@@ -323,6 +324,28 @@ class Connection:
                     'name': game_name,
                 })
                 return True
+
+    async def guild_sync_handler(self, data):
+        '''
+        Connection.guild_sync_handler(data)
+
+        Handle OP 12 Guild Sync
+        This is an undocumented OP, all things here are based on assumptions
+        '''
+
+        if not isinstance(data, list):
+            log.error('[guild_sync] client didn\'t send a list')
+            await self.ws.close(4001)
+
+        # ASSUMPTION: data is a list of guild IDs
+        for guild_id in data:
+            guild = self.guilds.get_guild(guild_id)
+
+            await self.dispatch('GUILD_SYNC', {
+                'id': guild_id,
+                'presences': [self.presence.get_presence(member.id) for member in guild.online_members],
+                'members': [member.as_json for member in guild.online_members],
+            })
 
     async def run(self):
         '''
@@ -381,6 +404,8 @@ async def gateway_server(app, databases):
 
     app.router.add_post('/api/users/add', server.users_endpoint.h_add_user)
     app.router.add_patch('/api/users/@me', server.users_endpoint.h_patch_me)
+
+    app.router.add_get('/api/users/@me/settings', server.users_endpoint.h_get_me_settings)
 
     #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)
     #app.router.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)

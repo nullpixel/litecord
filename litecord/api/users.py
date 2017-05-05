@@ -42,13 +42,8 @@ class UsersEndpoint:
             users = self.server.db['users']
             userdata = None
 
-            # yeah, I have to search through all users
-            #  TODO: create other dictionaries that have other relationships with users
-            #  like ID => user, and name => list of users
-            for _user_email in users:
-                _user_id = users[_user_email]['id']
-                if str(_user_id) == user_id:
-                    userdata = users[_user_email]
+            # way easier using id->raw_user instead of searching through userdb
+            userdata = self.server.get_raw_user(user_id)
 
             if userdata is None:
                 return _err("user not found")
@@ -140,3 +135,11 @@ class UsersEndpoint:
             'code': 500,
             'message': 'Internal Server Error'
         })
+
+    async def h_get_me_settings(self, request):
+        '''
+        UsersEndpoint.h_get_me_settings
+
+        Dummy handler for GET /users/@me/settings
+        '''
+        return _json({})
