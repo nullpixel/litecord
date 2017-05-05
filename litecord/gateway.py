@@ -398,6 +398,8 @@ async def gateway_server(app, databases):
         await connection.run()
         log.info("Stopped connection", exc_info=True)
 
+    app.router.add_post('/api/auth/login', server.login)
+
     #app.add_route('/api/channels', self.channel_handler)
 
     #app.router.add_get('/api/users/@me/guilds', server.h_users_me_guild)

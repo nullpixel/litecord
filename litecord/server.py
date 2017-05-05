@@ -93,6 +93,12 @@ class LitecordServer:
         users = self.cache['id->user']
         return users.get(user_id)
 
+    def _user(self, token):
+        session_id = self.server.session_dict[token]
+        user_id = self.server.sessions[session_id].user['id']
+        user = self.get_user(user_id)
+        return user
+
     async def login(self, request):
         try:
             json = await request.json()

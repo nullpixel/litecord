@@ -14,7 +14,6 @@ class UsersEndpoint:
 
     def register(self, app):
         _r = app.router
-        _r.add_post('/api/auth/login', self.server.login)
         _r.add_get('/api/users/{user_id}', self.h_users)
 
         _r.add_post('/api/users/add', self.h_add_user)
