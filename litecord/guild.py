@@ -55,6 +55,6 @@ class GuildManager:
             message_data['id'] = message_id
             channel = self.get_channel(message_data['channel_id'])
 
-            message = Message(self.server, channel, message_data['author_id'], message_data)
+            message = Message(self.server, channel, message_data)
 
         return True

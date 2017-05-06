@@ -321,8 +321,9 @@ class Guild(LitecordObject):
             'features': self.features,
             'mfa_level': -1, # TODO
 
-            # those events are only in GUILD_CREATE
-            # but we can send them anyways :DDDDDD
+            # those fields are only in the GUILD_CREATE event
+            # but we can send them anyways :')
+            # usually clients ignore this, so we don't need to worry
 
             'joined_at': dt_to_json(self.created_at),
             'large': self.large,
@@ -333,7 +334,6 @@ class Guild(LitecordObject):
             # arrays of stuff
             'members': self.iter_json(self.members),
             'channels': self.iter_json(self.channels),
-
             'presences': self.presences,
         }
 
@@ -352,9 +352,9 @@ class Message:
         member: A `Member` object, the member that made the message, can be `None`.
         content: A string, the message content.
         edited_at: If the message was edited, this is set to a
-            `datetime.datetime` representing the time in which the message was edited.
+            `datetime.datetime` representing the time at which the message was edited.
     """
-    def __init__(self, server, channel, author_id, _message_data):
+    def __init__(self, server, channel, _message_data):
         LitecordObject.__init__(self, server)
         self._data = _message_data
 
@@ -365,8 +365,8 @@ class Message:
         self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))
 
         self.channel = channel
-        self.author = self.server.get_user(author_id)
-        self.member = self.channel.guild.members.get(author_id)
+        self.author = self.server.get_user(self.author_id)
+        self.member = self.channel.guild.members.get(self.author_id)
 
         if self.member is None:
             log.warning("Message being created with invalid userID")
