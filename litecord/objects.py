@@ -32,6 +32,10 @@ class LitecordObject:
         """
         raise NotImplemented
 
+    def iter_json(self, indexable):
+        """Get all objects from an indexable, in JSON serializable form"""
+        return [indexable[index].as_json for index in indexable]
+
 class Presence:
     """A presence object.
 
@@ -327,8 +331,8 @@ class Guild(LitecordObject):
             'voice_states': [],
 
             # arrays of stuff
-            'members': [self.members[member_id].as_json for member_id in self.members],
-            'channels': [self.channels[channel_id].as_json for channel_id in self.channels],
+            'members': self.iter_json(self.members),
+            'channels': self.iter_json(self.channels),
 
             'presences': self.presences,
         }
