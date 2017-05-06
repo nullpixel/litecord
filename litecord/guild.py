@@ -1,5 +1,5 @@
 import logging
-from .objects import Guild
+from .objects import Guild, Message
 
 log = logging.getLogger(__name__)
 
@@ -24,14 +24,17 @@ class GuildManager:
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
+        guild_id = int(guild_id)
         return self.guilds.get(guild_id)
 
     def get_channel(self, channel_id):
         """Get a `Channel` object by its ID."""
+        channel_id = int(channel_id)
         return self.channels.get(channel_id)
 
     def get_guilds(self, user_id):
         """Get a list of all `Guild`s a user is on"""
+        user_id = int(user_id)
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]
 
@@ -45,10 +48,10 @@ class GuildManager:
             guild_data = self.guild_db[guild_id]
 
             guild = Guild(self.server, guild_data)
-            self.guilds[guild_id] = guild
+            self.guilds[guild.id] = guild
 
-            for channel_id in guild.channels:
-                self.channels[channel_id] = guild.channels[channel_id]
+            for channel in guild.all_channels():
+                self.channels[channel.id] = channel
 
         for message_id in self.message_db:
             message_data = self.message_db[message_id]
@@ -56,5 +59,6 @@ class GuildManager:
             channel = self.get_channel(message_data['channel_id'])
 
             message = Message(self.server, channel, message_data)
+            self.messages[message.id] = message
 
         return True

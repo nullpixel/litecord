@@ -111,11 +111,13 @@ class LitecordServer:
     # helpers
     def get_raw_user(self, user_id):
         """Get a raw user object using the user's ID."""
+        user_id = int(user_id)
         users = self.cache['id->raw_user']
         return users.get(user_id)
 
     def get_user(self, user_id):
         """Get a `User` object using the user's ID."""
+        user_id = int(user_id)
         users = self.cache['id->user']
         return users.get(user_id)
 

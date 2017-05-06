@@ -58,7 +58,7 @@ class Presence:
         # merge the two, with game overwriting _default
         self.game = {**_default, **game}
         self.user = user
-        self.guild_id = guild_id
+        self.guild_id = int(guild_id)
 
         if self.game['status'] not in ('online', 'offline', 'idle'):
             log.warning(f'Presence for {self.user!r} with unknown status')
@@ -74,7 +74,7 @@ class Presence:
             'user': self.user.as_json,
             'roles': [],
             'game': self.game.get('name'),
-            'guild_id': self.guild_id,
+            'guild_id': str(self.guild_id),
             'status': self.game.get('status'),
         }
 
@@ -90,7 +90,7 @@ class User(LitecordObject):
     def __init__(self, server, _data):
         LitecordObject.__init__(self, server)
         self._data = _data
-        self.id = _data['id']
+        self.id = int(_data['id'])
         self.username = self._data['username']
         self.discriminator = self._data['discriminator']
 
@@ -181,13 +181,16 @@ class Channel(LitecordObject):
     def __init__(self, server, _channel, guild=None):
         LitecordObject.__init__(self, server)
         self._data = _channel
-        self.id = _channel['id']
-        self.guild_id = _channel['guild_id']
+        self.id = int(_channel['id'])
+        self.guild_id = int(_channel['guild_id'])
 
         if guild is None:
             self.guild = self.guild_man.get_guild(self.guild_id)
         else:
             self.guild = guild
+
+        if self.guild is None:
+            log.warning("Creating an orphaned Channel")
 
         self.name = _channel['name']
         self.type = _channel['type']
@@ -196,20 +199,20 @@ class Channel(LitecordObject):
         self.topic = _channel['topic']
 
         # TODO: messages
-        self.last_message_id = -1
+        self.last_message_id = 0
 
     @property
     def as_json(self):
         return {
-            'id': self.id,
-            'guild_id': self.guild_id,
+            'id': str(self.id),
+            'guild_id': str(self.guild_id),
             'name': self.name,
             'type': self.type,
             'position': self.position,
             'is_private': self.is_private,
             'permission_overwrites': [],
             'topic': self.topic,
-            'last_message_id': self.last_message_id,
+            'last_message_id': str(self.last_message_id),
 
             # NOTE: THIS IS VOICE, WON'T BE USED.
             #'bitrate': self.bitrate,
@@ -241,7 +244,7 @@ class Guild(LitecordObject):
     def __init__(self, server, _guild_data):
         LitecordObject.__init__(self, server)
         self._data = _guild_data
-        self.id = _guild_data['id']
+        self.id = int(_guild_data['id'])
         self.name = _guild_data['name']
         self.icons = {
             'icon': '',
@@ -273,6 +276,8 @@ class Guild(LitecordObject):
         self.members = {}
 
         for member_id in self.member_ids:
+            member_id = int(member_id)
+
             user = self.server.get_user(member_id)
             if user is None:
                 log.warning(f"user {member_id} not found")
@@ -281,6 +286,16 @@ class Guild(LitecordObject):
 
         self.large = len(self.members) > 150
         self.member_count = len(self.members)
+
+    def all_channels(self):
+        """Yield all channels from a guild"""
+        for channel in self.channels.values():
+            yield channel
+
+    def all_members(self):
+        """Yield all members from a guild"""
+        for member in self.members.values():
+            yield member
 
     @property
     def online_members(self):
@@ -299,11 +314,11 @@ class Guild(LitecordObject):
     @property
     def as_json(self):
         return {
-            'id': self.id,
+            'id': str(self.id),
             'name': self.name,
             'icon': self.icons['icon'],
             'splash': self.icons['splash'],
-            'owner_id': self.owner_id,
+            'owner_id': str(self.owner_id),
             'region': self.region,
 
             # voice things aka NOT USABLE
@@ -358,8 +373,8 @@ class Message:
         LitecordObject.__init__(self, server)
         self._data = _message_data
 
-        self.id = _message_data['id']
-        self.author_id = _message_data['author_id']
+        self.id = int(_message_data['id'])
+        self.author_id = int(_message_data['author_id'])
         self.channel_id = channel.id
 
         self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))
@@ -369,6 +384,7 @@ class Message:
         self.member = self.channel.guild.members.get(self.author_id)
 
         if self.member is None:
+            print(f'{self.author_id} {self.author!r} {self.channel!r} {self.member!r}')
             log.warning("Message being created with invalid userID")
 
         self.content = _message_data['content']

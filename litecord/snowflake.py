@@ -40,6 +40,7 @@ def _snowflake_raw(timestamp, process_id):
 
 def snowflake_time(snowflake):
     """Get a timestamp from a specific snowflake"""
+    snowflake = int(snowflake)
     b_snowflake = '{0:049b}'.format(snowflake)
     since_epoch = int(b_snowflake[:37], 2)
 

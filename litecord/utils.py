@@ -6,7 +6,7 @@ from aiohttp import web
 def strip_user_data(user):
     """Remove unecessary fields from a raw user object"""
     return {
-        'id': user['id'],
+        'id': str(user['id']),
         'username': user['username'],
         'discriminator': user['discriminator'],
         'avatar': user['avatar'],
