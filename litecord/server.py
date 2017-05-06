@@ -220,7 +220,7 @@ class LitecordServer:
         })
 
     async def get_discrim(self, username):
-        """Generate a discriminator from a username"""
+        """Generate a discriminator from a username."""
         users = self.db['users']
 
         used_discrims = [users[user_email]['discriminator'] for user_email in \

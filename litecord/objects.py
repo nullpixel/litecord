@@ -6,6 +6,14 @@ from .snowflake import snowflake_time
 log = logging.getLogger(__name__)
 
 class LitecordObject:
+    """A general Litecord object
+
+    Attributes:
+        server: A `LitecordServer` instance
+
+    Properties:
+        guild_man: Returns the server's `GuildManager`
+    """
     def __init__(self, server):
         self.server = server
 
@@ -15,7 +23,26 @@ class LitecordObject:
         # since guild_man is None when initializing databases
         return self.server.guild_man
 
+    @property
+    def as_json(self):
+        """Return a JSON serializable object representing itself.
+
+        NOTE: it is recommended to not give sensitive information through `as_json`
+            as it is usually used to send the object to a client.
+        """
+        raise NotImplemented
+
 class Presence:
+    """A presence object.
+
+    Presence objects are used to signal clients that someone is playing a game,
+    or that someone went Online, Idle/AFK or DnD(Do not Disturb).
+
+    Attributes:
+        game: A dictionary representing the currently playing game/status.
+        user: The user that this presence object is linked to.
+        guild_id: An optional attribute, only used in `Presence.as_json`
+    """
     def __init__(self, user, game=None, guild_id=None):
         _default = {
             'status': 'online',
@@ -48,6 +75,14 @@ class Presence:
         }
 
 class User(LitecordObject):
+    """A general user object.
+
+    Attributes:
+        _data: raw user data.
+        id: The user's snowflake ID.
+        username: A string denoting the user's username
+        discriminator: A string denoting the user's discriminator
+    """
     def __init__(self, server, _data):
         LitecordObject.__init__(self, server)
         self._data = _data
@@ -60,19 +95,22 @@ class User(LitecordObject):
 
     @property
     def guilds(self):
-        '''Get all guilds a user is in'''
+        """Yield all guilds a user is in."""
         for guild in self.guild_man.all_guilds():
             if self.id in guild.member_ids:
                 yield guild
 
     @property
     def as_json(self):
-        '''Return the user as ready for JSON dump'''
+        """Remove sensitive data from `User._data` and make it JSON serializable"""
         return strip_user_data(self._data)
 
     @property
     def connection(self):
-        '''Get the user's `Connection` if any'''
+        """Return the user's `Connection` object, if possible
+
+        Returns `None` when a client is offline/no connection attached.
+        """
         for session_id in self.server.sessions:
             connection = self.server.sessions[session_id]
             if connection.identified:
@@ -81,6 +119,19 @@ class User(LitecordObject):
         return None
 
 class Member(LitecordObject):
+    """A general member object.
+
+    A member is linked to a guild.
+
+    Attributes:
+        user: A `User` instance representing this member.
+        guild: A `Guild` instance which the user is on.
+        id: The member's snowflake ID, Equals to the user's ID.
+        nick: A string denoting the member's nickname, can be `None`
+            if no nickname is set.
+        joined_at: A `datetime.datetime` object representing the date
+            the member joined the guild.
+    """
     def __init__(self, server, guild, user):
         LitecordObject.__init__(self, server)
         self.user = user
@@ -108,9 +159,21 @@ class Member(LitecordObject):
         }
 
 class Channel(LitecordObject):
-    '''
-    Channel - represents a Text Channel
-    '''
+    """A general text channel object
+
+    Attributes:
+        _data: Raw channel data.
+        id: The channel's snowflake ID.
+        guild_id: The guild's ID this channel is in.
+        guild: A `Guild` object, follows the same as `guild_id`.
+        name: A string denoting the channel's name.
+        type: A string representing the channel's type, usually it is `"text"`.
+        position: Integer starting from 0. Channel's position on the guild.
+        is_private: Boolean, should be False.
+        topic: A string, the channel topic/description.
+
+        TODO: last_message_id: A snowflake, the last message in the channel.
+    """
     def __init__(self, server, _channel, guild=None):
         LitecordObject.__init__(self, server)
         self._data = _channel
@@ -150,6 +213,27 @@ class Channel(LitecordObject):
         }
 
 class Guild(LitecordObject):
+    """A general guild.
+
+    Attributes:
+        _data: Raw guild data.
+        _channel_data: Raw channel data for the guild.
+
+        id: The guild's snowflake ID.
+        name: The guild's name.
+        icons: A dictionary with two keys: `"icon"` and `"splash"`
+        created_at: `datetime.datetime` object, the guild's creation date
+        owner_id: A snowflake, the guild owner's ID.
+        TODO: region: A string.
+        TODO: roles: A list of `Role` objects.
+        TODO: emojis: A list of `Emoji` objects.
+        features: A list of strings denoting the features this guild has.
+        channels: A dictionary relating channel ID to its `Channel` object.
+        member_ids: A list of snowflakes, contains the IDs for all the guild's members.
+        members: A dictionary relating user ID to its `Member` object.
+        large: A boolean, `True` if the gulid has more than 150 members.
+        member_count: An integer, the number of members in this guild.
+    """
     def __init__(self, server, _guild_data):
         LitecordObject.__init__(self, server)
         self._data = _guild_data
@@ -191,17 +275,22 @@ class Guild(LitecordObject):
             member = Member(server, self, user)
             self.members[member_id] = member
 
-        self.large = len(self.members) > 100
+        self.large = len(self.members) > 150
         self.member_count = len(self.members)
-        self.presences = []
 
     @property
     def online_members(self):
-        '''Get all members that have a connection'''
+        """Get all members that have a connection"""
         for member_id in self.members:
             member = self.members[member_id]
             if member.user.connection is not None:
                 yield member
+
+    @property
+    def presences(self):
+        """Returns a list of `Presence` objects for all online members."""
+        return [self.server.presence.get_presence(member.id).as_json \
+            for member in self.online_members],
 
     @property
     def as_json(self):
@@ -241,8 +330,7 @@ class Guild(LitecordObject):
             'members': [self.members[member_id].as_json for member_id in self.members],
             'channels': [self.channels[channel_id].as_json for channel_id in self.channels],
 
-            'presences': [self.server.presence.get_presence(member.id).as_json \
-                for member in self.online_members],
+            'presences': self.presences,
         }
 
 class Message:
