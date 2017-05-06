@@ -4,6 +4,7 @@ from random import randint
 from aiohttp import web
 
 def strip_user_data(user):
+    """Remove unecessary fields from a raw user object"""
     return {
         'id': user['id'],
         'username': user['username'],
@@ -16,6 +17,7 @@ def strip_user_data(user):
     }
 
 def random_digits(n):
+    """Returns `n` random digits"""
     range_start = 10**(n-1)
     range_end = (10**n)-1
     return randint(range_start, range_end)
@@ -34,6 +36,7 @@ date_handler = lambda obj: (
 )
 
 def dt_to_json(dt):
+    """Convert a `datetime.datetime` object to a JSON serializable string"""
     return json.dumps(dt, default=date_handler)
 
 def _json(obj):

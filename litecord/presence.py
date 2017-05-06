@@ -12,12 +12,14 @@ from .objects import Presence
 log = logging.getLogger(__name__)
 
 class PresenceManager:
+    """Manage presence objects/updates."""
     def __init__(self, server):
         log.info('PresenceManager: init')
         self.server = server
         self.presences = {}
 
     def get_presence(self, user_id):
+        """Get a `Presence` object from a user's ID."""
         try:
             log.warning(f'Presence not found for user {user_id}')
             print(self.presences)
@@ -26,15 +28,15 @@ class PresenceManager:
             return None
 
     def add_presence(self, user_id, game=None):
+        """Overwrite someone's presence."""
         user = self.server.get_user(user_id)
         self.presences[user_id] = Presence(user, game)
 
     async def status_update(self, user_id, new_status=None):
-        '''
-        PresenceManager.status_update(user_id, new_status)
+        """Updates an user's status.
 
-        Updates an user's status and sends respective PRESENCE_UPDATE events to relevant clients.
-        '''
+        Dispatches PRESENCE_UPDATE events to relevant clients.
+        """
 
         if new_status is None:
             new_status = {}
@@ -56,11 +58,7 @@ class PresenceManager:
                     await conn.dispatch('PRESENCE_UPDATE', presence.as_json)
 
     async def typing_start(self, user_id, channel_id):
-        '''
-        PresenceManager.typing_start(user_id, channel_id)
-
-        Sends a TYPING_START to relevant clients
-        '''
+        """Sends a TYPING_START to relevant clients."""
         typing_timestamp = int(time.time())
         channel = self.server.guild_man.get_channel(channel_id)
 
