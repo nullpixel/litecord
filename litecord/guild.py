@@ -4,12 +4,23 @@ from .objects import Guild
 log = logging.getLogger(__name__)
 
 class GuildManager:
-    """Manage guild data."""
+    """Manage guild, channel and message data.
+
+    Attributes:
+        server: A `LitecordServer` instance
+        guild_db: A direct reference to the server's guild database
+        message_db: a direct reference to the server's message database
+        guilds: A dictionary, list of all available guilds
+        channels: Dictionary, list of all available channels
+    """
     def __init__(self, server):
         self.server = server
         self.guild_db = server.db['guilds']
+        self.message_db = server.db['messages']
+
         self.guilds = {}
         self.channels = {}
+        self.messages = {}
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
@@ -38,5 +49,12 @@ class GuildManager:
 
             for channel_id in guild.channels:
                 self.channels[channel_id] = guild.channels[channel_id]
+
+        for message_id in self.message_db:
+            message_data = self.message_db[message_id]
+            message_data['id'] = message_id
+            channel = self.get_channel(message_data['channel_id'])
+
+            message = Message(self.server, channel, message_data['author_id'], message_data)
 
         return True

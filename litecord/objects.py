@@ -338,18 +338,35 @@ class Guild(LitecordObject):
         }
 
 class Message:
-    def __init__(self, server, channel, user, _message_data):
+    """A general message object.
+
+    Attributes:
+        _data: Raw message data.
+        id: The message's snowflake ID.
+        author_id: The message author's snowflake ID.
+        channel_id: The message channel's snowflake ID.
+
+        timestamp: A `datetime.datetime` object, the message's creation time.
+        channel: A `Channel` object, which channel the message comes from.
+        author: A `User` object, the user that made the message, can be `None`.
+        member: A `Member` object, the member that made the message, can be `None`.
+        content: A string, the message content.
+        edited_at: If the message was edited, this is set to a
+            `datetime.datetime` representing the time in which the message was edited.
+    """
+    def __init__(self, server, channel, author_id, _message_data):
         LitecordObject.__init__(self, server)
         self._data = _message_data
 
         self.id = _message_data['id']
+        self.author_id = _message_data['author_id']
+        self.channel_id = channel.id
+
         self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))
 
         self.channel = channel
-        self.channel_id = channel.id
-
-        self.user = user
-        self.member = self.channel.server.members.get(self.user.id)
+        self.author = self.server.get_user(author_id)
+        self.member = self.channel.guild.members.get(author_id)
 
         if self.member is None:
             log.warning("Message being created with invalid userID")
@@ -358,6 +375,7 @@ class Message:
         self.edited_at = None
 
     def edit(self, new_content, timestamp=None):
+        """Edit a message object"""
         if timestamp is None:
             timestamp = datetime.datetime.now()
 
@@ -375,6 +393,7 @@ class Message:
             'edited_timestamp': self.edited_at or None,
             'tts': False,
             'mention_everyone': '@everyone' in self.content,
+
             'mentions': [], # TODO
             'mention_roles': [], # TODO?
             'attachments': [], # TODO
