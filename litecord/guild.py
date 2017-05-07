@@ -32,16 +32,29 @@ class GuildManager:
         channel_id = int(channel_id)
         return self.channels.get(channel_id)
 
+    def get_message(self, message_id):
+        """Get a `Message` object by its ID."""
+        message_id = int(message_id)
+        return self.messages.get(message_id)
+
     def get_guilds(self, user_id):
-        """Get a list of all `Guild`s a user is on"""
+        """Get a list of all `Guild`s a user is on."""
         user_id = int(user_id)
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]
 
     def all_guilds(self):
-        """Yield all available guilds"""
+        """Yield all available guilds."""
         for guild_id in self.guilds:
             yield self.guilds[guild_id]
+
+    async def new_message(self, **kwargs):
+        """Create a new message and put it in the database.
+
+        Dispatches MESSAGE_CREATE events to respective clients.
+        Returns a `Message` object.
+        """
+        raise NotImplemented
 
     def init(self):
         for guild_id in self.guild_db:
@@ -53,6 +66,7 @@ class GuildManager:
             for channel in guild.all_channels():
                 self.channels[channel.id] = channel
 
+        # load messages from database
         for message_id in self.message_db:
             message_data = self.message_db[message_id]
             message_data['id'] = message_id

@@ -202,7 +202,6 @@ class LitecordServer:
         NOTE: This function doesn't check for OAuth2 Bearer tokens.
         """
         auth_header = request.headers['Authorization']
-        print(auth_header)
         if len(auth_header) < 1:
             return _err('401: Unauthorized, Malformed request')
 

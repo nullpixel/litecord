@@ -384,8 +384,7 @@ class Message:
         self.member = self.channel.guild.members.get(self.author_id)
 
         if self.member is None:
-            print(f'{self.author_id} {self.author!r} {self.channel!r} {self.member!r}')
-            log.warning("Message being created with invalid userID")
+            log.warning("Message being created with invalid userID [member not found]")
 
         self.content = _message_data['content']
         self.edited_at = None
