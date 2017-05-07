@@ -6,9 +6,7 @@ from ..utils import _err, _json, strip_user_data
 log = logging.getLogger(__name__)
 
 class ChannelsEndpoint:
-    '''
-    Handle stuff over /channels/*
-    '''
+    """Handle channel/message related endpoints"""
     def __init__(self, server):
         self.server = server
 
@@ -16,7 +14,7 @@ class ChannelsEndpoint:
         _r = app.router
         _r.add_get('/api/channels/{channel_id}', self.h_get_channel)
 
-        # NOTE: needs message management
+        # NOTE: needs message stuff in GuildManager
         #_r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
         #_r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
 
@@ -30,12 +28,10 @@ class ChannelsEndpoint:
         _r.add_post('/api/channels/{channel_id}/typing', self.h_post_typing)
 
     async def h_get_channel(self, request):
-        '''
-        ChannelsEndpoint.h_get_channel
+        """`GET /channels/{channel_id}`.
 
-        Handle `GET /channels/{channel_id}`
         Returns a channel object
-        '''
+        """
 
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
@@ -54,12 +50,11 @@ class ChannelsEndpoint:
         return _json(channel.as_json)
 
     async def h_post_typing(self, request):
-        '''
-        ChannelsEndpoint.h_post_typing(request)
+        """`POST /channels/{channel_id}/typing`.
 
-        Handle `POST /channels/{channel_id}/typing`
-        Dispatches TYPING_START events to relevant clients
-        '''
+        Dispatches TYPING_START events to relevant clients.
+        Returns a HTTP empty response with status code 204.
+        """
 
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
@@ -75,7 +70,6 @@ class ChannelsEndpoint:
 
         if user.id not in channel.guild.members:
             return _err('401: Unauthorized')
-
 
         await self.server.presence.typing_start(user.id, channel_id)
         return web.Response(status=204)

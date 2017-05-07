@@ -25,11 +25,10 @@ class UsersEndpoint:
         #_r.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
 
     async def h_users(self, request):
-        '''
-        LitecordServer.h_users
+        """Handle `GET /users/{user_id}`
 
-        Handle `GET /users/{user_id}`
-        '''
+        Get a specific user.
+        """
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
@@ -62,12 +61,19 @@ class UsersEndpoint:
             return _json(strip_user_data(userdata))
 
     async def h_add_user(self, request):
-        '''
-        LitecordServer.h_add_user: POST /users/add
+        """`POST /users/add`
 
-        Handles user adding, receives a stripped down version of a user object.
-        This endpoint requires no authentication.
-        '''
+        Creates a user.
+        Input: A JSON object:
+            {
+                "email": "the new user's email",
+                "password": "the new user's password",
+                "username": "the new user's username",
+            }
+
+        NOTE: This endpoint doesn't require authentication
+        TODO: Add better error codes
+        """
 
         try:
             payload = await request.json()
@@ -111,11 +117,11 @@ class UsersEndpoint:
         })
 
     async def h_patch_me(self, request):
-        '''
-        LitecordServer.h_patch_me
+        """`PATCH /users/@me`
 
-        Handle `PATCH /users/@me` requests
-        '''
+        Changes a user.
+        Returns the new user object.
+        """
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
@@ -149,9 +155,8 @@ class UsersEndpoint:
         })
 
     async def h_get_me_settings(self, request):
-        '''
-        UsersEndpoint.h_get_me_settings
+        """`GET /users/@me/settings`
 
-        Dummy handler for GET /users/@me/settings
-        '''
+        Dummy handler.
+        """
         return _json({})

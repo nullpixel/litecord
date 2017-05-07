@@ -1,7 +1,3 @@
-'''
-guilds.py - All handlers under /guilds/*
-'''
-
 import json
 import logging
 from ..utils import _err, _json, strip_user_data
@@ -9,6 +5,7 @@ from ..utils import _err, _json, strip_user_data
 log = logging.getLogger(__name__)
 
 class GuildsEndpoint:
+    """Manager for guild-related endpoints."""
     def __init__(self, server):
         self.server = server
 
@@ -23,11 +20,10 @@ class GuildsEndpoint:
         pass
 
     async def h_guilds(self, request):
-        '''
-        GuildsEndpoint.h_guilds
+        """`GET /guilds/{guild_id}`
 
-        Handle `GET /guilds/{guild_id}`
-        '''
+        Returns a guild object
+        """
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
@@ -42,11 +38,10 @@ class GuildsEndpoint:
         return _json(guild.as_json)
 
     async def h_get_guild_channels(self, request):
-        '''
-        GuildsEndpoint.h_get_guild_channels
+        """`GET /guilds/{guild_id}/channels`
 
-        `GET /guilds/{guild_id}/channels`
-        '''
+        Returns a list of channels the guild has.
+        """
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
@@ -61,11 +56,10 @@ class GuildsEndpoint:
         return _json([channel.as_json for channel in guild.channels])
 
     async def h_guild_one_member(self, request):
-        '''
-        GuildsEndpoint.h_guild_one_member
+        """`GET /guilds/{guild_id}/members/{user_id}`
 
-        Handle `GET /guilds/{guild_id}/members/{user_id}`
-        '''
+        Get a specific member in a guild.
+        """
 
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
@@ -89,11 +83,10 @@ class GuildsEndpoint:
         return _json(guild.members[user_id].as_json)
 
     async def h_guild_members(self, request):
-        '''
-        GuildsEndpoint.h_guild_members
+        """`GET /guilds/{guild_id}/members`
 
-        Handle `GET /guilds/{guild_id}/members`
-        '''
+        Returns a list of all the members in a guild.
+        """
 
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
