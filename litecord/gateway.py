@@ -42,7 +42,7 @@ class Connection:
         self.ws = ws
         self.path = path
 
-        # sequence stuff
+        # last sequence sent by the server
         self._seq = 0
 
         # the last event client received, used for resuming
@@ -51,6 +51,7 @@ class Connection:
         #  if it is, we do session invalidation
         self.last_seq = None
 
+        # some stuff
         self.token = None
         self.identified = False
         self.properties = {}
@@ -58,19 +59,27 @@ class Connection:
 
         # reference to LitecordServer
         self.server = server
+
+        # reference to PresenceManager
         self.presence = server.presence
 
         # OP handlers
         self.op_handlers = {
             OP['HEARTBEAT']: self.heartbeat_handler,
             OP['IDENTIFY']: self.identify_handler,
-            OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
             OP['STATUS_UPDATE']: self.status_handler,
+
+            #OP['RESUME']: self.resume_handler,
+            OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
+
+            # Undocumented.
             OP['GUILD_SYNC']: self.guild_sync_handler,
         }
 
         # Event handlers
         #  Fired when a client sends an OP 0 DISPATCH
+        #  NOTE: This is unlikely to happen.
+        #   However we should be ready when it happens, right?
         self.event_handlers = {}
 
     def basic_hello(self):
@@ -79,7 +88,7 @@ class Connection:
             'op': OP["HELLO"],
             'd': {
                 'heartbeat_interval': 20000,
-                '_trace': [],
+                '_trace': ["litecord-gateway-prd-1-69"],
             }
         }
 
@@ -226,8 +235,7 @@ class Connection:
 
         log.info("New session %s", self.session_id)
 
-        # this sets to a default of online
-        await self.presence.status_update(self.user['id'])
+        # do the thing with large_threshold
         all_guild_list = [guild for guild in guild_list]
         guild_list = []
 
@@ -246,6 +254,9 @@ class Connection:
             'guilds': guild_list,
             'session_id': self.session_id,
         })
+
+        # only set the user to an online status AFTER we dispatched READY
+        await self.presence.status_update(self.user['id'])
 
         return True
 
@@ -291,6 +302,10 @@ class Connection:
             'guild_id': guild_id,
             'members': chunk,
         })
+
+    async def resume_handler(self, data):
+        """Dummy Handler for OP 6 Resume"""
+        pass
 
     async def process_recv(self, payload):
         """Process a payload sent by the client.

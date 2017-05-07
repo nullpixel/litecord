@@ -18,5 +18,10 @@ OP = {
     'INVALID_SESSION': 9,
     'HELLO': 10,
     'HEARTBEAT_ACK': 11,
+
+    # Undocumented OP code
     'GUILD_SYNC': 12,
+
+    # TODO: meme op code because we can do that here :^)
+    #'MEME': 69,
 }
