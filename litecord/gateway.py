@@ -391,7 +391,13 @@ class Connection:
 
         try:
             while True:
-                payload = json.loads(await self.ws.recv())
+                received = await self.ws.recv()
+                if len(received) > 4096:
+                    await self.ws.close(4002)
+                    self.cleanup()
+                    break
+
+                payload = json.loads(received)
                 continue_flag = await self.process_recv(payload)
 
                 # if process_recv tells us to stop, we clean everything
