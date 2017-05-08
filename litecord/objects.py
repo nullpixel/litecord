@@ -58,7 +58,10 @@ class Presence:
         # merge the two, with game overwriting _default
         self.game = {**_default, **game}
         self.user = user
-        self.guild_id = int(guild_id)
+        try:
+            self.guild_id = int(guild_id)
+        except:
+            self.guild_id = None
 
         if self.game['status'] not in ('online', 'offline', 'idle'):
             log.warning(f'Presence for {self.user!r} with unknown status')

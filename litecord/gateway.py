@@ -265,6 +265,11 @@ class Connection:
 
         Sends a Guild Members Chunk event(https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
         """
+        if not self.identified:
+            log.warning("Client not identified to do OP 8, closing with 4003")
+            await self.ws.close(4003)
+            return False
+
         guild_id = data.get('guild_id')
         query = data.get('query')
         limit = data.get('limit')
@@ -296,16 +301,73 @@ class Connection:
                     'guild_id': guild_id,
                     'members': chunk,
                 })
-            return
-
-        await self.dispatch('GUILD_MEMBERS_CHUNK', {
-            'guild_id': guild_id,
-            'members': chunk,
-        })
+        else:
+            await self.dispatch('GUILD_MEMBERS_CHUNK', {
+                'guild_id': guild_id,
+                'members': chunk,
+            })
+        return True
 
     async def resume_handler(self, data):
         """Dummy Handler for OP 6 Resume"""
-        pass
+        if not self.identified:
+            log.warning("Client not identified to do OP 6, closing with 4003")
+            await self.ws.close(4003)
+            return True
+
+        return True
+
+    async def status_handler(self, data):
+        """Handle OP 3 Status Update packets
+
+        Checks the payload format and if it is OK, calls `PresenceManager.status_update`
+        """
+
+        if not self.identified:
+            log.error("Client not identified to do OP 3, closing with 4003")
+            await self.ws.close(4003)
+            return False
+
+        idle_since = data.get('idle_since', 'nothing')
+        game = data.get('game')
+        if game is not None:
+            game_name = game.get('name')
+            if game_name is not None:
+                await self.presence.status_update(self.user['id'], {
+                    'name': game_name,
+                })
+            return True
+
+        return False
+
+    async def guild_sync_handler(self, data):
+        """Handle OP 12 Guild Sync packets
+
+        This is an undocumented OP on Discord's API docs.
+        This OP is sent by the client to request member and presence information.
+        """
+
+        if not self.identified:
+            log.error("Client not identified to do OP 12, closing with 4003")
+            await self.ws.close(4003)
+            return False
+
+        if not isinstance(data, list):
+            log.error('[guild_sync] client didn\'t send a list')
+            await self.ws.close(4001)
+            return False
+
+        # ASSUMPTION: data is a list of guild IDs
+        for guild_id in data:
+            guild = self.guilds.get_guild(guild_id)
+
+            await self.dispatch('GUILD_SYNC', {
+                'id': guild_id,
+                'presences': [self.presence.get_presence(member.id) for member in guild.online_members],
+                'members': [member.as_json for member in guild.online_members],
+            })
+
+        return True
 
     async def process_recv(self, payload):
         """Process a payload sent by the client.
@@ -341,43 +403,6 @@ class Connection:
         # if the op is non existant, we just ignore
         return True
 
-    async def status_handler(self, data):
-        """Handle OP 3 Status Update packets
-
-        Checks the payload format and if it is OK, calls `PresenceManager.status_update`
-        """
-
-        idle_since = data.get('idle_since', 'nothing')
-        game = data.get('game')
-        if game is not None:
-            game_name = game.get('name')
-            if game_name is not None:
-                await self.presence.status_update(self.user['id'], {
-                    'name': game_name,
-                })
-                return True
-
-    async def guild_sync_handler(self, data):
-        """Handle OP 12 Guild Sync packets
-
-        This is an undocumented OP on Discord's API docs.
-        This OP is sent by the client to request member and presence information.
-        """
-
-        if not isinstance(data, list):
-            log.error('[guild_sync] client didn\'t send a list')
-            await self.ws.close(4001)
-
-        # ASSUMPTION: data is a list of guild IDs
-        for guild_id in data:
-            guild = self.guilds.get_guild(guild_id)
-
-            await self.dispatch('GUILD_SYNC', {
-                'id': guild_id,
-                'presences': [self.presence.get_presence(member.id) for member in guild.online_members],
-                'members': [member.as_json for member in guild.online_members],
-            })
-
     async def run(self):
         """Starts basic handshake with the client
 
@@ -397,10 +422,17 @@ class Connection:
                     self.cleanup()
                     break
 
-                payload = json.loads(received)
+                try:
+                    payload = json.loads(received)
+                except:
+                    await self.ws.close(4002)
+                    self.cleanup()
+                    break
+
                 continue_flag = await self.process_recv(payload)
 
                 # if process_recv tells us to stop, we clean everything
+                # process_recv will very probably close the websocket already
                 if not continue_flag:
                     log.info("Stopped processing")
                     self.cleanup()
@@ -408,7 +440,7 @@ class Connection:
         except Exception as err:
             # if any error we just close with 4000
             log.error('Error while running the connection', exc_info=True)
-            await self.ws.close(4000, f'Unexpected error: {err!r}')
+            await self.ws.close(4000, f'Unknown error: {err!r}')
             self.cleanup()
             return
 
