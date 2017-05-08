@@ -36,6 +36,7 @@ class LitecordObject:
         """Get all objects from an indexable, in JSON serializable form"""
         return [indexable[index].as_json for index in indexable]
 
+
 class Presence:
     """A presence object.
 
@@ -81,6 +82,7 @@ class Presence:
             'status': self.game.get('status'),
         }
 
+
 class User(LitecordObject):
     """A general user object.
 
@@ -125,6 +127,7 @@ class User(LitecordObject):
                     return connection
         return None
 
+
 class Member(LitecordObject):
     """A general member object.
 
@@ -164,6 +167,7 @@ class Member(LitecordObject):
             'deaf': self.voice_deaf,
             'mute': self.voice_mute,
         }
+
 
 class Channel(LitecordObject):
     """A general text channel object
@@ -221,6 +225,7 @@ class Channel(LitecordObject):
             #'bitrate': self.bitrate,
             #'user_limit': self.user_limit,
         }
+
 
 class Guild(LitecordObject):
     """A general guild.
@@ -354,6 +359,7 @@ class Guild(LitecordObject):
             'channels': self.iter_json(self.channels),
             'presences': self.presences,
         }
+
 
 class Message:
     """A general message object.

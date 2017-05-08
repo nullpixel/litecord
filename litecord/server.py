@@ -19,8 +19,10 @@ log = logging.getLogger(__name__)
 def get_random_salt(size=32):
     return base64.b64encode(os.urandom(size)).decode()
 
+
 def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
+
 
 class LitecordServer:
     """Main class for the Litecord server.

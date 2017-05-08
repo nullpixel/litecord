@@ -9,7 +9,7 @@ import sys
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
-from .utils import chunk_list
+from .utils import chunk_list, strip_user_data
 
 MAX_TRIES = 10
 
@@ -249,7 +249,7 @@ class Connection:
 
         await self.dispatch('READY', {
             'v': GATEWAY_VERSION,
-            'user': self.user,
+            'user': strip_user_data(self.user),
             'private_channels': [],
             'guilds': guild_list,
             'session_id': self.session_id,
@@ -376,11 +376,10 @@ class Connection:
         https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
         """
 
-        # first, we get data we actually need
         op = payload.get('op')
         data = payload.get('d')
-        if (op is None):
-            log.info("Got erroneous data from client, closing with 4001")
+        if op not in self.op_handlers:
+            log.info("opcode not found, closing with 4001")
             await self.ws.close(4001)
             return False
 
@@ -396,14 +395,9 @@ class Connection:
                 # don't even try to check in op_handlers.
                 return True
 
-        if op in self.op_handlers:
-            handler = self.op_handlers[op]
-            return (await handler(data))
-        else:
-            # 4001 is sent when client sends a packet with unkown opcode
-            # or has opcode but invalid data object
-            await self.ws.close(4001)
-            return False
+        handler = self.op_handlers[op]
+        return (await handler(data))
+
 
     async def run(self):
         """Starts basic handshake with the client
@@ -459,6 +453,7 @@ class Connection:
             valid_tokens.remove(self.token)
             session_data.pop(self.session_id)
             self.token = None
+
 
 async def gateway_server(app, databases):
     """Main function to start the websocket server

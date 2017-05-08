@@ -15,6 +15,7 @@ async def get_raw_token():
     token = hashlib.md5(_str.encode()).hexdigest()
     return f'memework_{token}'
 
+
 def _snowflake(timestamp):
     """Generate a snowflake from a specific timestamp.
 
@@ -30,6 +31,7 @@ def _snowflake(timestamp):
     res = f'{b_epoch}{b_id}'
     return int(res[2:], 2)
 
+
 def _snowflake_raw(timestamp, process_id):
     """Make a snowflake using raw data"""
     since_epoch = int(timestamp - EPOCH)
@@ -37,6 +39,7 @@ def _snowflake_raw(timestamp, process_id):
     b_id = '{0:011b}'.format(process_id)
     res = f'{b_epoch}{b_id}'
     return int(res[2:], 2)
+
 
 def snowflake_time(snowflake):
     """Get a timestamp from a specific snowflake"""
@@ -46,6 +49,7 @@ def snowflake_time(snowflake):
 
     timestamp = EPOCH + since_epoch
     return timestamp
+
 
 def get_snowflake():
     """Generate a snowflake"""
