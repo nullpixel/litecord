@@ -2,6 +2,8 @@ import json
 import logging
 from aiohttp import web
 from ..utils import _err, _json, strip_user_data
+from ..snowflake import get_snowflake
+from ..objects import Message
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class ChannelsEndpoint:
         #_r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
         #_r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
 
-        #_r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
+        _r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
         #_r.add_patch('/api/channels/{channel_id}/messages/{message_id}',
         #               self.h_patch_message)
 
@@ -73,3 +75,50 @@ class ChannelsEndpoint:
 
         await self.server.presence.typing_start(user.id, channel_id)
         return web.Response(status=204)
+
+    async def h_post_message(self, request):
+        """`POST /channels/{channel_id}/messages/`.
+
+        Send a message.
+        Dispatches MESSAGE_CREATE events to relevant clients.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        channel_id = request.match_info['channel_id']
+        user = self.server._user(_error_json['token'])
+
+        channel = self.server.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=ERR_CODES['UNKNOWN_CHANNEL'])
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        try:
+            payload = await request.json()
+        except:
+            return _err("error parsing")
+
+        try:
+            content = payload['content']
+            if len(content) > 2000:
+                return web.response(status=400)
+        except:
+            return _err('no useful content provided')
+
+        tts = payload.get('tts', False)
+
+        _data = {
+            'id': get_snowflake(),
+            'author_id': user.id,
+            'content': content,
+        }
+
+        # TODO: this part
+        new_message = self.server.guild_man.new_message(_data)
+        return _json(new_message.as_json)

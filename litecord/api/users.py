@@ -25,7 +25,7 @@ class UsersEndpoint:
         #_r.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
 
     async def h_users(self, request):
-        """Handle `GET /users/{user_id}`
+        """Handle `GET /users/{user_id}`.
 
         Get a specific user.
         """
@@ -61,7 +61,7 @@ class UsersEndpoint:
             return _json(strip_user_data(userdata))
 
     async def h_add_user(self, request):
-        """`POST /users/add`
+        """`POST /users/add`.
 
         Creates a user.
         Input: A JSON object:
@@ -117,7 +117,7 @@ class UsersEndpoint:
         })
 
     async def h_patch_me(self, request):
-        """`PATCH /users/@me`
+        """`PATCH /users/@me`.
 
         Changes a user.
         Returns the new user object.
@@ -155,7 +155,7 @@ class UsersEndpoint:
         })
 
     async def h_get_me_settings(self, request):
-        """`GET /users/@me/settings`
+        """`GET /users/@me/settings`.
 
         Dummy handler.
         """

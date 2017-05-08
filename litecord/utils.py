@@ -3,6 +3,50 @@ import datetime
 from random import randint
 from aiohttp import web
 
+ERR_TRANSLATOR = {
+    10001: 'Unknown Account',
+    10002: 'Unknown Application',
+    10003: 'Unknown Channel',
+    10004: 'Unknown Guild',
+    10005: 'Unknown Integration',
+    10006: 'Unknown Invite',
+    10007: 'Unknown Member',
+    10008: 'Unknown Message',
+    10009: 'Unknown Overwrite',
+    10010: 'Unknown Provider',
+    10011: 'Unknown Role',
+    10012: 'Unknown Token',
+    10013: 'Unknown User',
+    20001: 'Bots cannot use this endpoint',
+    20002: 'Only bots can use this endpoint',
+    30001: 'Maximum number of guilds reached (100)',
+    30002: 'Maximum number of friends reached (1000)',
+    40001: 'Unauthorized',
+    50001: 'Missing Access',
+    50002: 'Invalid Account Type',
+    50003: 'Cannot execute action on a DM channel',
+    50004: 'Embed Disabled',
+    50005: 'Cannot edit a message authored by another user',
+    50006: 'Cannot send an empty message',
+    50007: 'Cannot send messages to this user',
+    50008: 'Cannot send messages in a voice channel',
+    50009: 'Channel verification level is too high',
+    50010: 'OAuth2 application does not have a bot',
+    50011: 'OAuth2 application limit reached',
+    50012: 'Invalid OAuth State',
+    50013: 'Missing Permissions',
+    50014: 'Invalid authentication token',
+    50015: 'Note is too long',
+    50016: 'Provided too few or too many messages to delete. Must provide at least 2 and fewer than 100 messages to delete.',
+    50019: 'A message can only be pinned to the channel it was sent in',
+    50034: 'A message provided was too old to bulk delete',
+    90001: 'Reaction Blocked',
+}
+
+ERRNO_TO_HTTPERR = {
+    40001: 403,
+}
+
 def strip_user_data(user):
     """Remove unecessary fields from a raw user object"""
     return {
@@ -24,8 +68,14 @@ def random_digits(n):
     return randint(range_start, range_end)
 
 
-def _err(msg):
-    return web.Response(text=json.dumps({
+def _err(msg='', errno=None):
+    if errno is not None:
+        return web.Response(status=ERRNO_TO_HTTPERR.get(errno, 500), text=json.dumps({
+            'code': errno,
+            'message': ERR_TRANSLATOR[errno]
+        }))
+
+    return web.Response(status=500, text=json.dumps({
         'code': 0,
         'message': msg
     }))
@@ -44,7 +94,7 @@ def dt_to_json(dt):
 
 
 def _json(obj):
-    return web.Response(text=json.dumps(obj))
+    return web.Response(status=200, text=json.dumps(obj))
 
 
 # Modification of https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
