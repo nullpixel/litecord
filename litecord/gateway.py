@@ -399,9 +399,11 @@ class Connection:
         if op in self.op_handlers:
             handler = self.op_handlers[op]
             return (await handler(data))
-
-        # if the op is non existant, we just ignore
-        return True
+        else:
+            # 4001 is sent when client sends a packet with unkown opcode
+            # or has opcode but invalid data object
+            await self.ws.close(4001)
+            return False
 
     async def run(self):
         """Starts basic handshake with the client
