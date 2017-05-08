@@ -175,8 +175,6 @@ class Connection:
         Args:
             data: A dictionary, https://discordapp.com/developers/docs/topics/gateway#gateway-identify
         """
-        log.info('[identify] identifying connection')
-
         token = data.get('token')
         prop = data.get('properties')
         large = data.get('large_threshold')
@@ -231,12 +229,15 @@ class Connection:
 
         # set identified to true so we know this connection is 👌 good 👌
         self.identified = True
-        guild_list = self.server.guild_man.get_guilds(self.user['id'])
 
-        log.info("New session %s", self.session_id)
+        # set user status before even calculating guild data to be sent
+        # if we do it *after* READY, the presence manager errors since it tries
+        # to get presence stuff for a member that is still connecting
+        await self.presence.status_update(self.user['id'])
 
-        # do the thing with large_threshold
-        all_guild_list = [guild for guild in guild_list]
+        all_guild_list = self.server.guild_man.get_guilds(self.user['id'])
+
+        # the actual list of guilds to be sent to the client
         guild_list = []
 
         for guild in all_guild_list:
@@ -247,16 +248,18 @@ class Connection:
 
             guild_list.append(guild_json)
 
+        stripped_user = strip_user_data(self.user)
+
+        log.info("New session %s, user with %d bytes, sending %d guilds", self.session_id, \
+            len(json.dumps(stripped_user)), len(guild_list))
+
         await self.dispatch('READY', {
             'v': GATEWAY_VERSION,
-            'user': strip_user_data(self.user),
+            'user': stripped_user,
             'private_channels': [],
             'guilds': guild_list,
             'session_id': self.session_id,
         })
-
-        # only set the user to an online status AFTER we dispatched READY
-        await self.presence.status_update(self.user['id'])
 
         return True
 
@@ -448,7 +451,11 @@ class Connection:
         The cleanup only happens if the connection is identified.
         This method can only be called once.
         """
+        if self.ws.open:
+            log.warning("Cleaning up a connection while it is open")
+
         if self.token is not None:
+            log.debug(f'cleaning up session ID {self.session_id!r}')
             token_to_session.pop(self.token)
             valid_tokens.remove(self.token)
             session_data.pop(self.session_id)
@@ -486,7 +493,7 @@ async def gateway_server(app, databases):
         sys.exit(1)
 
     async def henlo(websocket, path):
-        log.info("Got new client, opening connection")
+        log.info("Opening connection")
         conn = Connection(server, websocket, path)
         await conn.run()
         log.info("Stopped connection", exc_info=True)
@@ -497,6 +504,6 @@ async def gateway_server(app, databases):
     app.router.add_post('/api/auth/login', server.login)
 
     # start WS
-    log.info("Starting WS")
-    start_server = websockets.serve(henlo, '0.0.0.0', 12000)
-    await start_server
+    log.info("[websocket] starting")
+    ws_server = websockets.serve(henlo, '0.0.0.0', 12000)
+    await ws_server

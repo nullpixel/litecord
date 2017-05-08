@@ -7,8 +7,10 @@ import json
 import aiohttp
 import litecord
 
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger('init')
+logging.basicConfig(level=logging.INFO, \
+    format='[%(levelname)7s] [%(name)s] %(message)s')
+
+log = logging.getLogger('litecord')
 
 app = web.Application()
 
@@ -25,14 +27,21 @@ async def give_gateway(request):
 async def index(request):
     return web.Response(text=json.dumps({"goto": "/api/gateway"}))
 
-app.router.add_get('/', index)
-app.router.add_get('/api/gateway', give_gateway)
+def main():
+    app.router.add_get('/', index)
+    app.router.add_get('/api/gateway', give_gateway)
 
-if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    log.info("Starting gateway")
 
+    log.debug("[main] starting ws task")
     gateway_task = loop.create_task(litecord.gateway_server(app, DATABASES))
+
+    log.debug("[main] starting http")
     web.run_app(app, port=8000)
+
+    log.info("Exiting...")
     gateway_task.cancel()
     loop.close()
+
+if __name__ == "__main__":
+    main()

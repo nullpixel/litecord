@@ -280,7 +280,7 @@ class Guild(LitecordObject):
             self.channels[channel_id] = channel
 
         # list of snowflakes
-        self.member_ids = _guild_data['members']
+        self.member_ids = [int(member_id) for member_id in _guild_data['members']]
         self.members = {}
 
         for member_id in self.member_ids:
