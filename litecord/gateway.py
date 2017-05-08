@@ -401,7 +401,6 @@ class Connection:
         handler = self.op_handlers[op]
         return (await handler(data))
 
-
     async def run(self):
         """Starts basic handshake with the client
 
@@ -436,6 +435,11 @@ class Connection:
                     log.info("Stopped processing")
                     self.cleanup()
                     break
+        except websockets.ConnectionClosed as err:
+            # signal clients that this one is offline
+            log.info(f"[ws] closed, code {err.code!r}")
+            self.cleanup()
+            await self.presence.status_update(self.user['id'], self.presence.offline())
         except Exception as err:
             # if any error we just close with 4000
             log.error('Error while running the connection', exc_info=True)
@@ -448,9 +452,11 @@ class Connection:
     def cleanup(self):
         """Remove the connection from being found
 
-        The cleanup only happens if the connection is identified.
-        This method can only be called once.
+        The cleanup only happens if the connection is open and identified.
+        This method can only be called once in a connection.
         """
+
+        self.identified = False
         if self.ws.open:
             log.warning("Cleaning up a connection while it is open")
 

@@ -32,6 +32,15 @@ class PresenceManager:
         user = self.server.get_user(user_id)
         self.presences[user_id] = Presence(user, game)
 
+    def offline(self):
+        """Return a presence dict object for offline users"""
+        return {
+            'status': 'offline',
+            'type': 0,
+            'name': None,
+            'url': None,
+        }
+
     async def status_update(self, user_id, new_status=None):
         """Updates an user's status.
 
@@ -49,7 +58,7 @@ class PresenceManager:
         presence = self.presences[user_id]
         presence.game.update(new_status)
 
-        log.info(f'{user_id} is now playing {presence.game["name"]}, updating presences')
+        log.info(f'{user_id} : {presence}, updating presences')
 
         for guild in user.guilds:
             for member in guild.online_members:

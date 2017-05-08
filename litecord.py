@@ -7,7 +7,7 @@ import json
 import aiohttp
 import litecord
 
-logging.basicConfig(level=logging.INFO, \
+logging.basicConfig(level=logging.DEBUG, \
     format='[%(levelname)7s] [%(name)s] %(message)s')
 
 log = logging.getLogger('litecord')

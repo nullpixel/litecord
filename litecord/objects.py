@@ -307,11 +307,12 @@ class Guild(LitecordObject):
 
     @property
     def online_members(self):
-        """Get all members that have a connection"""
-        for member_id in self.members:
-            member = self.members[member_id]
-            if member.user.connection is not None:
-                yield member
+        """Yield all members that have an identified connection"""
+        for member in self.members.values():
+            conn = member.user.connection
+            if conn is not None:
+                if conn.identified:
+                    yield member
 
     @property
     def presences(self):
