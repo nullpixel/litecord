@@ -207,7 +207,16 @@ class LitecordServer:
         if len(auth_header) < 1:
             return _err('401: Unauthorized, Malformed request')
 
-        token_type, token_value = auth_header.split()
+        try:
+            token_type, token_value = auth_header.split()
+        except:
+            if auth_header.startswith('memework_'):
+                token_type = 'Bot'
+                token_value = auth_header
+            else:
+                log.info(f"Received weird auth header: {auth_header!r}")
+                return _err('error parsing Authorization header')
+
         if token_type != 'Bot':
             return _err('401: Unauthorized, Invalid token type')
 

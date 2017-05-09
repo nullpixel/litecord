@@ -222,6 +222,18 @@ class Channel(LitecordObject):
             pass
         return None
 
+    async def last_messages(self, limit=50):
+        """Get the last messages from a channel.
+
+        Returns an ordered list of `Message` objects.
+        """
+        res = []
+        for m in self.server.guild_man.all_messages():
+            if len(res) > limit: break
+            if m.channel.id == self.id:
+                res.append(m)
+        return res
+
     @property
     def as_json(self):
         return {
@@ -426,7 +438,7 @@ class Message:
         return {
             'id': str(self.id),
             'channel_id': str(self.channel_id),
-            'author': self.user.as_json,
+            'author': self.author.as_json,
             'content': self.content,
             'timestamp': dt_to_json(self.timestamp),
             'edited_timestamp': self.edited_at or None,

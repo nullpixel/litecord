@@ -17,7 +17,7 @@ class ChannelsEndpoint:
         _r.add_get('/api/channels/{channel_id}', self.h_get_channel)
 
         # NOTE: needs message stuff in GuildManager
-        #_r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
+        _r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
         _r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
 
         _r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
@@ -151,3 +151,48 @@ class ChannelsEndpoint:
             return _err(errno=10008)
 
         return _json(message.as_json)
+
+    async def h_get_messages(self, request):
+        """`GET /channels/{channel_id}/messages`.
+
+        Returns a list of messages.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        channel_id = request.match_info['channel_id']
+
+        user = self.server._user(_error_json['token'])
+        channel = self.server.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=10003)
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        # get data from payload
+        # this is ugly.
+        data = request.query_string.split('=')
+        limit = 50
+        if len(data) == 2:
+            key, val = data
+            if key == 'limit':
+                try:
+                    limit = int(val)
+                except:
+                    limit = 50
+
+        if limit > 300:
+            meme
+
+        # TODO: understand these
+        #around = request.query.get('around', 50)
+        #before = request.query.get('before', 50)
+        #after = request.query.get('after', 50)
+
+        message_list = await channel.last_messages(limit)
+        return _json([m.as_json for m in message_list])

@@ -1,7 +1,11 @@
 import json
 import datetime
+import logging
+
 from random import randint
 from aiohttp import web
+
+log = logging.getLogger(__name__)
 
 ERR_TRANSLATOR = {
     10001: 'Unknown Account',
@@ -69,6 +73,7 @@ def random_digits(n):
 
 
 def _err(msg='', errno=None):
+    log.debug(f"Erroring {msg!r} {errno!r}")
     if errno is not None:
         return web.Response(status=ERRNO_TO_HTTPERR.get(errno, 500), text=json.dumps({
             'code': errno,

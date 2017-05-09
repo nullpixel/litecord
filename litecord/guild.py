@@ -48,6 +48,14 @@ class GuildManager:
         for guild_id in self.guilds:
             yield self.guilds[guild_id]
 
+    def all_messages(self, limit=500):
+        """Yield `limit` messages, with the 1st being the most recent one."""
+        sorted_ids = sorted(self.messages.keys(), reverse=True)[:limit]
+
+        for message_id in sorted_ids:
+            message = self.messages[message_id]
+            yield message
+
     async def new_message(self, **kwargs):
         """Create a new message and put it in the database.
 
