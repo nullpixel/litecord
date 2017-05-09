@@ -45,7 +45,7 @@ def snowflake_time(snowflake):
     """Get a timestamp from a specific snowflake"""
     snowflake = int(snowflake)
     b_snowflake = '{0:049b}'.format(snowflake)
-    since_epoch = int(b_snowflake[:37], 2)
+    since_epoch = int(b_snowflake[:38], 2)
 
     timestamp = EPOCH + since_epoch
     return timestamp

@@ -86,16 +86,9 @@ def _err(msg='', errno=None):
     }))
 
 
-date_handler = lambda obj: (
-    obj.isoformat()
-    if isinstance(obj, datetime.datetime)
-    or isinstance(obj, datetime.date)
-    else None
-)
-
 def dt_to_json(dt):
     """Convert a `datetime.datetime` object to a JSON serializable string"""
-    return json.dumps(dt, default=date_handler)
+    return dt.isoformat()
 
 
 def _json(obj):
