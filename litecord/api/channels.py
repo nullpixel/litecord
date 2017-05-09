@@ -18,7 +18,7 @@ class ChannelsEndpoint:
 
         # NOTE: needs message stuff in GuildManager
         #_r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
-        #_r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
+        _r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
 
         _r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
         #_r.add_patch('/api/channels/{channel_id}/messages/{message_id}',
@@ -94,7 +94,7 @@ class ChannelsEndpoint:
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:
-            return _err(errno=ERR_CODES['UNKNOWN_CHANNEL'])
+            return _err(errno=10003)
 
         if user.id not in channel.guild.members:
             return _err(errno=40001)
@@ -122,3 +122,32 @@ class ChannelsEndpoint:
         # TODO: this part
         new_message = self.server.guild_man.new_message(_data)
         return _json(new_message.as_json)
+
+    async def h_get_single_message(self, request):
+        """`GET /channels/{channel_id}/messages/{message_id}`.
+
+        Get a single message by its snowflake ID.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        channel_id = request.match_info['channel_id']
+        message_id = request.match_info['message_id']
+
+        user = self.server._user(_error_json['token'])
+        channel = self.server.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=10003)
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        message = channel.get_message(message_id)
+        if message is None:
+            return _err(errno=10008)
+
+        return _json(message.as_json)

@@ -212,6 +212,16 @@ class Channel(LitecordObject):
         # TODO: messages
         self.last_message_id = 0
 
+    def get_message(self, message_id):
+        """Get a single message from a channel."""
+        try:
+            m = self.server.guild_man.get_message(message_id)
+            if m.channel.id == self.id:
+                return m
+        except AttributeError:
+            pass
+        return None
+
     @property
     def as_json(self):
         return {
