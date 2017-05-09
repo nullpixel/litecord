@@ -322,7 +322,7 @@ class Guild(LitecordObject):
     def presences(self):
         """Returns a list of `Presence` objects for all online members."""
         return [self.server.presence.get_presence(self.id, member.id).as_json \
-            for member in self.online_members],
+            for member in self.online_members]
 
     @property
     def as_json(self):

@@ -26,7 +26,6 @@ class PresenceManager:
             self.presences[guild_id] = {}
             guild_presences = self.presences[guild_id]
 
-        print(guild_presences)
         try:
             return guild_presences[user_id]
         except:
@@ -51,7 +50,6 @@ class PresenceManager:
         if new_status is None:
             new_status = {}
 
-        print(guild, user)
         user_id = user.id
         guild_id = guild.id
 

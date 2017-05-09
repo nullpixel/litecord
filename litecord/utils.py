@@ -52,7 +52,7 @@ def strip_user_data(user):
     return {
         'id': str(user['id']),
         'username': user['username'],
-        'discriminator': user['discriminator'],
+        'discriminator': str(user['discriminator']),
         'avatar': user['avatar'],
         'bot': user['bot'],
         #'mfa_enabled': user['mfa_enabled'],
