@@ -119,8 +119,7 @@ class ChannelsEndpoint:
             'content': content,
         }
 
-        # TODO: this part
-        new_message = self.server.guild_man.new_message(_data)
+        new_message = await self.server.guild_man.new_message(channel, user, _data)
         return _json(new_message.as_json)
 
     async def h_get_single_message(self, request):

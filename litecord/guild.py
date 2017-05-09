@@ -1,5 +1,6 @@
 import logging
 from .objects import Guild, Message
+from .snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
@@ -56,13 +57,24 @@ class GuildManager:
             message = self.messages[message_id]
             yield message
 
-    async def new_message(self, **kwargs):
+    async def new_message(self, channel, author, raw):
         """Create a new message and put it in the database.
 
         Dispatches MESSAGE_CREATE events to respective clients.
         Returns a `Message` object.
         """
-        raise NotImplemented
+
+        message_id = get_snowflake()
+        message = Message(self.server, channel, raw)
+
+        self.messages[message_id] = message
+
+        # TODO: store messages
+        for member in channel.guild.online_members:
+            conn = member.connection
+            await conn.dispatch('MESSAGE_CREATE', message.as_json)
+
+        return message
 
     def init(self):
         for guild_id in self.guild_db:
