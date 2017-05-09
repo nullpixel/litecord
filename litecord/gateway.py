@@ -55,7 +55,10 @@ class Connection:
         self.token = None
         self.identified = False
         self.properties = {}
+
+        # user objects
         self.user = None
+        self.raw_user = None
 
         # reference to LitecordServer
         self.server = server
@@ -151,7 +154,7 @@ class Connection:
 
     async def get_myself(self):
         """Get the raw user that this connection represents."""
-        return self.user
+        return self.raw_user
 
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
@@ -209,7 +212,9 @@ class Connection:
             await self.ws.close(4004, 'Authentication failed..')
             return
 
-        self.user = user_object
+        self.raw_user = user_object
+        self.user = self.server.get_user(self.raw_user['id'])
+
         self.session_id = self.gen_sessid()
         self.token = token
 
@@ -227,15 +232,15 @@ class Connection:
         session_data[self.session_id] = self
         token_to_session[self.token] = self.session_id
 
-        # set identified to true so we know this connection is 👌 good 👌
-        self.identified = True
-
         # set user status before even calculating guild data to be sent
         # if we do it *after* READY, the presence manager errors since it tries
         # to get presence stuff for a member that is still connecting
-        await self.presence.status_update(self.user['id'])
+        await self.presence.global_update(self.user)
 
-        all_guild_list = self.server.guild_man.get_guilds(self.user['id'])
+        # set identified to true so we know this connection is 👌 good 👌
+        self.identified = True
+
+        all_guild_list = self.server.guild_man.get_guilds(self.user.id)
 
         # the actual list of guilds to be sent to the client
         guild_list = []
@@ -248,7 +253,7 @@ class Connection:
 
             guild_list.append(guild_json)
 
-        stripped_user = strip_user_data(self.user)
+        stripped_user = strip_user_data(self.raw_user)
 
         log.info("New session %s, user with %d bytes, sending %d guilds", self.session_id, \
             len(json.dumps(stripped_user)), len(guild_list))
@@ -336,7 +341,7 @@ class Connection:
         if game is not None:
             game_name = game.get('name')
             if game_name is not None:
-                await self.presence.status_update(self.user['id'], {
+                await self.presence.global_update(self.user, {
                     'name': game_name,
                 })
             return True
@@ -366,7 +371,8 @@ class Connection:
 
             await self.dispatch('GUILD_SYNC', {
                 'id': guild_id,
-                'presences': [self.presence.get_presence(member.id) for member in guild.online_members],
+                'presences': [self.presence.get_presence(guild_id, member.id) \
+                    for member in guild.online_members],
                 'members': [member.as_json for member in guild.online_members],
             })
 
@@ -439,7 +445,7 @@ class Connection:
             # signal clients that this one is offline
             log.info(f"[ws] closed, code {err.code!r}")
             self.cleanup()
-            await self.presence.status_update(self.user['id'], self.presence.offline())
+            await self.presence.global_update(self.user, self.presence.offline())
         except Exception as err:
             # if any error we just close with 4000
             log.error('Error while running the connection', exc_info=True)

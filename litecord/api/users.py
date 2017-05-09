@@ -39,7 +39,7 @@ class UsersEndpoint:
         # get data about the current user
         token = _error_json['token']
         session_id = self.server.session_dict[token]
-        user = self.server.sessions[session_id].user
+        user = self.server.sessions[session_id].raw_user
         user = strip_user_data(user)
 
         if user_id == '@me':
@@ -135,7 +135,7 @@ class UsersEndpoint:
         # get data about the current user
         token = _error_json['token']
         session_id = self.server.session_dict[token]
-        user = self.server.sessions[session_id].user
+        user = self.server.sessions[session_id].raw_user
         user = strip_user_data(user)
 
         users = self.server.db['users']

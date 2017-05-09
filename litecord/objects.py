@@ -48,7 +48,7 @@ class Presence:
         user: The user that this presence object is linked to.
         guild_id: An optional attribute, only used in `Presence.as_json`
     """
-    def __init__(self, user, game=None, guild_id=None):
+    def __init__(self, guild, user, status=None):
         _default = {
             'status': 'online',
             'type': 0,
@@ -57,18 +57,15 @@ class Presence:
         }
 
         # merge the two, with game overwriting _default
-        self.game = {**_default, **game}
+        self.game = {**_default, **status}
         self.user = user
-        try:
-            self.guild_id = int(guild_id)
-        except:
-            self.guild_id = None
+        self.guild = guild
 
         if self.game['status'] not in ('online', 'offline', 'idle'):
             log.warning(f'Presence for {self.user!r} with unknown status')
 
     def __repr__(self):
-        return f'Presence({self.user!r}, {self.game["status"]!r}, {self.game["name"]!r})'
+        return f'Presence({self.user!s}, {self.game["status"]!r}, {self.game["name"]!r})'
 
     @property
     def as_json(self):
@@ -76,9 +73,13 @@ class Presence:
             # Discord sends an incomplete user object with all optional fields(excluding id)
             # we are lazy, so we send the same user object you'd receive in other normal events :^)
             'user': self.user.as_json,
+            'guild_id': str(self.guild.id),
             'roles': [],
-            'game': self.game.get('name'),
-            'guild_id': str(self.guild_id),
+            'game': {
+                'type': self.game.get('type'),
+                'name': self.game.get('name'),
+                'url': self.game.get('url'),
+            },
             'status': self.game.get('status'),
         }
 
@@ -98,6 +99,9 @@ class User(LitecordObject):
         self.id = int(_data['id'])
         self.username = self._data['username']
         self.discriminator = self._data['discriminator']
+
+    def __str__(self):
+        return f'{self.username}#{self.discriminator}'
 
     def __repr__(self):
         return f'User({self.id}, {self.username}#{self.discriminator})'
@@ -123,7 +127,7 @@ class User(LitecordObject):
         for session_id in self.server.sessions:
             connection = self.server.sessions[session_id]
             if connection.identified:
-                if connection.user['id'] == self.id:
+                if connection.user.id == self.id:
                     return connection
         return None
 
@@ -317,7 +321,7 @@ class Guild(LitecordObject):
     @property
     def presences(self):
         """Returns a list of `Presence` objects for all online members."""
-        return [self.server.presence.get_presence(member.id).as_json \
+        return [self.server.presence.get_presence(self.id, member.id).as_json \
             for member in self.online_members],
 
     @property

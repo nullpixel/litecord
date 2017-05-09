@@ -129,7 +129,7 @@ class LitecordServer:
         This is a helper function to save lines of code in endpoint objects.
         """
         session_id = self.session_dict[token]
-        user_id = self.sessions[session_id].user['id']
+        user_id = self.sessions[session_id].user.id
         user = self.get_user(user_id)
         return user
 

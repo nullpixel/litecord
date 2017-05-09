@@ -7,7 +7,7 @@ Sends PRESENCE_UPDATE to clients when needed
 import logging
 import time
 
-from .objects import Presence
+from .objects import Presence, User
 
 log = logging.getLogger(__name__)
 
@@ -18,19 +18,20 @@ class PresenceManager:
         self.server = server
         self.presences = {}
 
-    def get_presence(self, user_id):
+    def get_presence(self, guild_id, user_id):
         """Get a `Presence` object from a user's ID."""
         try:
-            log.warning(f'Presence not found for user {user_id}')
-            print(self.presences)
-            return self.presences[user_id]
+            guild_presences = self.presences[guild_id]
         except KeyError:
-            return None
+            self.presences[guild_id] = {}
+            guild_presences = self.presences[guild_id]
 
-    def add_presence(self, user_id, game=None):
-        """Overwrite someone's presence."""
-        user = self.server.get_user(user_id)
-        self.presences[user_id] = Presence(user, game)
+        print(guild_presences)
+        try:
+            return guild_presences[user_id]
+        except:
+            log.warning(f"Presence not found for {user_id}")
+            return None
 
     def offline(self):
         """Return a presence dict object for offline users"""
@@ -41,33 +42,56 @@ class PresenceManager:
             'url': None,
         }
 
-    async def status_update(self, user_id, new_status=None):
-        """Updates an user's status.
+    async def status_update(self, guild, user, new_status=None):
+        """Update a user's status in a guild.
 
-        Dispatches PRESENCE_UPDATE events to relevant clients.
+        Dispatches PRESENCE_UPDATE events to relevant clients in the guild.
         """
 
         if new_status is None:
             new_status = {}
 
-        user = self.server.get_user(user_id)
-        if user_id not in self.presences:
-            self.presences[user_id] = Presence(user, new_status)
+        print(guild, user)
+        user_id = user.id
+        guild_id = guild.id
+
+        if guild_id not in self.presences:
+            self.presences[guild_id] = {}
+
+        guild_presences = self.presences[guild_id]
+        guild_presences[user_id] = Presence(guild, user, new_status)
 
         # TODO: just do presence.game.update if needed
-        presence = self.presences[user_id]
+        presence = guild_presences[user_id]
         presence.game.update(new_status)
 
-        log.info(f'{user_id} : {presence}, updating presences')
+        log.info(f'{user!s} : {presence!r}, updating presences')
+
+        for member in guild.online_members:
+            if member.id == user.id:
+                continue
+
+            conn = member.connection
+            if conn:
+                await conn.dispatch('PRESENCE_UPDATE', presence.as_json)
+
+    async def global_update(self, user, new_status=None):
+        """Updates an user's status, globally.
+
+        Dispatches PRESENCE_UPDATE events to relevant clients.
+        """
+
+        if not isinstance(user, User):
+            user = self.server.get_user(user_id)
+            if user is None:
+                log.error("[global_update] user not found")
+                return
 
         for guild in user.guilds:
-            for member in guild.online_members:
-                conn = member.connection
-                if conn:
-                    await conn.dispatch('PRESENCE_UPDATE', presence.as_json)
+            await self.status_update(guild, user, new_status)
 
     async def typing_start(self, user_id, channel_id):
-        """Sends a TYPING_START to relevant clients."""
+        """Sends a TYPING_START to relevant clients in the channel's guild."""
         typing_timestamp = int(time.time())
         channel = self.server.guild_man.get_channel(channel_id)
 
