@@ -46,18 +46,25 @@ class LitecordServer:
         self.db_paths = None
         self.db = {}
 
+        # if anybody needs
         self.loop = asyncio.get_event_loop()
 
+        # mongodb stuff
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client['litecord']
         self.message_db = self.litecord_db['messages']
 
+        # cache for events
         self.event_cache = {}
+
+        # cache for objects
         self.cache = {}
 
+        # TODO: don't make those references.
         self.valid_tokens = valid_tokens
         self.session_dict = session_dict
         self.sessions = sessions
+
         self.guild_man = None
 
     def db_init_all(self):
