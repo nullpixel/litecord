@@ -79,6 +79,10 @@ class PresenceManager:
         Dispatches PRESENCE_UPDATE events to relevant clients.
         """
 
+        if user is None:
+            log.error("Can't update presence for no one.")
+            return False
+
         if not isinstance(user, User):
             user = self.server.get_user(user_id)
             if user is None:

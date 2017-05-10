@@ -6,6 +6,7 @@ import uuid
 import traceback
 import json
 import sys
+import pprint
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
@@ -47,11 +48,18 @@ class Connection:
         # Last sequence sent by the client and last sequence received by the client
         # will be here
         self.events = None
+        self.hb_interval = 1000
+        self.wait_task = None
 
         # some stuff
         self.token = None
-        self.identified = False
+        self.session_id = None
         self.properties = {}
+
+        # flags
+        self.identified = False
+        self.resume_count = 0
+        # TODO: self.replay_lock = asyncio.Lock()
 
         # user objects
         self.user = None
@@ -69,7 +77,7 @@ class Connection:
             OP['IDENTIFY']: self.identify_handler,
             OP['STATUS_UPDATE']: self.status_handler,
 
-            #OP['RESUME']: self.resume_handler,
+            OP['RESUME']: self.resume_handler,
             OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
 
             # Undocumented.
@@ -87,7 +95,7 @@ class Connection:
         return {
             'op': OP["HELLO"],
             'd': {
-                'heartbeat_interval': 20000,
+                'heartbeat_interval': self.hb_interval,
                 '_trace': ["litecord-gateway-prd-1-69"],
             }
         }
@@ -159,12 +167,21 @@ class Connection:
 
         res = await self.send_json(payload)
         self.events['events'][sent_seq] = payload
+        self.events['sent_seq'] = sent_seq
 
         return res
 
     async def get_myself(self):
         """Get the raw user that this connection represents."""
         return self.raw_user
+
+    async def hb_wait_task(self):
+        try:
+            await asyncio.sleep((self.hb_interval + 4) / 1000)
+            #log.info("Closing client for lack of heartbeats")
+            #await self.ws.close(4001)
+        except asyncio.CancelledError:
+            pass
 
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
@@ -177,12 +194,40 @@ class Connection:
             data: An integer or None.
         """
         try:
+            self.wait_task.cancel()
+        except:
+            pass
+
+        try:
             self.events['recv_seq'] = data
         except:
             log.warning("Received OP 1 Heartbeat from unidentified connection")
 
         await self.send_op(OP['HEARTBEAT_ACK'], {})
+        self.wait_task = self.server.loop.create_task(self.hb_wait_task())
         return True
+
+    async def check_token(self, token):
+        db_users = self.server.db['users']
+        db_tokens = self.server.db['tokens']
+
+        if token not in db_tokens:
+            return False, None
+
+        raw_user = None
+        token_user_id = db_tokens[token]
+
+        for user_email in db_users:
+            user_id = db_users[user_email]['id']
+            if token_user_id == user_id:
+                # We found a valid token
+                raw_user = db_users[user_email]
+
+        if raw_user is None:
+            return False, None
+
+        user = self.server.get_user(raw_user['id'])
+        return True, raw_user, user
 
     async def identify_handler(self, data):
         """Handle an OP 2 Identify sent by the client.
@@ -203,32 +248,13 @@ class Connection:
             await self.ws.close(4001)
             return
 
-        # get DB objects
-        db_tokens = self.server.db['tokens']
-        db_users = self.server.db['users']
-
-        if token not in db_tokens:
-            log.warning('Invalid token, closing with 4004')
-            await self.ws.close(4004, 'Authentication failed..')
-            return
-
-        user_object = None
-        token_user_id = db_tokens[token]
-
-        # check if the token is valid
-        for user_email in db_users:
-            user_id = db_users[user_email]['id']
-            if token_user_id == user_id:
-                # We found a valid token
-                user_object = db_users[user_email]
-
-        if user_object is None:
-            log.warning('No users related to that token')
-            await self.ws.close(4004, 'Authentication failed..')
-            return
+        valid, user_object, user = await self.check_token(token)
+        if not valid:
+            await self.ws.close(4004, 'Authentication failed...')
+            return False
 
         self.raw_user = user_object
-        self.user = self.server.get_user(self.raw_user['id'])
+        self.user = user
 
         self.session_id = self.gen_sessid()
         self.token = token
@@ -340,12 +366,85 @@ class Connection:
             })
         return True
 
+    async def invalidate(self, flag=False, session_id=None):
+        log.info(f"Invalidated, can resume: {flag}")
+        await self.send_op(OP['INVALID_SESSION'], flag)
+        if not flag:
+            try:
+                self.server.event_cache.pop(self.session_id or session_id)
+                await self.ws.close(4001)
+            except:
+                pass
+
     async def resume_handler(self, data):
-        """Dummy Handler for OP 6 Resume"""
-        if not self.identified:
-            log.warning("Client not identified to do OP 6, closing with 4003")
-            await self.ws.close(4003)
+        """Handler for OP 6 Resume.
+
+        TODO: fix this implementaiton.
+        """
+
+        log.info("[resume] Resuming a connection...")
+
+        self.resume_count += 1
+        if self.resume_count > 3:
+            await self.ws.close(4001)
+            return
+
+        # get shit client sends
+        token = data.get('token')
+        session_id = data.get('session_id')
+        replay_seq = data.get('seq')
+
+        if replay_seq is None or session_id is None or token is None:
+            await self.ws.close(4001)
+            return False
+
+        if session_id not in self.server.event_cache:
+            log.warning("[resume] invalidated from session_id")
+            await self.invalidate(True)
             return True
+
+        event_data = self.server.event_cache[session_id]
+
+        valid, raw_user, user = await self.check_token(token)
+        if not valid:
+            log.warning("[resume] invalidated @ check_token")
+            await self.invalidate(session_id=session_id)
+            return False
+
+        # man how can i resume from the future
+        sent_seq = event_data['sent_seq']
+
+        if replay_seq > sent_seq:
+            log.warning(f"[resume] invalidated from replay_seq > sent_set {replay_seq} {sent_seq}")
+            await self.invalidate(True)
+            return True
+
+        # if the client loses more than 20 events while its offline,
+        # invalidate it.
+        if abs(replay_seq - sent_seq) > 20:
+            log.warning("[resume] invalidated from seq delta")
+            await self.invalidate(False, session_id=session_id)
+            return
+
+        seqs_to_replay = range(replay_seq, sent_seq + 1)
+        log.info(f"Replaying {len(seqs_to_replay)} events to {user!r}")
+
+        for seq in seqs_to_replay:
+            try:
+                await self.send_json(event_data[seq])
+            except KeyError:
+                log.info(f"Event {seq} not found")
+
+        self.raw_user = raw_user
+        self.user = user
+
+        self.token = token
+        self.session_id = session_id
+        self.identified = True
+
+        await self.dispatch('RESUMED', {
+            '_trace': ['litecord-gateway-prd-1-666']
+        })
 
         return True
 
@@ -487,6 +586,11 @@ class Connection:
         """
 
         self.identified = False
+        try:
+            self.hb_wait_task.cancel()
+        except:
+            pass
+
         if self.ws.open:
             log.warning("Cleaning up a connection while it is open")
 
