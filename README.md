@@ -1,6 +1,4 @@
 # Litecord
-=========
-
 An implementation of Discord's backend.
 
 This has real shitty code, good luck
@@ -12,21 +10,20 @@ With litecord you can run your own "Discord", locally, by yourself, but with lim
  * This is written in Python and it wasn't made to be resilient, don't DDoS a Litecord server
  * Ratelimits doesn't exist, yet.
 
-# Usage
-
-wow you *really* want to use it?
-
-ok then.
-
-
+## Installation
 ```bash
-# Pỳthon 3.6
-# something along those lines
-sudo pip3.6 install -U aiohttp websockets
+# Clone the repo
+git clone ssh://git@git.memework.org:2222/lnmds/litecord.git
+# Open the freshly cloned copy
+cd litecord
+# Install the dependencies
+sudo pip3.6 install -r requirements.txt
 ```
 
-Then you just run `litecord.py`, simple.
-It will fire up 2 servers, a REST one and a WS one:
+Then you just run `python3.6 litecord.py`, simple.
+
+## Usage
+When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
  * REST runs at `http://0.0.0.0:8000`
  * WS runs at `ws://0.0.0.0:12000`
 
@@ -34,4 +31,13 @@ For now the REST API can give you the address to the WS one through the `/api/ga
 so you just need to change your gateway path(in your preferred library).
 
 Check [this](https://git.memework.org/lnmds/litecord/issues/2) for the list of implemented things in `litecord`
-Also, don't issue `"there is no voice"` things. There won't be.
+Also, don't create an issue for `"there is no voice"`. There won't be.
+
+## Updating
+```bash
+# Fetch changes
+git fetch
+# Merge the changes from origin
+git pull
+```
+That's it! Just make sure to restart `litecord.py` when you're done!
