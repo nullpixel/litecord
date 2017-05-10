@@ -177,10 +177,12 @@ class Connection:
 
     async def hb_wait_task(self):
         try:
-            await asyncio.sleep((self.hb_interval + 4) / 1000)
-            #log.info("Closing client for lack of heartbeats")
-            #await self.ws.close(4001)
+            await asyncio.sleep((self.hb_interval) / 1000)
+            await asyncio.sleep(3)
+            log.info("Closing client for lack of heartbeats")
+            await self.ws.close(4000)
         except asyncio.CancelledError:
+            log.debug("[hb_wait_task] Cancelled")
             pass
 
     async def heartbeat_handler(self, data):
@@ -212,7 +214,8 @@ class Connection:
         db_tokens = self.server.db['tokens']
 
         if token not in db_tokens:
-            return False, None
+            log.warning("Token not found")
+            return False, None, None
 
         raw_user = None
         token_user_id = db_tokens[token]
@@ -224,7 +227,8 @@ class Connection:
                 raw_user = db_users[user_email]
 
         if raw_user is None:
-            return False, None
+            log.warning("(token, user) pair not found")
+            return False, None, None
 
         user = self.server.get_user(raw_user['id'])
         return True, raw_user, user
@@ -431,7 +435,7 @@ class Connection:
 
         for seq in seqs_to_replay:
             try:
-                await self.send_json(event_data[seq])
+                await self.send_json(event_data['events'][seq])
             except KeyError:
                 log.info(f"Event {seq} not found")
 
@@ -440,6 +444,16 @@ class Connection:
 
         self.token = token
         self.session_id = session_id
+
+        if self.session_id not in self.server.event_cache:
+            self.server.event_cache[self.session_id] = {
+                'sent_seq': 0,
+                'recv_seq': 0,
+                'events': {},
+            }
+
+        self.events = self.server.event_cache[self.session_id]
+
         self.identified = True
 
         await self.dispatch('RESUMED', {
@@ -596,9 +610,12 @@ class Connection:
 
         if self.token is not None:
             log.debug(f'cleaning up session ID {self.session_id!r}')
-            token_to_session.pop(self.token)
-            valid_tokens.remove(self.token)
-            session_data.pop(self.session_id)
+            try:
+                token_to_session.pop(self.token)
+                valid_tokens.remove(self.token)
+                session_data.pop(self.session_id)
+            except:
+                log.warning("Error while cleaning up the connection.")
             self.token = None
 
 
