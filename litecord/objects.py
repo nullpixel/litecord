@@ -450,6 +450,8 @@ class Message:
             'channel_id': int(self.channel_id),
             'author_id': int(self.author.id),
 
+            'edited_timestamp': dt_to_json(self.edited_at),
+
             'content': str(self.content),
         }
 

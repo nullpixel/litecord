@@ -88,7 +88,10 @@ def _err(msg='', errno=None):
 
 def dt_to_json(dt):
     """Convert a `datetime.datetime` object to a JSON serializable string"""
-    return dt.isoformat()
+    try:
+        return dt.isoformat()
+    except:
+        return None
 
 
 def _json(obj):

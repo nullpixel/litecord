@@ -114,6 +114,25 @@ class GuildManager:
 
         return True
 
+    async def edit_message(self, message, payload):
+        """Edit a message.
+
+        Dispatches MESSAGE_UPDATE events to respective clients.
+        Returns `True` on success, `False` on failure.
+        """
+
+        new_content = payload['content']
+        message.edit(new_content)
+
+        result = await self.message_db.replace_one({'message_id': message.id}, message.as_db)
+        log.info(f"Updated {result.modified_count} messages")
+
+        for member in message.channel.guild.online_members:
+            conn = member.connection
+            await conn.dispatch('MESSAGE_UPDATE', message.as_json)
+
+        return True
+
     def init(self):
         for guild_id in self.guild_db:
             guild_data = self.guild_db[guild_id]
