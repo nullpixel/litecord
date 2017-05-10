@@ -34,7 +34,21 @@ class GuildManager:
     def get_channel(self, channel_id):
         """Get a `Channel` object by its ID."""
         channel_id = int(channel_id)
-        return self.channels.get(channel_id)
+        channel = self.channels.get(channel_id)
+        if channel is None:
+            return None
+
+        async def _updater():
+            # Update a channel's last_message_id property
+            mlist = await channel.last_messages(1)
+            try:
+                m_id = mlist[0].id
+            except:
+                m_id = None
+            channel.last_message_id = m_id
+
+        asyncio.async(_updater())
+        return channel
 
     def get_message(self, message_id):
         """Get a `Message` object by its ID."""

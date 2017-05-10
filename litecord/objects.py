@@ -209,7 +209,6 @@ class Channel(LitecordObject):
         self.is_private = False
         self.topic = _channel['topic']
 
-        # TODO: messages
         self.last_message_id = 0
 
     def get_message(self, message_id):
