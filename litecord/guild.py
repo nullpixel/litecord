@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from .objects import Guild, Message
 from .snowflake import get_snowflake
 
@@ -22,6 +23,8 @@ class GuildManager:
         self.guilds = {}
         self.channels = {}
         self.messages = {}
+
+        self.message_db = server.message_db
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
@@ -49,12 +52,12 @@ class GuildManager:
         for guild_id in self.guilds:
             yield self.guilds[guild_id]
 
-    def all_messages(self, limit=500):
+    async def all_messages(self, limit=500):
         """Yield `limit` messages, with the 1st being the most recent one."""
-        sorted_ids = sorted(self.messages.keys(), reverse=True)[:limit]
+        cursor = self.message_db.find().sort('message_id')
 
-        for message_id in sorted_ids:
-            message = self.messages[message_id]
+        for raw_message in reversed(await cursor.to_list(length=limit)):
+            message = self.messages[raw_message['message_id']]
             yield message
 
     async def new_message(self, channel, author, raw):
@@ -67,9 +70,9 @@ class GuildManager:
         message_id = get_snowflake()
         message = Message(self.server, channel, raw)
 
-        self.messages[message_id] = message
+        result = await self.message_db.insert_one(message.as_db)
+        log.info(f"Adding message with id {result.inserted_id!r}")
 
-        # TODO: store messages
         for member in channel.guild.online_members:
             conn = member.connection
             await conn.dispatch('MESSAGE_CREATE', message.as_json)
@@ -87,12 +90,20 @@ class GuildManager:
                 self.channels[channel.id] = channel
 
         # load messages from database
-        for message_id in self.message_db:
-            message_data = self.message_db[message_id]
-            message_data['id'] = message_id
-            channel = self.get_channel(message_data['channel_id'])
+        async def _gather():
+            cursor = self.message_db.find().sort('message_id')
+            message_count = 0
 
-            message = Message(self.server, channel, message_data)
-            self.messages[message.id] = message
+            for raw_message in reversed(await cursor.to_list(length=200)):
+                raw_message['id'] = raw_message['message_id']
+                channel = self.get_channel(raw_message['channel_id'])
+
+                m = Message(self.server, channel, raw_message)
+                self.messages[m.id] = m
+                message_count += 1
+
+            log.info(f'[guild] Loaded {message_count} messages')
+
+        asyncio.async(_gather())
 
         return True

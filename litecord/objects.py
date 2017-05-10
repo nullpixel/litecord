@@ -228,10 +228,20 @@ class Channel(LitecordObject):
         Returns an ordered list of `Message` objects.
         """
         res = []
-        for m in self.server.guild_man.all_messages():
+        cursor = self.server.message_db.find({'channel_id': self.id}).sort('message_id')
+
+        for raw_message in reversed(await cursor.to_list(length=limit)):
             if len(res) > limit: break
-            if m.channel.id == self.id:
+            m_id = raw_message['message_id']
+
+            if m_id in self.guild_man.messages:
+                res.append(self.guild_man.messages[m_id])
+            else:
+                m = Message(self.server, self, raw_message)
+                self.guild_man.messages[m_id] = m
+
                 res.append(m)
+
         return res
 
     @property
@@ -432,6 +442,16 @@ class Message:
 
         self.edited_at = timestamp
         self.content = new_content
+
+    @property
+    def as_db(self):
+        return {
+            'message_id': int(self.id),
+            'channel_id': int(self.channel_id),
+            'author_id': int(self.author.id),
+
+            'content': str(self.content),
+        }
 
     @property
     def as_json(self):

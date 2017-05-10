@@ -1,17 +1,18 @@
+import asyncio
 import json
 import logging
 import os
 import base64
 import hashlib
 
+import motor.motor_asyncio
 from aiohttp import web
+
 from .snowflake import get_raw_token, get_snowflake
 from .utils import strip_user_data, random_digits, _json, _err
 from .guild import GuildManager
 from .presence import PresenceManager
-
 from .api import users, guilds, channels
-
 from .objects import User, Guild
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,12 @@ class LitecordServer:
     def __init__(self, valid_tokens, session_dict, sessions):
         self.db_paths = None
         self.db = {}
+
+        self.loop = asyncio.get_event_loop()
+
+        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
+        self.litecord_db = self.mongo_client['litecord']
+        self.message_db = self.litecord_db['messages']
 
         self.cache = {}
 

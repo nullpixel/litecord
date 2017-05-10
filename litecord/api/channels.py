@@ -44,6 +44,9 @@ class ChannelsEndpoint:
         user = self.server._user(_error_json['token'])
 
         channel = self.server.guild_man.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+
         guild = channel.guild
 
         if user.id not in guild.members:
