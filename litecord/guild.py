@@ -98,7 +98,7 @@ class GuildManager:
                 'channel_id': str(message.channel.id),
             })
 
-        return message
+        return True
 
     def init(self):
         for guild_id in self.guild_db:
