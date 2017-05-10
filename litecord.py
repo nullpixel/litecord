@@ -17,7 +17,7 @@ app = web.Application()
 DATABASES = {
     'users': 'db/users.json',
     'guilds': 'db/guilds.json',
-    'messages': 'db/messages.json',
+    #'messages': 'db/messages.json',
     'tokens': 'db/tokens.json',
 }
 

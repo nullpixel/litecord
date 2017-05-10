@@ -1,0 +1,20 @@
+[
+    {
+        "id": "150501171201",
+        "name": "Memework",
+        "owner_id": "149260046337",
+        "region": "local",
+        "features": ["VANITY_URL"],
+        "channels": {
+            "150501171201": {
+                "name": "general",
+                "type": "text",
+                "position": 0,
+                "topic": "general but it is general"
+            }
+        },
+        "members": [
+            "149260046337", "149260046338", "152162811905"
+        ]
+    }
+]

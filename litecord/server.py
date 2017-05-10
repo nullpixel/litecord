@@ -5,6 +5,8 @@ import os
 import base64
 import hashlib
 
+import pprint
+
 import motor.motor_asyncio
 from aiohttp import web
 
@@ -24,6 +26,11 @@ def get_random_salt(size=32):
 def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
+
+BOILERPLATES = {
+    'user': 'boilerplate_data/users.json',
+    'guild': 'boilerplate_data/guilds.json',
+}
 
 class LitecordServer:
     """Main class for the Litecord server.
@@ -52,7 +59,10 @@ class LitecordServer:
         # mongodb stuff
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client['litecord']
+
         self.message_db = self.litecord_db['messages']
+        self.user_db = self.litecord_db['users']
+        self.guild_db = self.litecord_db['gulids']
 
         # cache for events
         self.event_cache = {}
@@ -65,7 +75,27 @@ class LitecordServer:
         self.session_dict = session_dict
         self.sessions = sessions
 
+        self.presence = None
         self.guild_man = None
+
+    async def boilerplate_init(self):
+        """Load boilerplate data."""
+
+        for key in BOILERPLATES:
+            path = BOILERPLATES[key]
+            data = None
+            with open(path, 'r') as f:
+                data = json.loads(f.read())
+
+            db_to_update = getattr(self, f'{key}_db')
+
+            tot = 0
+            for element in data:
+                res = await db_to_update.find_one_and_replace({'id': element['id']},
+                    element)
+
+                tot += 1
+            log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
 
     def db_init_all(self):
         """Initialize all declared databases in `self.db_paths`."""
@@ -302,6 +332,9 @@ class LitecordServer:
         Loads databases, managers and endpoints.
         """
         try:
+            log.info("Loading boilerplate data")
+            asyncio.async(self.boilerplate_init())
+
             log.info('Initializing server state')
             if not self.db_init_all():
                 return False

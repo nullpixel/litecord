@@ -18,13 +18,11 @@ class GuildManager:
     def __init__(self, server):
         self.server = server
         self.guild_db = server.db['guilds']
-        self.message_db = server.db['messages']
+        self.message_db = server.message_db
 
         self.guilds = {}
         self.channels = {}
         self.messages = {}
-
-        self.message_db = server.message_db
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
@@ -134,6 +132,7 @@ class GuildManager:
         return True
 
     def init(self):
+        log.info("Loading guild data...")
         for guild_id in self.guild_db:
             guild_data = self.guild_db[guild_id]
 
@@ -142,6 +141,15 @@ class GuildManager:
 
             for channel in guild.all_channels():
                 self.channels[channel.id] = channel
+
+        async def _load_guilds():
+            cursor = self.guild_db.find()
+
+            for raw_guild in reversed(await cursor.to_list()):
+                guild = Guild(self.server, raw_gulid)
+                self.guilds[guild.id] = guild
+                for channel in guild.channels:
+                    self.channels[channel.id] = channel
 
         # load messages from database
         async def _gather():
