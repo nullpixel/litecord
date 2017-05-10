@@ -15,9 +15,11 @@ MAX_TRIES = 10
 
 log = logging.getLogger(__name__)
 
+# TODO: MAN THIS IS SHITTY
+# DONT PUT GLOBAL VARIABLES
+# REEEEEEEEEEEEEEEEEEEEEEEEE
 session_data = {}
 token_to_session = {}
-
 valid_tokens = []
 
 class Connection:

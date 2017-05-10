@@ -37,5 +37,18 @@
         "avatar": "",
         "bot": false,
         "verified": true
+    },
+    "suck@generic.sucks": {
+        "id": "152162811905",
+        "username": "heatingdevice",
+        "discriminator": "0420",
+        "password": {
+            "plain": "generic-sucks",
+            "hash": "",
+            "salt": ""
+        },
+        "avatar": "",
+        "bot": false,
+        "verified": true
     }
 }

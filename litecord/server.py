@@ -32,6 +32,8 @@ class LitecordServer:
         db_paths: A dictionary with database file paths,
             See `gateway_server` for more explanation.
         db: A dictionary that relates database IDs with actual database objects.
+        event_cache: A dictionary that relates user IDs to the last events they received.
+            Used for resuming.
         cache: An internal dictionary that relates IDs to objects/raw objects.
         valid_tokens: List of valid tokens(strings),
             A valid token is a token that was used in a connection and it is still,
@@ -50,6 +52,7 @@ class LitecordServer:
         self.litecord_db = self.mongo_client['litecord']
         self.message_db = self.litecord_db['messages']
 
+        self.event_cache = {}
         self.cache = {}
 
         self.valid_tokens = valid_tokens
@@ -112,8 +115,9 @@ class LitecordServer:
             user['email'] = user_email
 
             # cache objects
-            id_to_raw_user[user['id']] = user
-            id_to_user[user['id']] = User(self, user)
+            userobj = User(self, user)
+            id_to_raw_user[int(user['id'])] = user
+            id_to_user[userobj.id] = userobj
 
         self.db_save(['users'])
 
