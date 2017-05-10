@@ -73,9 +73,30 @@ class GuildManager:
         result = await self.message_db.insert_one(message.as_db)
         log.info(f"Adding message with id {result.inserted_id!r}")
 
+        self.messages[message.id] = message
+
         for member in channel.guild.online_members:
             conn = member.connection
             await conn.dispatch('MESSAGE_CREATE', message.as_json)
+
+        return message
+
+    async def delete_message(self, message):
+        """Delete a message.
+
+        Dispatches MESSAGE_DELETE events to respective clients.
+        Returns `True` on success, `False` on failure.
+        """
+
+        result = await self.message_db.delete_one({'message_id': message.id})
+        log.info(f"Deleted {result.deleted_count} messages")
+
+        for member in message.channel.guild.online_members:
+            conn = member.connection
+            await conn.dispatch('MESSAGE_DELETE', {
+                'id': str(message.id),
+                'channel_id': str(message.channel.id),
+            })
 
         return message
 

@@ -16,7 +16,6 @@ class ChannelsEndpoint:
         _r = app.router
         _r.add_get('/api/channels/{channel_id}', self.h_get_channel)
 
-        # NOTE: needs message stuff in GuildManager
         _r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
         _r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
 
@@ -24,8 +23,8 @@ class ChannelsEndpoint:
         #_r.add_patch('/api/channels/{channel_id}/messages/{message_id}',
         #               self.h_patch_message)
 
-        #_r.add_delete('/api/channels/{channel_id}/messages/{message_id}',
-        #                self.h_delete_message)
+        _r.add_delete('/api/channels/{channel_id}/messages/{message_id}',
+                        self.h_delete_message)
 
         _r.add_post('/api/channels/{channel_id}/typing', self.h_post_typing)
 
@@ -198,3 +197,36 @@ class ChannelsEndpoint:
 
         message_list = await channel.last_messages(limit)
         return _json([m.as_json for m in message_list])
+
+    async def h_delete_message(self, request):
+        """`DELETE /channels/{channel_id}/messages/{message_id}`.
+
+        Delete a message sent by the user.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        channel_id = request.match_info['channel_id']
+        message_id = request.match_info['message_id']
+
+        user = self.server._user(_error_json['token'])
+        channel = self.server.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=10003)
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        message = channel.get_message(message_id)
+        if message is None:
+            return _err(errno=10008)
+
+        if user.id != message.author.id:
+            return _err(errno=40001)
+
+        await self.server.guild_man.delete_message(message)
+        return web.Response(status=204)

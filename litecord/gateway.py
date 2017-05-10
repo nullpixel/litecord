@@ -48,7 +48,7 @@ class Connection:
         # Last sequence sent by the client and last sequence received by the client
         # will be here
         self.events = None
-        self.hb_interval = 1000
+        self.hb_interval = 3000
         self.wait_task = None
 
         # some stuff
