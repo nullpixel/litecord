@@ -11,6 +11,9 @@ With litecord you can run your own "Discord", locally, by yourself, but with lim
  * Ratelimits doesn't exist, yet.
 
 ## Installation
+
+Make sure you have [MongoDB](https://www.mongodb.com/) installed and running.
+
 ```bash
 # Clone the repo
 git clone ssh://git@git.memework.org:2222/lnmds/litecord.git
@@ -27,8 +30,7 @@ When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
  * REST runs at `http://0.0.0.0:8000`
  * WS runs at `ws://0.0.0.0:12000`
 
-For now the REST API can give you the address to the WS one through the `/api/gateway` endpoint,
-so you just need to change your gateway path(in your preferred library).
+You'll need to change the "base URL" or whatever it is called in your preffered Discord library.
 
 Check [this](https://git.memework.org/lnmds/litecord/issues/2) for the list of implemented things in `litecord`
 Also, don't create an issue for `"there is no voice"`. There won't be.
