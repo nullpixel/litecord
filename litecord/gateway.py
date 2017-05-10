@@ -28,9 +28,9 @@ class Connection:
     Attributes:
         ws:
             The actual websocket connection
-        last_seq:
-            An integer representing the last event the client received.
-            See `Connection.heartbeat_handler` for more details.
+        events:
+            If the connection is identified, this becomes a reference to
+            `LitecordServer.event_cache[connection.user.id]`
         token:
             The token this connection is using.
         identified:
@@ -44,14 +44,9 @@ class Connection:
         self.ws = ws
         self.path = path
 
-        # last sequence sent by the server
-        self._seq = 0
-
-        # the last event client received, used for resuming
-        # TODO: Resuming:
-        #  check if the different between last_seq and _seq is higher than 50
-        #  if it is, we do session invalidation
-        self.last_seq = None
+        # Last sequence sent by the client and last sequence received by the client
+        # will be here
+        self.events = None
 
         # some stuff
         self.token = None
@@ -137,22 +132,35 @@ class Connection:
     async def dispatch(self, evt_name, evt_data={}):
         """Send a DISPATCH packet through the websocket.
 
+        Saves the packet in the `LitecordServer`'s event cache.
+
         Args:
             evt_name: Event name, follows the same pattern as Discord's event names
             evt_data: any JSON serializable object
         """
+        try:
+            sent_seq = self.events['sent_seq']
+        except:
+            log.warning("[dispatch] can't dispatch event to unidentified connection")
+            return
+
+        sent_seq += 1
+
         payload = {
             'op': OP["DISPATCH"],
 
             # always an int
-            's': self._seq,
+            's': sent_seq,
+
             # always a str
             't': evt_name,
-
             'd': evt_data,
         }
-        self._seq += 1
-        return (await self.send_json(payload))
+
+        res = await self.send_json(payload)
+        self.events['events'][sent_seq] = payload
+
+        return res
 
     async def get_myself(self):
         """Get the raw user that this connection represents."""
@@ -161,13 +169,18 @@ class Connection:
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
 
-        Saves the last event received by the client in `Connection.last_seq`
-        Sends a OP 11 Heartbeat ACK packet
+        Saves the last sequence number received by the
+        client in `Connection.events['recv_seq']`.
+        Sends a OP 11 Heartbeat ACK packet.
 
         Args:
-            data: An integer or None
+            data: An integer or None.
         """
-        self.last_seq = data
+        try:
+            self.events['recv_seq'] = data
+        except:
+            log.warning("Received OP 1 Heartbeat from unidentified connection")
+
         await self.send_op(OP['HEARTBEAT_ACK'], {})
         return True
 
@@ -233,6 +246,15 @@ class Connection:
 
         session_data[self.session_id] = self
         token_to_session[self.token] = self.session_id
+
+        if self.session_id not in self.server.event_cache:
+            self.server.event_cache[self.session_id] = {
+                'sent_seq': 0,
+                'recv_seq': 0,
+                'events': {},
+            }
+
+        self.events = self.server.event_cache[self.session_id]
 
         # set user status before even calculating guild data to be sent
         # if we do it *after* READY, the presence manager errors since it tries
