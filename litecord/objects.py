@@ -233,6 +233,7 @@ class Channel(LitecordObject):
         for raw_message in reversed(await cursor.to_list(length=limit)):
             if len(res) > limit: break
             m_id = raw_message['message_id']
+            raw_message['id'] = m_id
 
             if m_id in self.guild_man.messages:
                 res.append(self.guild_man.messages[m_id])
