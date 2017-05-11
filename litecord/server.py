@@ -10,7 +10,7 @@ import motor.motor_asyncio
 from aiohttp import web
 
 from .snowflake import get_raw_token, get_snowflake
-from .utils import strip_user_data, random_digits, _json, _err
+from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
 from .api import users, guilds, channels
@@ -18,18 +18,12 @@ from .objects import User, Guild
 
 log = logging.getLogger(__name__)
 
-def get_random_salt(size=32):
-    return base64.b64encode(os.urandom(size)).decode()
-
-
-def pwd_hash(plain, salt):
-    return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
-
 
 BOILERPLATES = {
     'user': 'boilerplate_data/users.json',
     'guild': 'boilerplate_data/guilds.json',
 }
+
 
 class LitecordServer:
     """Main class for the Litecord server.
@@ -294,10 +288,12 @@ class LitecordServer:
 
     async def get_discrim(self, username):
         """Generate a discriminator from a username."""
-        users = self.db['users']
 
-        used_discrims = [users[user_email]['discriminator'] for user_email in \
-            users if users[user_email]['username'] == username]
+        cursor = self.user_db.find({
+            'username': username
+        })
+        raw_user_list = await cursor.to_list(length=None)
+        used_discrims = [raw_user['discriminator'] for raw_user in raw_user_list]
 
         # only 8000 discrims per user
         if len(used_discrims) >= 8000:
@@ -312,7 +308,6 @@ class LitecordServer:
                 discrim = str(random_digits(4))
             except ValueError:
                 return discrim
-
 
     async def h_guild_post_message(self, request):
         """Dummy handler for `POST:/guild/{guild_id}/messages`

@@ -4,7 +4,8 @@ users.py - All handlers under /users/*
 
 import json
 import logging
-from ..utils import _err, _json, strip_user_data
+from ..utils import _err, _json, strip_user_data, get_random_salt, pwd_hash
+from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
@@ -86,8 +87,10 @@ class UsersEndpoint:
         if email is None or password is None or username is None:
             return _err("malformed payload")
 
-        users = self.db['users']
-        if email in users:
+        user_db = self.server.user_db
+        res = await user_db.find_one({'email': email})
+
+        if res is not None:
             return _err("email already used")
 
         discrim = await self.server.get_discrim(username)
@@ -95,6 +98,7 @@ class UsersEndpoint:
 
         new_user = {
             "id": get_snowflake(),
+            "email": email,
             "username": username,
             "discriminator": discrim,
             "password": {
@@ -107,9 +111,8 @@ class UsersEndpoint:
             "verified": True
         }
 
-        users[email] = new_user
-
-        self.server.db_save(['users'])
+        log.info(f"New user {new_user['username']}#{new_user['discriminator']}")
+        await user_db.insert_one(new_user)
 
         return _json({
             "code": 1,

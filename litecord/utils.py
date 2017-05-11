@@ -2,6 +2,10 @@ import json
 import datetime
 import logging
 
+import base64
+import os
+import hashlib
+
 from random import randint
 from aiohttp import web
 
@@ -70,6 +74,14 @@ def random_digits(n):
     range_start = 10**(n-1)
     range_end = (10**n)-1
     return randint(range_start, range_end)
+
+
+def get_random_salt(size=32):
+    return base64.b64encode(os.urandom(size)).decode()
+
+
+def pwd_hash(plain, salt):
+    return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
 
 def _err(msg='', errno=None):
