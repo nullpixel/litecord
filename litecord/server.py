@@ -175,7 +175,8 @@ class LitecordServer:
         res = await self.token_db.find_one({'token': str(token)})
         try:
             return res.get('user_id')
-        except:
+        except AttributeError:
+            log.warning("No object found")
             return None
 
     async def token_used(self, token):
@@ -193,7 +194,8 @@ class LitecordServer:
 
     async def token_register(self, token, user_id):
         """Attach a token to a user."""
-        res = self.token_db.insert_one({'token': str(token), 'id': str(user_id)})
+        log.info(f"Registering {token} to {user_id}")
+        res = self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
         return res
 
     async def login(self, request):
@@ -231,8 +233,7 @@ class LitecordServer:
         if pwd_hash(password, pwd['salt']) != pwd['hash']:
             return _err("fail on login")
 
-        user_id = user['id']
-
+        user_id = raw_user['id']
         old_token = await self.token_userid(user_id)
 
         new_token = await get_raw_token()
