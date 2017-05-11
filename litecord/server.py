@@ -168,19 +168,33 @@ class LitecordServer:
     # token helper functions
     async def token_userid(self, user_id):
         """Find a token from a user's ID."""
-        pass
+        return (await self.token_db.find_one({'user_id': str(user_id)}))
+
+    async def token_find(self, token):
+        """Return a user ID from a token."""
+        res = await self.token_db.find_one({'token': str(token)})
+        try:
+            return res.get('user_id')
+        except:
+            return None
 
     async def token_used(self, token):
         """Returns `True` if the token is alredy used by other account."""
-        pass
+        obj = await self.token_find(token)
+        return bool(obj)
 
     async def token_unregister(self, token):
         """Detach a token from a user."""
-        pass
+        if token is None:
+            return True
+
+        res = self.token_db.delete_one({'token': str(token)})
+        return res.deleted_count > 0
 
     async def token_register(self, token, user_id):
         """Attach a token to a user."""
-        pass
+        res = self.token_db.insert_one({'token': str(token), 'id': str(user_id)})
+        return res
 
     async def login(self, request):
         """Login a user through the `POST:/auth/login` endpoint.

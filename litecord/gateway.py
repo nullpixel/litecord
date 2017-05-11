@@ -210,15 +210,12 @@ class Connection:
         return True
 
     async def check_token(self, token):
-        db_tokens = self.server.db['tokens']
-
-        if token not in db_tokens:
+        token_user_id = await self.server.token_find(token)
+        if token_user_id is None:
             log.warning("Token not found")
             return False, None, None
 
-        token_user_id = db_tokens[token]
         raw_user = self.server.get_raw_user(token_user_id)
-
         if raw_user is None:
             log.warning("(token, user) pair not found")
             return False, None, None
