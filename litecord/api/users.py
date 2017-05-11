@@ -36,30 +36,23 @@ class UsersEndpoint:
             return _error
 
         user_id = request.match_info['user_id']
-
-        # get data about the current user
-        token = _error_json['token']
-        session_id = self.server.session_dict[token]
-        user = self.server.sessions[session_id].raw_user
-        user = strip_user_data(user)
+        user = self.server._user(_error_json['token'])
 
         if user_id == '@me':
-            return _json(user)
+            return _json(user.as_json)
         else:
             # If we want to be full discord-like, uncomment this
             #if not user['bot']:
-            #    return _err("403: Forbidden")
+            #    return _err(errno=40001)
 
             log.info(f'searching for user {user_id!r}')
-            users = self.server.db['users']
-            userdata = None
 
             # way easier using id->raw_user instead of searching through userdb
-            userdata = self.server.get_raw_user(user_id)
-
+            raw_userdata = self.server.get_raw_user(user_id)
             if userdata is None:
-                return _err("user not found")
-            return _json(strip_user_data(userdata))
+                return _err(errno=10013)
+
+            return _json(strip_user_data(raw_userdata))
 
     async def h_add_user(self, request):
         """`POST /users/add`.
@@ -135,27 +128,23 @@ class UsersEndpoint:
         except:
             return _err("error parsing")
 
-        # get data about the current user
-        token = _error_json['token']
-        session_id = self.server.session_dict[token]
-        user = self.server.sessions[session_id].raw_user
-        user = strip_user_data(user)
+        user = self.server._user(_error_json['token'])
+        new_raw_user = {}
 
-        users = self.server.db['users']
-        for user_email in users:
-            user_obj = users[user_email]
-            if user_obj['id'] == user['id']:
-                new_username = payload['username']
-                new_discrim = await self.server.get_discrim(new_username)
-                user_obj['username'] = payload['username']
-                user_obj['discriminator'] = new_discrim
-                user_obj['avatar'] = payload['avatar']
-                return _json(strip_user_data(user_obj))
+        new_username = payload.get('username', user.username)
+        if new_username != user.username:
+            new_raw_user['discriminator'] = await self.server.get_discrim(new_username)
 
-        return _json({
-            'code': 500,
-            'message': 'Internal Server Error'
-        })
+        new_raw_user['username'] = new_username
+        new_raw_user['avatar'] = payload.get('avatar', user._data['avatar'])
+
+        self.user_db.find_one_and_update({'id': str(user.id)}, new_raw_user)
+
+        # TODO: This guy will dispatch USER_UPDATE events
+        # Also it will update LitecordServer.cache objects.
+        #await self.server.userdb_update()
+
+        return _json(user.as_json)
 
     async def h_get_me_settings(self, request):
         """`GET /users/@me/settings`.

@@ -96,9 +96,11 @@ class User(LitecordObject):
     def __init__(self, server, _data):
         LitecordObject.__init__(self, server)
         self._data = _data
+
         self.id = int(_data['id'])
-        self.username = self._data['username']
-        self.discriminator = self._data['discriminator']
+        self.username = _data['username']
+        self.discriminator = _data['discriminator']
+        self.email = _data['email']
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'
