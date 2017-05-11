@@ -59,9 +59,10 @@ class LitecordServer:
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client['litecord']
 
-        self.message_db = self.litecord_db['messages']
-        self.user_db = self.litecord_db['users']
-        self.guild_db = self.litecord_db['gulids']
+        self.message_db =   self.litecord_db['messages']
+        self.user_db =      self.litecord_db['users']
+        self.guild_db =     self.litecord_db['gulids']
+        self.token_db =     self.litecord_db['tokens']
 
         # cache for events
         self.event_cache = {}
@@ -164,6 +165,23 @@ class LitecordServer:
         user = self.get_user(user_id)
         return user
 
+    # token helper functions
+    async def token_userid(self, user_id):
+        """Find a token from a user's ID."""
+        pass
+
+    async def token_used(self, token):
+        """Returns `True` if the token is alredy used by other account."""
+        pass
+
+    async def token_unregister(self, token):
+        """Detach a token from a user."""
+        pass
+
+    async def token_register(self, token, user_id):
+        """Attach a token to a user."""
+        pass
+
     async def login(self, request):
         """Login a user through the `POST:/auth/login` endpoint.
 
@@ -191,37 +209,26 @@ class LitecordServer:
         if email is None or password is None:
             return _err("malformed packet")
 
-        user = self.get_raw_user_email(email)
-        if user is None:
+        raw_user = self.get_raw_user_email(email)
+        if raw_user is None:
             return _err("fail on login")
 
-        user = users[email]
-        pwd = user['password']
+        pwd = raw_user['password']
         if pwd_hash(password, pwd['salt']) != pwd['hash']:
             return _err("fail on login")
 
-        tokens = self.db['tokens']
-        account_id = user['id']
+        user_id = user['id']
 
-        # check if there is already a token related to the user
-        _old_token = None
-        for token in tokens:
-            if tokens[token] == account_id:
-                _old_token = token
+        old_token = await self.token_userid(user_id)
 
-        # make a new one
-        _token = await get_raw_token()
-        while _token in tokens:
-            _token = await get_raw_token()
+        new_token = await get_raw_token()
+        while (await self.token_used(new_token)):
+            new_token = await get_raw_token()
 
-        # overwrite the previous one if any
-        if _old_token is not None:
-            tokens.pop(_old_token)
+        await self.token_unregister(old_token)
+        await self.token_register(new_token, user_id)
 
-        tokens[_token] = account_id
-        self.db_save(['tokens'])
-
-        return _json({"token": _token})
+        return _json({"token": new_token})
 
     async def check_request(self, request):
         """Checks a request to the API.

@@ -210,21 +210,14 @@ class Connection:
         return True
 
     async def check_token(self, token):
-        db_users = self.server.db['users']
         db_tokens = self.server.db['tokens']
 
         if token not in db_tokens:
             log.warning("Token not found")
             return False, None, None
 
-        raw_user = None
         token_user_id = db_tokens[token]
-
-        for user_email in db_users:
-            user_id = db_users[user_email]['id']
-            if token_user_id == user_id:
-                # We found a valid token
-                raw_user = db_users[user_email]
+        raw_user = self.server.get_raw_user(token_user_id)
 
         if raw_user is None:
             log.warning("(token, user) pair not found")
