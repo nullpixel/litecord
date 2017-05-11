@@ -147,15 +147,16 @@ class LitecordServer:
         users = self.cache['id->user']
         return users.get(user_id)
 
-    def get_raw_user_email(self, email):
-        """Get a raw user from the user's email."""
+    async def get_raw_user_email(self, email):
+        """Get a raw user object from a user's email."""
+        raw_user = await self.user_db.find_one({'email': email})
 
-        raw_user_cache = self.cache['id->raw_user']
-        for raw_user_id in raw_user_cache:
-            raw_user = raw_user_cache[raw_user_id]
-            if raw_user['email'] == email:
-                return raw_user
-        return None
+        self.cache['id->raw_user'][raw_user['id']] = raw_user
+
+        if raw_user['id'] not in self.cache['id->user']:
+            self.cache['id->user'][raw_user['id']] = User(self, raw_user)
+
+        return raw_user
 
     def _user(self, token):
         """Get a user object from its token.
@@ -227,7 +228,7 @@ class LitecordServer:
         if email is None or password is None:
             return _err("malformed packet")
 
-        raw_user = self.get_raw_user_email(email)
+        raw_user = await self.get_raw_user_email(email)
         if raw_user is None:
             return _err("fail on login [email]")
 
