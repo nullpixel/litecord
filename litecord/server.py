@@ -215,13 +215,13 @@ class LitecordServer:
 
         """
         try:
-            json = await request.json()
+            payload = await request.json()
         except Exception as err:
             # error parsing json
             return _err("error parsing")
 
-        email = json.get('email')
-        password = json.get('password')
+        email = payload.get('email')
+        password = payload.get('password')
         if email is None or password is None:
             return _err("malformed packet")
 
