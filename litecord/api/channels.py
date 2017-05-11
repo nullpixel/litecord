@@ -5,6 +5,8 @@ from ..utils import _err, _json, strip_user_data
 from ..snowflake import get_snowflake
 from ..objects import Message
 
+from ..ratelimits import ratelimit
+
 log = logging.getLogger(__name__)
 
 class ChannelsEndpoint:
@@ -78,6 +80,7 @@ class ChannelsEndpoint:
         await self.server.presence.typing_start(user.id, channel_id)
         return web.Response(status=204)
 
+    @ratelimit(5, 5)
     async def h_post_message(self, request):
         """`POST /channels/{channel_id}/messages/`.
 
