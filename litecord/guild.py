@@ -17,7 +17,7 @@ class GuildManager:
     """
     def __init__(self, server):
         self.server = server
-        self.guild_db = server.db['guilds']
+        self.guild_db = server.guild_db
         self.message_db = server.message_db
 
         self.guilds = {}
@@ -131,41 +131,33 @@ class GuildManager:
 
         return True
 
-    def init(self):
+    async def init(self):
         log.info("Loading guild data...")
-        for guild_id in self.guild_db:
-            guild_data = self.guild_db[guild_id]
 
-            guild = Guild(self.server, guild_data)
+        cursor = self.guild_db.find()
+        guild_count = 0
+
+        for raw_guild in reversed(await cursor.to_list(length=None)):
+            guild = Guild(self.server, raw_guild)
             self.guilds[guild.id] = guild
 
             for channel in guild.all_channels():
                 self.channels[channel.id] = channel
+            guild_count += 1
 
-        async def _load_guilds():
-            cursor = self.guild_db.find()
-
-            for raw_guild in reversed(await cursor.to_list()):
-                guild = Guild(self.server, raw_gulid)
-                self.guilds[guild.id] = guild
-                for channel in guild.channels:
-                    self.channels[channel.id] = channel
+        log.info(f'[guild] Loaded {guild_count} guilds')
 
         # load messages from database
-        async def _gather():
-            cursor = self.message_db.find().sort('message_id')
-            message_count = 0
 
-            for raw_message in reversed(await cursor.to_list(length=200)):
-                raw_message['id'] = raw_message['message_id']
-                channel = self.get_channel(raw_message['channel_id'])
+        cursor = self.message_db.find().sort('message_id')
+        message_count = 0
 
-                m = Message(self.server, channel, raw_message)
-                self.messages[m.id] = m
-                message_count += 1
+        for raw_message in reversed(await cursor.to_list(length=200)):
+            raw_message['id'] = raw_message['message_id']
+            channel = self.get_channel(raw_message['channel_id'])
 
-            log.info(f'[guild] Loaded {message_count} messages')
+            m = Message(self.server, channel, raw_message)
+            self.messages[m.id] = m
+            message_count += 1
 
-        asyncio.async(_gather())
-
-        return True
+        log.info(f'[guild] Loaded {message_count} messages')

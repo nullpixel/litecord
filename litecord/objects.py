@@ -313,7 +313,7 @@ class Guild(LitecordObject):
             channel_data['id'] = channel_id
 
             channel = Channel(server, channel_data, self)
-            self.channels[channel_id] = channel
+            self.channels[channel.id] = channel
 
         # list of snowflakes
         self.member_ids = [int(member_id) for member_id in _guild_data['members']]
@@ -326,7 +326,7 @@ class Guild(LitecordObject):
             if user is None:
                 log.warning(f"user {member_id} not found")
             member = Member(server, self, user)
-            self.members[member_id] = member
+            self.members[member.id] = member
 
         self.large = len(self.members) > 150
         self.member_count = len(self.members)

@@ -4,8 +4,7 @@ import logging
 import os
 import base64
 import hashlib
-
-import pprint
+import time
 
 import motor.motor_asyncio
 from aiohttp import web
@@ -91,43 +90,15 @@ class LitecordServer:
 
             tot = 0
             for element in data:
-                res = await db_to_update.find_one_and_replace({'id': element['id']},
-                    element)
-
+                res = await db_to_update.replace_one({'id': element['id']}, element, True)
                 tot += 1
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
 
-    def db_init_all(self):
-        """Initialize all declared databases in `self.db_paths`."""
-        for database_id in self.db_paths:
-            db_path = self.db_paths[database_id]
-            try:
-                self.db[database_id] = json.load(open(db_path, 'r'))
+    async def load_users(self):
+        """Load users database using MongoDB.
 
-                # usually load functions put stuff in cache
-                # so that other parts of the code doesn't become too complicated
-                db_load_function = getattr(self, f'dbload_{database_id}', None)
-                if db_load_function is not None:
-                    db_load_function()
-            except:
-                log.error(f"Error loading database {database_id} at {db_path}", exc_info=True)
-                return False
-
-        return True
-
-    def db_save(self, list_db):
-        """Save one database into its file."""
-        for database_id in list_db:
-            path = self.db_paths[database_id]
-            db_object = self.db[database_id]
-            json.dump(db_object, open(path, 'w'))
-
-    def dbload_users(self):
-        """Load users database.
-
-        Creates the `id->raw_user` and `id->user` dictionaries in `self.cache`.
+        Creates the `id->raw_user` and `id->user` dictionaries in `LitecordServer.cache`.
         """
-        users = self.db['users']
 
         # create cache objects
         self.cache['id->raw_user'] = {}
@@ -137,9 +108,11 @@ class LitecordServer:
         id_to_raw_user = self.cache['id->raw_user']
         id_to_user = self.cache['id->user']
 
-        for user_email in users:
-            user = users[user_email]
-            pwd = user['password']
+        cursor = self.user_db.find()
+        all_users = await cursor.to_list(length=None)
+
+        for raw_user in all_users:
+            pwd = raw_user['password']
 
             if len(pwd['salt']) < 1:
                 pwd['salt'] = get_random_salt()
@@ -148,15 +121,15 @@ class LitecordServer:
                 pwd['hash'] = pwd_hash(pwd['plain'], pwd['salt'])
                 pwd['plain'] = None
 
-            # a helper
-            user['email'] = user_email
+            # put that into the database
+            await self.user_db.find_one_and_replace({'id': raw_user['id']}, raw_user)
 
             # cache objects
-            userobj = User(self, user)
-            id_to_raw_user[int(user['id'])] = user
-            id_to_user[userobj.id] = userobj
+            user = User(self, raw_user)
+            id_to_raw_user[user.id] = raw_user
+            id_to_user[user.id] = user
 
-        self.db_save(['users'])
+        log.info(f"Loaded {len(all_users)} users")
 
     # helpers
     def get_raw_user(self, user_id):
@@ -170,6 +143,16 @@ class LitecordServer:
         user_id = int(user_id)
         users = self.cache['id->user']
         return users.get(user_id)
+
+    def get_raw_user_email(self, email):
+        """Get a raw user from the user's email."""
+
+        raw_user_cache = self.cache['id->raw_user']
+        for raw_user_id in raw_user_cache:
+            raw_user = raw_user_cache[raw_user_id]
+            if raw_user['email'] == email:
+                return raw_user
+        return None
 
     def _user(self, token):
         """Get a user object from its token.
@@ -208,8 +191,8 @@ class LitecordServer:
         if email is None or password is None:
             return _err("malformed packet")
 
-        users = self.db['users']
-        if email not in users:
+        user = self.get_raw_user_email(email)
+        if user is None:
             return _err("fail on login")
 
         user = users[email]
@@ -326,23 +309,23 @@ class LitecordServer:
 
         return _err('not implemented')
 
-    def init(self, app):
+    async def init(self, app):
         """Initialize the server.
 
         Loads databases, managers and endpoints.
         """
         try:
+            t_init = time.monotonic()
+
             log.info("Loading boilerplate data")
-            asyncio.async(self.boilerplate_init())
+            await self.boilerplate_init()
 
             log.info('Initializing server state')
-            if not self.db_init_all():
-                return False
+            await self.load_users()
 
             log.info('Initializing GuildManager')
             self.guild_man = GuildManager(self)
-            if not self.guild_man.init():
-                return False
+            await self.guild_man.init()
 
             log.info('Creating PresenceManager')
             self.presence = PresenceManager(self)
@@ -357,6 +340,10 @@ class LitecordServer:
             self.channels_endpoint = channels.ChannelsEndpoint(self)
             self.channels_endpoint.register(app)
 
+            t_end = time.monotonic()
+            delta = round((t_end - t_init) * 1000, 2)
+
+            log.info(f"[server] Loaded in {delta}ms")
             return True
         except:
             log.error('Error when initializing LitecordServer', exc_info=True)

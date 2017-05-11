@@ -645,7 +645,7 @@ async def gateway_server(app, databases):
     server = LitecordServer(valid_tokens, token_to_session, session_data)
 
     server.db_paths = databases
-    if not server.init(app):
+    if not (await server.init(app)):
         log.error("We had an error initializing the Litecord Server.")
         sys.exit(1)
 
