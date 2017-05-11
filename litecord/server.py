@@ -229,11 +229,11 @@ class LitecordServer:
 
         raw_user = self.get_raw_user_email(email)
         if raw_user is None:
-            return _err("fail on login")
+            return _err("fail on login [email]")
 
         pwd = raw_user['password']
         if pwd_hash(password, pwd['salt']) != pwd['hash']:
-            return _err("fail on login")
+            return _err("fail on login [password]")
 
         user_id = raw_user['id']
         old_token = await self.token_userid(user_id)
