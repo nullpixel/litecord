@@ -156,6 +156,7 @@ class ChannelsEndpoint:
 
         return _json(message.as_json)
 
+    @ratelimit(5, 5)
     async def h_get_messages(self, request):
         """`GET /channels/{channel_id}/messages`.
 

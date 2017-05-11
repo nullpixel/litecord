@@ -48,9 +48,17 @@ class LitecordServer:
         sessions: A dictionary relating session IDs to their respective `Connection` object.
         guild_man: An instance of `GuildManager`.
     """
-    def __init__(self, valid_tokens, session_dict, sessions):
+    def __init__(self, valid_tokens, session_dict, sessions, flags=None):
         self.db_paths = None
         self.db = {}
+
+        if flags is None:
+            flags = {}
+
+        self.flags = flags
+
+        self.rest_ratelimits = {}
+        self.ws_ratelimits = {}
 
         # if anybody needs
         self.loop = asyncio.get_event_loop()

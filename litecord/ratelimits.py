@@ -1,5 +1,8 @@
+import logging
+
 from aiohttp import web
 
+log = logging.getLogger(__name__)
 
 """
 
@@ -32,11 +35,19 @@ def ratelimit(requests=50, seconds=1, special_bucket=False):
     #  Needs more thinking.
 
     def decorator(func):
-        async def inner_func(self, request):
-            #if not self.server.flags.get('ratelimit_enabled', False):
-            #    return
+        async def inner_func(endpoint, request):
+            server = endpoint.server
+            if not server.flags.get('rest_ratelimits', False):
+                return (await func(endpoint, request))
 
-            return (await func(self, request))
+            ratelimits = endpoint.server.rest_ratelimits
+            peername = request.transport.get_extra_info('peername')
+            if peername is not None:
+                host, port = peername
+            else:
+                log.warning("Request without client IP")
+
+            return (await func(endpoint, request))
         return inner_func
 
     return decorator
@@ -48,11 +59,15 @@ def ws_ratelimit(requests=120, seconds=60, special_bucket=False):
     """
 
     def decorator(func):
-        async def inner_func(self, data):
-            #if not self.server.flags.get('ratelimit_enabled', False):
-            #    return
+        async def inner_func(conn, data):
+            server = conn.server
+            if not server.flags.get('ws_ratelimits', False):
+                return (await func(conn, data))
 
-            return (await func(self, data))
+            ratelimits = server.ws_ratelimits
+            host, port = conn.ws.remote_address
+
+            return (await func(conn, data))
         return inner_func
 
     return decorator
