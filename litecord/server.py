@@ -189,7 +189,7 @@ class LitecordServer:
         if token is None:
             return True
 
-        res = self.token_db.delete_one({'token': str(token)})
+        res = await self.token_db.delete_one({'token': str(token)})
         return res.deleted_count > 0
 
     async def token_register(self, token, user_id):
