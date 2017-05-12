@@ -100,7 +100,7 @@ class User(LitecordObject):
         self.id = int(_data['id'])
         self.username = _data['username']
         self.discriminator = _data['discriminator']
-        self.email = _data['email']
+        self.email = _data.get('email')
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'

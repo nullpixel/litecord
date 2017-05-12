@@ -138,11 +138,8 @@ class UsersEndpoint:
         new_raw_user['username'] = new_username
         new_raw_user['avatar'] = payload.get('avatar', user._data['avatar'])
 
-        self.user_db.find_one_and_update({'id': str(user.id)}, new_raw_user)
-
-        # TODO: This guy will dispatch USER_UPDATE events
-        # Also it will update LitecordServer.cache objects.
-        #await self.server.userdb_update()
+        await self.user_db.update_one({'id': str(user.id)}, new_raw_user)
+        await self.server.userdb_update()
 
         return _json(user.as_json)
 

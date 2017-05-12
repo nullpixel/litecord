@@ -134,6 +134,34 @@ class LitecordServer:
 
         log.info(f"Loaded {len(all_users)} users")
 
+    async def userdb_update(self):
+        """Update the server's user cache.
+
+        Dispatches USER_UPDATE events to respective clients.
+        """
+        cursor = self.user_db.find()
+        all_users = await cursor.to_list(length=None)
+
+        raw_user_cache = self.cache['id->raw_user']
+        user_cache = self.cache['id->user']
+
+        for raw_user in all_users:
+            cached_raw_user = raw_user_cache[raw_user['id']]
+            cached_user = user_cache[raw_user['id']]
+
+            differences = set(raw_user.items()) ^ set(cached_raw_user.items())
+            if len(differences) > 0:
+                user = User(self, raw_user)
+
+                # dispatch USER_UPDATE to all online clients
+                for guild in user.guilds:
+                    for member in guild.online_members:
+                        conn = member.connection
+                        await conn.dispatch('USER_UPDATE', user.as_json)
+
+                cached_raw_user = raw_user
+                cached_user = user
+
     # helpers
     def get_raw_user(self, user_id):
         """Get a raw user object using the user's ID."""
