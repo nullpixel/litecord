@@ -638,5 +638,7 @@ async def gateway_server(app, flags):
 
     # start WS
     log.info("[ws] starting")
-    ws_server = websockets.serve(henlo, '0.0.0.0', 12000)
+
+    ws = flags['server']['ws']
+    ws_server = websockets.serve(henlo, ws[0], ws[1])
     await ws_server

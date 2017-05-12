@@ -3,6 +3,11 @@ config.py - basic configuration file for a litecord instance.
 """
 
 flags = {
+    'server': {
+        # its a tuple (host, port)
+        'http': ('0.0.0.0', 8000),
+        'ws': ('0.0.0.0', 12000),
+    },
     'ratelimits': {
         'rest': True,
         'ws': True,
