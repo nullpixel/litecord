@@ -149,7 +149,7 @@ class LitecordServer:
             cached_raw_user = raw_user_cache[raw_user['id']]
             cached_user = user_cache[raw_user['id']]
 
-            differences = set(raw_user.items()) ^ set(cached_raw_user.items())
+            differences = set(raw_user.values()) ^ set(cached_raw_user.values())
             if len(differences) > 0:
                 user = User(self, raw_user)
 
