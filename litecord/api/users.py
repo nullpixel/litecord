@@ -136,7 +136,9 @@ class UsersEndpoint:
             new_raw_user['discriminator'] = await self.server.get_discrim(new_username)
 
         new_raw_user['username'] = new_username
-        new_raw_user['avatar'] = payload.get('avatar', user._data['avatar'])
+
+        new_avatar_hash = await self.server.images.avatar_register(payload.get('avatar'))
+        new_raw_user['avatar'] = new_avatar_hash or user._data['avatar']
 
         await self.user_db.update_one({'id': str(user.id)}, new_raw_user)
         await self.server.userdb_update()

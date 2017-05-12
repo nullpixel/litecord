@@ -100,6 +100,8 @@ class User(LitecordObject):
         self.id = int(_data['id'])
         self.username = _data['username']
         self.discriminator = _data['discriminator']
+        self.avatar_hash = _data['avatar']
+
         self.email = _data.get('email')
 
     def __str__(self):

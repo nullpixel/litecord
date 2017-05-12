@@ -15,6 +15,7 @@ from .guild import GuildManager
 from .presence import PresenceManager
 from .api import users, guilds, channels
 from .objects import User, Guild
+from .images import Images
 
 log = logging.getLogger(__name__)
 
@@ -360,6 +361,9 @@ class LitecordServer:
 
             log.info('[load] user database')
             await self.load_users()
+
+            log.info('[load] Images')
+            self.images = Images(self, self.flags.get('images', {}))
 
             log.info('[init] GuildManager')
             self.guild_man = GuildManager(self)
