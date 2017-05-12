@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 class PresenceManager:
     """Manage presence objects/updates."""
     def __init__(self, server):
-        log.info('PresenceManager: init')
         self.server = server
         self.presences = {}
 

@@ -132,8 +132,6 @@ class GuildManager:
         return True
 
     async def init(self):
-        log.info("Loading guild data...")
-
         cursor = self.guild_db.find()
         guild_count = 0
 

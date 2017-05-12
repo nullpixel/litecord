@@ -85,7 +85,7 @@ def pwd_hash(plain, salt):
 
 
 def _err(msg='', errno=None):
-    log.debug(f"Erroring {msg!r} {errno!r}")
+    log.debug(f"Erroring message={msg!r} errno={errno!r}")
     if errno is not None:
         return web.Response(status=ERRNO_TO_HTTPERR.get(errno, 500), text=json.dumps({
             'code': errno,

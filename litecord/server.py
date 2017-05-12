@@ -355,20 +355,20 @@ class LitecordServer:
         try:
             t_init = time.monotonic()
 
-            log.info("Loading boilerplate data")
+            log.info("[load] boilerplate data")
             await self.boilerplate_init()
 
-            log.info('Initializing server state')
+            log.info('[load] user database')
             await self.load_users()
 
-            log.info('Initializing GuildManager')
+            log.info('[init] GuildManager')
             self.guild_man = GuildManager(self)
             await self.guild_man.init()
 
-            log.info('Creating PresenceManager')
+            log.info('[init] PresenceManager')
             self.presence = PresenceManager(self)
 
-            log.info('Initializing endpoint objects')
+            log.info('[init] endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
             self.users_endpoint.register(app)
 

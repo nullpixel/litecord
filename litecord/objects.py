@@ -203,7 +203,7 @@ class Channel(LitecordObject):
             self.guild = guild
 
         if self.guild is None:
-            log.warning("Creating an orphaned Channel")
+            log.error("Creating an orphaned Channel")
 
         self.name = _channel['name']
         self.type = _channel['type']
@@ -212,6 +212,13 @@ class Channel(LitecordObject):
         self.topic = _channel['topic']
 
         self.last_message_id = 0
+
+    @property
+    def watchers(self):
+        """Yields all `Member`s who are online and can watch the channel."""
+        for member in self.guild.online_members:
+            #if member.channel_perms[self.id].READ_MESSAGES: yield member
+            yield member
 
     def get_message(self, message_id):
         """Get a single message from a channel."""
