@@ -1,0 +1,3 @@
+
+class ImageError(Exception):
+    pass
