@@ -19,13 +19,6 @@ HB_MAX_MSEC = 6000
 
 log = logging.getLogger(__name__)
 
-# TODO: MAN THIS IS SHITTY
-# DONT PUT GLOBAL VARIABLES
-# REEEEEEEEEEEEEEEEEEEEEEEEE
-session_data = {}
-token_to_session = {}
-valid_tokens = []
-
 class Connection:
     """Represents a websocket connection to litecord
 
@@ -107,7 +100,7 @@ class Connection:
         """Generate a new Session ID."""
         tries = 0
         new_id = str(uuid.uuid4().fields[-1])
-        while new_id in session_data:
+        while new_id in self.server.sessions:
             if tries >= MAX_TRIES:
                 return None
 
@@ -257,18 +250,19 @@ class Connection:
         self.token = token
 
         try:
-            valid_tokens.index(self.token)
+            self.server.valid_tokens.index(self.token)
         except:
-            valid_tokens.append(self.token)
+            self.server.valid_tokens.append(self.token)
 
         # lol properties
-        self.properties['token'] = self.token
-        self.properties['os'] = prop.get('$os')
-        self.properties['browser'] = prop.get('$browser')
-        self.properties['large'] = large
+        _prop = self.properties
+        _prop['token'] = self.token
+        _prop['os'] = prop.get('$os')
+        _prop['browser'] = prop.get('$browser')
+        _prop['large'] = large
 
-        session_data[self.session_id] = self
-        token_to_session[self.token] = self.session_id
+        self.server.sessions[self.session_id] = self
+        self.server.session_dict[self.token] = self.session_id
 
         if self.session_id not in self.server.event_cache:
             self.server.event_cache[self.session_id] = {
@@ -604,9 +598,9 @@ class Connection:
         if self.token is not None:
             log.debug(f'cleaning up session ID {self.session_id!r}')
             try:
-                token_to_session.pop(self.token)
-                valid_tokens.remove(self.token)
-                session_data.pop(self.session_id)
+                self.server.session_dict.pop(self.token)
+                self.server.valid_tokens.remove(self.token)
+                self.server.sessions.pop(self.session_id)
             except:
                 log.warning("Error while cleaning up the connection.")
             self.token = None
@@ -635,7 +629,7 @@ async def gateway_server(app, databases):
             }
             ```
     """
-    server = LitecordServer(valid_tokens, token_to_session, session_data)
+    server = LitecordServer()
 
     server.db_paths = databases
     if not (await server.init(app)):

@@ -29,9 +29,9 @@ class LitecordServer:
     """Main class for the Litecord server.
 
     Attributes:
-        db_paths: A dictionary with database file paths,
-            See `gateway_server` for more explanation.
-        db: A dictionary that relates database IDs with actual database objects.
+        flags: A dictionary, server configuration goes there.
+        loop: asyncio event loop.
+        mongo_client: An instance of `AsyncIOMotorClient`.
         event_cache: A dictionary that relates user IDs to the last events they received.
             Used for resuming.
         cache: An internal dictionary that relates IDs to objects/raw objects.
@@ -41,11 +41,12 @@ class LitecordServer:
         session_dict: A dictionary relating tokens to their respective `Connection`.
         sessions: A dictionary relating session IDs to their respective `Connection` object.
         guild_man: An instance of `GuildManager`.
-    """
-    def __init__(self, valid_tokens, session_dict, sessions, flags=None):
-        self.db_paths = None
-        self.db = {}
+        presence: An instance of `PresenceManager`.
 
+        TODO: rest_ratelimits.
+        TODO: ws_ratelimits.
+    """
+    def __init__(self, flags=None):
         if flags is None:
             flags = {}
 
@@ -72,10 +73,9 @@ class LitecordServer:
         # cache for objects
         self.cache = {}
 
-        # TODO: don't make those references.
-        self.valid_tokens = valid_tokens
-        self.session_dict = session_dict
-        self.sessions = sessions
+        self.valid_tokens = []
+        self.session_dict = {}
+        self.sessions = {}
 
         self.presence = None
         self.guild_man = None
