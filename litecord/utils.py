@@ -107,7 +107,7 @@ def dt_to_json(dt):
 
 
 def _json(obj):
-    return web.Response(status=200, text=json.dumps(obj))
+    return web.json_response(obj)
 
 
 # Modification of https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
