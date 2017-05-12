@@ -25,7 +25,8 @@ log.addHandler(handler)
 app = web.Application()
 
 async def give_gateway(request):
-    return web.Response(text=json.dumps({"url": "ws://0.0.0.0:12000"}))
+    http = config.flags['server']['http']
+    return web.Response(text=json.dumps({"url": f"ws://{http[0]}:{http[1]}"}))
 
 async def index(request):
     return web.Response(text=json.dumps({"goto": "/api/gateway"}))
