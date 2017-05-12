@@ -1,5 +1,7 @@
 import time
 import hashlib
+import os
+import base64
 
 process_id = 0
 
@@ -8,12 +10,9 @@ _id_in_process = 1
 
 async def get_raw_token():
     """Generate a token"""
-    global process_id
-    now = int(time.time())
-    _str = f'{now}{process_id}'
-    process_id += 1
-    token = hashlib.md5(_str.encode()).hexdigest()
-    return f'memework_{token}'
+    random_stuff = hashlib.sha256(os.urandom(1024)).digest()
+    token = base64.urlsafe_b64encode(random_stuff).decode()
+    return f'litecord_{token}'
 
 
 def _snowflake(timestamp):
