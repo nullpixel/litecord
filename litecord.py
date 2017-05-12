@@ -7,6 +7,8 @@ import json
 import aiohttp
 import litecord
 
+import litecord_config as config
+
 logging.basicConfig(level=logging.DEBUG, \
     format='[%(levelname)7s] [%(name)s] %(message)s')
 
@@ -27,7 +29,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     log.debug("[main] starting ws task")
-    gateway_task = loop.create_task(litecord.gateway_server(app))
+    gateway_task = loop.create_task(litecord.gateway_server(app, config.flags))
 
     log.debug("[main] starting http")
     web.run_app(app, port=8000)

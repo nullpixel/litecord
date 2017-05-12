@@ -606,7 +606,7 @@ class Connection:
             self.token = None
 
 
-async def gateway_server(app):
+async def gateway_server(app, flags):
     """Main function to start the websocket server
 
     This function initializes a LitecordServer object, which
@@ -619,7 +619,7 @@ async def gateway_server(app):
 
     This function registers the `/api/auth/login` route.
     """
-    server = LitecordServer()
+    server = LitecordServer(flags)
 
     if not (await server.init(app)):
         log.error("We had an error initializing the Litecord Server.")
