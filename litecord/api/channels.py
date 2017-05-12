@@ -72,10 +72,10 @@ class ChannelsEndpoint:
 
         channel = self.server.guild_man.get_channel(channel_id)
         if channel is None:
-            return _err('404: Not found')
+            return _err(errno=10003)
 
         if user.id not in channel.guild.members:
-            return _err('401: Unauthorized')
+            return _err(errno=40001)
 
         await self.server.presence.typing_start(user.id, channel_id)
         return web.Response(status=204)

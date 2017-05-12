@@ -49,7 +49,7 @@ class UsersEndpoint:
 
             # way easier using id->raw_user instead of searching through userdb
             raw_userdata = self.server.get_raw_user(user_id)
-            if userdata is None:
+            if raw_userdata is None:
                 return _err(errno=10013)
 
             return _json(strip_user_data(raw_userdata))

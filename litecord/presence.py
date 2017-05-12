@@ -98,7 +98,7 @@ class PresenceManager:
 
         # TODO: don't send events to people who can't read the channel
         #  Requires permission stuff
-        for member in channel.guild.online_members:
+        for member in channel.watchers:
             conn = member.connection
             if conn:
                 await conn.dispatch('TYPING_START', {
