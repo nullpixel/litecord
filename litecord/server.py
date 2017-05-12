@@ -142,6 +142,9 @@ class LitecordServer:
         cursor = self.user_db.find()
         all_users = await cursor.to_list(length=None)
 
+        updated_users = 0
+        events = 0
+
         raw_user_cache = self.cache['id->raw_user']
         user_cache = self.cache['id->user']
 
@@ -158,9 +161,12 @@ class LitecordServer:
                     for member in guild.online_members:
                         conn = member.connection
                         await conn.dispatch('USER_UPDATE', user.as_json)
+                        events += 1
 
                 cached_raw_user = raw_user
                 cached_user = user
+
+        log.info(f'[userdb_update] Updated {updated_users} users, dispatched {events} events')
 
     # helpers
     def get_raw_user(self, user_id):
@@ -272,6 +278,8 @@ class LitecordServer:
             new_token = await get_raw_token()
 
         await self.token_unregister(old_token)
+
+        log.info(f"[login] Generated new token for {user_id}")
         await self.token_register(new_token, user_id)
 
         return _json({"token": new_token})
@@ -336,32 +344,8 @@ class LitecordServer:
                 used_discrims.index(discrim)
                 discrim = str(random_digits(4))
             except ValueError:
+                log.info(f'[discrim] Generated discrim {discrim!r} for {username!r}')
                 return discrim
-
-    async def h_guild_post_message(self, request):
-        """Dummy handler for `POST:/guild/{guild_id}/messages`
-
-        TODO: remove this
-        """
-
-        guild_id = request.match_info['guild_id']
-
-        # find the guild
-        guild = self.guild_man.get_guild(guild_id)
-        if guild is None:
-            return _err('guild not found')
-
-        # store message somewhere... idfk where or how
-
-        # dispatching events should be something along those lines
-
-        # users = list of all users in the guild
-        # for user in users:
-        #  get gateway.Connection that represents the user
-        #  check if the Client is actually there
-        #  await connection.dispatch('MESSAGE_CREATE', {data goes here})
-
-        return _err('not implemented')
 
     async def init(self, app):
         """Initialize the server.

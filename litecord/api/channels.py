@@ -194,6 +194,8 @@ class ChannelsEndpoint:
         if limit > 300:
             meme
 
+        print('meme', request.query)
+
         # TODO: understand these
         #around = request.query.get('around', 50)
         #before = request.query.get('before', 50)
