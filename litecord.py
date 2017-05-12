@@ -14,6 +14,14 @@ logging.basicConfig(level=logging.DEBUG, \
 
 log = logging.getLogger('litecord')
 
+handler = logging.FileHandler('litecord.log')
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - [%(levelname)s] [%(name)s] %(message)s')
+handler.setFormatter(formatter)
+
+log.addHandler(handler)
+
 app = web.Application()
 
 async def give_gateway(request):
