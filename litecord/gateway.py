@@ -606,32 +606,21 @@ class Connection:
             self.token = None
 
 
-async def gateway_server(app, databases):
+async def gateway_server(app):
     """Main function to start the websocket server
 
     This function initializes a LitecordServer object, which
     initializes databases, fills caches, etc.
 
-    When running, for each new client, a `Connection` object is created to represent it,
-    its `.run()` method is called and the connection will live forever until it gets closed.
+    When running, for each new websocket client, a `Connection` object is
+    created to represent it, its `.run()` method is called and the
+    connection will stay alive forever until it gets closed or the client
+    stops heartbeating with us.
 
     This function registers the `/api/auth/login` route.
-
-    Args:
-        databases: A dictionary with database path data.
-            Example:
-            ```
-            {
-                'users': 'db/users.json',
-                'guilds': 'db/guilds.json',
-                'messages': 'db/messages.json',
-                'tokens': 'db/tokens.json',
-            }
-            ```
     """
     server = LitecordServer()
 
-    server.db_paths = databases
     if not (await server.init(app)):
         log.error("We had an error initializing the Litecord Server.")
         sys.exit(1)
@@ -648,6 +637,6 @@ async def gateway_server(app, databases):
     app.router.add_post('/api/auth/login', server.login)
 
     # start WS
-    log.info("[websocket] starting")
+    log.info("[ws] starting")
     ws_server = websockets.serve(henlo, '0.0.0.0', 12000)
     await ws_server

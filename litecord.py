@@ -14,13 +14,6 @@ log = logging.getLogger('litecord')
 
 app = web.Application()
 
-DATABASES = {
-    #'users': 'db/users.json',
-    #'guilds': 'db/guilds.json',
-    #'messages': 'db/messages.json',
-    'tokens': 'db/tokens.json',
-}
-
 async def give_gateway(request):
     return web.Response(text=json.dumps({"url": "ws://0.0.0.0:12000"}))
 
@@ -34,7 +27,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     log.debug("[main] starting ws task")
-    gateway_task = loop.create_task(litecord.gateway_server(app, DATABASES))
+    gateway_task = loop.create_task(litecord.gateway_server(app))
 
     log.debug("[main] starting http")
     web.run_app(app, port=8000)
