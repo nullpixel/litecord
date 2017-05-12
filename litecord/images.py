@@ -21,6 +21,7 @@ class Images:
         self.config = config
 
         self.image_db = server.litecord_db['images']
+        self.attach_db = server.litecord_db['attachments']
 
     def extract_uri(self, data):
         try:
@@ -33,13 +34,14 @@ class Images:
 
         return encoded_data, mimetype
 
-    async def avatar_register(self, avatar_data):
-        """Registers an avatar in the avatar database.
+    async def raw_add_image(self, data, img_type='avatar'):
+        """Add an image.
 
         Returns a string, representing the image hash.
-        The image hash can be used in `Images.avatar_retrieve` to get
+        The image hash can be used in `Images.image_retrieve` to get
         raw binary data.
         """
+
         try:
             decoded_data, mimetype = self.extract_uri(avatar_data)
         except ImageError as err:
@@ -60,13 +62,24 @@ class Images:
         log.info(f'Inserting {len(dec_data)}-bytes avatar.')
 
         await self.image_db.insert_one({
-            'type': 'avatar',
+            'type': img_type,
             'hash': data_hash,
             'data': encoded_data,
         })
 
         return data_hash
 
+    async def avatar_register(self, avatar_data):
+        """Registers an avatar in the avatar database."""
+        return (await self.raw_add_image(avatar_data))
+
+    async def add_attachment(self, data):
+        return (await self.raw_add_image(data, 'attachment'))
+
     async def avatar_retrieve(self, avatar_hash):
         img = await self.image_db.find_one({'type': 'avatar', 'hash': avatar_hash})
+        return img.get('data')
+
+    async def image_retrieve(self, img_hash):
+        img = await self.image_db.find_one({'type': 'attachment', 'hash': img_hash})
         return img.get('data')
