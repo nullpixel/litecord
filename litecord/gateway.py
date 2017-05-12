@@ -7,12 +7,15 @@ import traceback
 import json
 import sys
 import pprint
+import random
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 
 MAX_TRIES = 10
+HB_MIN_MSEC = 4000
+HB_MAX_MSEC = 6000
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,7 @@ class Connection:
         # Last sequence sent by the client and last sequence received by the client
         # will be here
         self.events = None
-        self.hb_interval = 3000
+        self.hb_interval = random.randint(HB_MIN_MSEC, HB_MAX_MSEC)
         self.wait_task = None
 
         # some stuff
