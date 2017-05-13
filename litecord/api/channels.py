@@ -179,29 +179,27 @@ class ChannelsEndpoint:
         if user.id not in channel.guild.members:
             return _err(errno=40001)
 
-        # get data from payload
-        # this is ugly.
-        data = request.query_string.split('=')
-        limit = 50
-        if len(data) == 2:
-            key, val = data
-            if key == 'limit':
-                try:
-                    limit = int(val)
-                except:
-                    limit = 50
+        limit = request.query.get('limit', 50)
 
-        if limit > 300:
-            meme
+        if (1 < limit) or (limit > 100):
+            return _err('limit not in 1-100 range')
 
-        print('meme', request.query)
+        around = request.query.get('around', None)
+        before = request.query.get('before', None)
+        after = request.query.get('after', None)
 
-        # TODO: understand these
-        #around = request.query.get('around', 50)
-        #before = request.query.get('before', 50)
-        #after = request.query.get('after', 50)
-
+        _l = [around, before, after]
         message_list = await channel.last_messages(limit)
+
+        if around is not None:
+            pass
+
+        elif before is not None:
+            pass
+
+        elif after is not None:
+            pass
+
         return _json([m.as_json for m in message_list])
 
     async def h_delete_message(self, request):
