@@ -19,11 +19,14 @@ Make sure you have [MongoDB](https://www.mongodb.com/) installed and running.
 git clone ssh://git@git.memework.org:2222/lnmds/litecord.git
 # Open the freshly cloned copy
 cd litecord
-# Install the dependencies
-sudo pip3.6 install -r requirements.txt
+
+# Create a virtual enviroment and install dependencies in it
+# Make sure your python is 3.6+
+python3 -m venv py_litecord/
+py_litecord/bin/python3 -m pip install -r requirements.txt
 ```
 
-Then you just run `python3.6 litecord.py`, simple.
+Then you just run `./run_litecord.sh`, simple.
 
 ## Usage
 When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
