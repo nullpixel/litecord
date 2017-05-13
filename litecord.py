@@ -41,13 +41,14 @@ def main():
     gateway_task = loop.create_task(litecord.gateway_server(app, config.flags))
 
     log.debug("[main] starting http")
+    http_task = loop.create_task(litecord.http_server(app, config.flags))
 
-    http = config.flags['server']['http']
-    web.run_app(app, host=http[0], port=http[1])
-
-    log.info("Exiting...")
-    gateway_task.cancel()
-    loop.close()
+    try:
+        loop.run_forever()
+    except:
+        log.info("Exiting...")
+        gateway_task.cancel()
+        loop.close()
 
 if __name__ == "__main__":
     main()
