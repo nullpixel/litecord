@@ -303,7 +303,7 @@ class LitecordServer:
         try:
             token_type, token_value = auth_header.split()
         except:
-            if auth_header.startswith('memework_'):
+            if auth_header.startswith('litecord_'):
                 token_type = 'Bot'
                 token_value = auth_header
             else:
