@@ -13,7 +13,7 @@ from .snowflake import get_raw_token, get_snowflake
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
-from .api import users, guilds, channels
+from .api import users, guilds, channels, imgs
 from .objects import User, Guild
 from .images import Images
 
@@ -381,6 +381,9 @@ class LitecordServer:
 
             self.channels_endpoint = channels.ChannelsEndpoint(self)
             self.channels_endpoint.register(app)
+
+            self.images_endpoint = imgs.ImageEndpoint(self)
+            self.images_endpoint.register(app)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)

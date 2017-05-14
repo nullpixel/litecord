@@ -78,8 +78,14 @@ class Images:
 
     async def avatar_retrieve(self, avatar_hash):
         img = await self.image_db.find_one({'type': 'avatar', 'hash': avatar_hash})
-        return img.get('data')
+        try:
+            return img.get('data')
+        except:
+            return None
 
     async def image_retrieve(self, img_hash):
         img = await self.image_db.find_one({'type': 'attachment', 'hash': img_hash})
-        return img.get('data')
+        try:
+            return img.get('data')
+        except:
+            return None
