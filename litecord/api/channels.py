@@ -190,6 +190,7 @@ class ChannelsEndpoint:
 
         _l = [around, before, after]
         message_list = await channel.last_messages(limit)
+        #ids = [m.id for m in message_list]
 
         if around is not None:
             pass
