@@ -609,7 +609,14 @@ class Connection:
 _load_lock = asyncio.Lock()
 
 async def http_server(app, flags):
-    """Main function to start the HTTP server."""
+    """Main function to start the HTTP server.
+
+    This function waits for `gateway_server` to finish(using locks).
+
+    That is needed since `gateway_server` initializes server state and registers
+    all API routes, and in aiohttp, you need to register
+    routes **before** the app starts.
+    """
     await _load_lock.acquire()
     http = flags['server']['http']
 
