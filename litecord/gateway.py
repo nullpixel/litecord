@@ -613,13 +613,11 @@ async def http_server(app, flags):
     await _load_lock.acquire()
     http = flags['server']['http']
 
-    log.info('HTTP running at {http[0]}:{http[1]}')
+    log.info(f'[http] starting at {http[0]}:{http[1]}')
 
     handler = app.make_handler()
     f = app.loop.create_server(handler, http[0], http[1])
     await f
-
-    log.info("exit")
 
 async def gateway_server(app, flags):
     """Main function to start the websocket server
@@ -655,8 +653,8 @@ async def gateway_server(app, flags):
 
     # start WS
     _load_lock.release()
-    log.info("[ws] starting")
-
     ws = flags['server']['ws']
+    log.info(f'[ws] running at {ws[0]}:{ws[1]}')
+
     ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
     await ws_server

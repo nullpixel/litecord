@@ -181,25 +181,40 @@ class ChannelsEndpoint:
 
         limit = request.query.get('limit', 50)
 
-        if (1 < limit) or (limit > 100):
-            return _err('limit not in 1-100 range')
+        try:
+            limit = int(limit)
+        except:
+            return _err('limit is not a integer')
 
-        around = request.query.get('around', None)
-        before = request.query.get('before', None)
-        after = request.query.get('after', None)
+        if not ((limit >= 1) and (limit <= 100)):
+            return _err(f'limit not in 1-100 range, {limit}')
+
+        around = request.query.get('around', -1)
+        before = request.query.get('before', -1)
+        after = request.query.get('after', -1)
+
+        try:
+            around = int(around)
+            before = int(before)
+            after = int(after)
+        except:
+            return _err('parameters are not integers')
 
         _l = [around, before, after]
         message_list = await channel.last_messages(limit)
-        #ids = [m.id for m in message_list]
 
-        if around is not None:
-            pass
+        if around != -1:
+            avg = int(limit / 2)
+            before = around + avg
+            after = around - avg
 
-        elif before is not None:
-            pass
+            message_list = [m for m in message_list if (m.id < before) and (m.id > after)]
 
-        elif after is not None:
-            pass
+        elif before != -1:
+            message_list = [m for m in message_list if (m.id < before)]
+
+        elif after != -1:
+            message_list = [m for m in message_list if (m.id > after)]
 
         return _json([m.as_json for m in message_list])
 
