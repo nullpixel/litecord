@@ -5,6 +5,7 @@ import os
 import base64
 import hashlib
 import time
+import subprocess
 
 import motor.motor_asyncio
 from aiohttp import web
@@ -80,6 +81,9 @@ class LitecordServer:
 
         self.presence = None
         self.guild_man = None
+
+        self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
+            shell=True).decode('utf-8').strip()
 
     async def boilerplate_init(self):
         """Load boilerplate data."""
@@ -247,6 +251,21 @@ class LitecordServer:
         log.info(f"Registering {token} to {user_id}")
         res = self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
         return res
+
+    async def h_get_version(self, request):
+        """`GET:/api/version`.
+
+        This endpoint doesn't require authentication.
+
+        Output: A JSON object:
+            {
+                "version": "string, the full git revision"
+            }
+        """
+
+        return _json({
+            'version': self.litecord_version,
+        })
 
     async def login(self, request):
         """Login a user through the `POST:/auth/login` endpoint.

@@ -657,6 +657,7 @@ async def gateway_server(app, flags):
         conn.cleanup()
 
     app.router.add_post('/api/auth/login', server.login)
+    app.router.add_get('/api/version', server.h_get_version)
 
     # start WS
     _load_lock.release()
