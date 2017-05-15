@@ -93,9 +93,16 @@ class LitecordServer:
             db_to_update = getattr(self, f'{key}_db')
 
             tot = 0
+
+
             for element in data:
+                existing = await db_to_update.find_one({'id': element['id']})
+                if (existing is not None) and key == 'user':
+                    continue
+
                 res = await db_to_update.replace_one({'id': element['id']}, element, True)
                 tot += 1
+
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
 
     async def load_users(self):
@@ -150,8 +157,12 @@ class LitecordServer:
         user_cache = self.cache['id->user']
 
         for raw_user in all_users:
-            cached_raw_user = raw_user_cache[raw_user['id']]
-            cached_user = user_cache[raw_user['id']]
+            raw_user = strip_user_data(raw_user)
+
+            raw_user_id = int(raw_user['id'])
+
+            cached_raw_user = strip_user_data(raw_user_cache[raw_user_id])
+            cached_user = user_cache[raw_user_id]
 
             differences = set(raw_user.values()) ^ set(cached_raw_user.values())
             if len(differences) > 0:
@@ -166,6 +177,7 @@ class LitecordServer:
 
                 cached_raw_user = raw_user
                 cached_user = user
+                updated_users += 1
 
         log.info(f'[userdb_update] Updated {updated_users} users, dispatched {events} events')
 

@@ -13,7 +13,7 @@ class ImageEndpoint:
 
     def register(self, app):
         _r = app.router
-        _r.add_get('/images/avatars/{user_id}/.{format}', self.h_get_user_avatar)
+        _r.add_get('/images/avatars/{user_id}/{avatar_hash}.{img_format}', self.h_get_user_avatar)
 
     async def h_get_user_avatar(self, request):
         """`GET /images/avatars/{user_id}`.
@@ -21,23 +21,17 @@ class ImageEndpoint:
         Retrieve a user's avatar.
         """
 
-        # 🤔 thinking about this part
-        '''_error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
-        channel_id = request.match_info['channel_id']
-        user = self.server._user(_error_json['token'])'''
-
         user_id = request.match_info['user_id']
+        avatar_hash = request.match_info['avatar_hash']
+        img_format = request.match_info['img_format']
+
         user = self.server.get_user(user_id)
         if user is None:
             return _err(errno=10012)
 
-        image = await self.images.avatar_retrieve(user.avatar_hash)
+        image = await self.images.avatar_retrieve(avatar_hash)
         if image is None:
             return _err('image not found')
 
-        binary = base64.b64decode(image['data'])
-        return web.Response(body=binary)
+        raw = base64.b64decode(image)
+        return web.Response(body=raw)

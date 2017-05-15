@@ -7,7 +7,7 @@ from .err import ImageError
 log = logging.getLogger(__name__)
 
 AVATAR_MIMETYPES = [
-    'image/jpeg', 'image/png',
+    'image/jpeg', 'image/jpg', 'image/png',
     #'image/gif'
 ]
 
@@ -25,7 +25,7 @@ class Images:
 
     def extract_uri(self, data):
         try:
-            sp = avatar_data.split(',')
+            sp = data.split(',')
             data_string = sp[0]
             encoded_data = sp[1]
             mimetype = data_string.split(';')[0].split(':')[1]
@@ -43,23 +43,22 @@ class Images:
         """
 
         try:
-            decoded_data, mimetype = self.extract_uri(avatar_data)
+            encoded_data, mimetype = self.extract_uri(data)
         except ImageError as err:
             raise err
 
         try:
             AVATAR_MIMETYPES.index(mimetype)
         except:
-            raise ImageError('Invalid MIME type')
+            raise ImageError(f'Invalid MIME type {mimetype!r}')
 
         try:
             dec_data = base64.b64decode(encoded_data)
         except:
             raise ImageError('Error decoding Base64 data')
 
-        data_hash = hashlib.sha256(decoded_data).hexdigest()
-
-        log.info(f'Inserting {len(dec_data)}-bytes avatar.')
+        data_hash = hashlib.sha256(dec_data).hexdigest()
+        log.info(f'Inserting {len(dec_data)}-bytes image.')
 
         await self.image_db.insert_one({
             'type': img_type,

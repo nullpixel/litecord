@@ -1,6 +1,6 @@
 import json
 import logging
-from ..utils import _err, _json, strip_user_data
+from ..utils import _err, _json
 
 log = logging.getLogger(__name__)
 
@@ -15,9 +15,7 @@ class GuildsEndpoint:
         _r.add_get('/api/guilds/{guild_id}/channels', self.h_get_guild_channels)
         _r.add_get('/api/guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
         _r.add_get('/api/guilds/{guild_id}/members', self.h_guild_members)
-
-    async def h_post_guilds(self, request):
-        pass
+        _r.add_post('/api/gulids', self.h_post_guilds)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`
@@ -104,3 +102,42 @@ class GuildsEndpoint:
             return _err('401: Unauthorized')
 
         return _json([member.as_json for member in guild.members])
+
+    async def h_post_guilds(self, request):
+        """`POST /guilds`.
+
+        Create a guild.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        user = self.server._user(_error_json['token'])
+
+        try:
+            _payload = await request.json()
+        except:
+            return _err('error parsing')
+
+        # we ignore anything else client sends.
+        try:
+            payload = {
+                'name': _payload['name'],
+                'region': _payload['region'],
+                'icon': _payload['icon'],
+                'verification_level': _payload['verification_level'],
+                'default_message_notifications': _payload['default_message_notifications'],
+                'roles': _payload['roles'],
+                'channels': _payload['channels'],
+            }
+        except KeyError:
+            return _err('incomplete payload')
+
+        try:
+            new_guild = await self.server.guild_man.new_guild(user, payload)
+        except:
+            return _err('error creating guild')
+
+        return _json(new_guild.as_json)
