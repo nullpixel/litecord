@@ -85,14 +85,18 @@ def pwd_hash(plain, salt):
 
 
 def _err(msg='', errno=None):
-    log.debug(f"Erroring message={msg!r} errno={errno!r}")
+    status_code = ERRNO_TO_HTTPERR.get(errno, 500)
+    err_msg = ERR_TRANSLATOR.get(errno, None)
+
+    log.debug(f"Erroring msg={msg!r} errno={errno!r} status={status_code!r} err_msg={err_msg!r}")
+
     if errno is not None:
-        return web.Response(status=ERRNO_TO_HTTPERR.get(errno, 500), text=json.dumps({
+        return web.Response(status=status_code, text=json.dumps({
             'code': errno,
-            'message': ERR_TRANSLATOR[errno]
+            'message': err_msg
         }))
 
-    return web.Response(status=500, text=json.dumps({
+    return web.Response(status=status_code, text=json.dumps({
         'code': 0,
         'message': msg
     }))

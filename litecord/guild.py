@@ -112,6 +112,58 @@ class GuildManager:
 
         return True
 
+    async def new_guild(self, owner, payload):
+        """Create a Guild.
+
+        Dispatches GUILD_CREATE event to the owner of the new guild.
+        Returns a `Guild` object.
+
+        Arguments:
+            owner: A `User` object representing the guild's owner.
+            payload: A guild payload:
+            {
+                "name": "Name of the guild",
+                "region": "guild voice region, ignored",
+                "verification_level": TODO,
+                "default_message_notifications": TODO,
+                "roles": [List of role payloads],
+                "channels": [List of channel payloads],
+                "icon": "base64 128x128 jpeg image for the guild icon",
+            }
+        """
+
+        conn = owner.connection
+        if not conn:
+            log.warning("User not connected through WS to do this action.")
+            return None
+
+        payload['owner_id'] = str(owner.id)
+        payload['id'] = str(get_snowflake())
+        payload['features'] = []
+        payload['channels'].append({
+            'id': str(payload['id']),
+            'guild_id': str(payload['id']),
+            'name': 'general',
+            'type': 'text',
+            'position': 0,
+            'topic': '',
+        })
+
+        for raw_channel in payload['channels']:
+            raw_channel['guild_id'] = payload['id']
+
+        guild = Guild(self.server, payload)
+        await self.guild_db.insert_one(payload)
+        self.guilds[guild.id] = guild
+
+        for channel in guild.all_channels():
+            self.channels[channel.id] = channel
+
+        await self.server.presence.status_update(guild, owner)
+        await conn.dispatch('GUILD_CREATE', guild.as_json)
+
+        return guild
+
     async def edit_message(self, message, payload):
         """Edit a message.
 

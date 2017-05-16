@@ -156,6 +156,7 @@ class Member(LitecordObject):
         self.guild = guild
 
         self.id = self.user.id
+        self.owner = self.id in self.guild.member_ids
         self.nick = None
         self.joined_at = datetime.datetime.now()
         self.voice_deaf = False
@@ -302,7 +303,7 @@ class Guild(LitecordObject):
         self.id = int(_guild_data['id'])
         self.name = _guild_data['name']
         self.icons = {
-            'icon': '',
+            'icon': _guild_data['icon'],
             'splash': '',
         }
 
@@ -318,12 +319,9 @@ class Guild(LitecordObject):
         self._channel_data = _guild_data['channels']
         self.channels = {}
 
-        for channel_id in self._channel_data:
-            channel_data = _guild_data['channels'][channel_id]
-            channel_data['guild_id'] = self.id
-            channel_data['id'] = channel_id
-
-            channel = Channel(server, channel_data, self)
+        for raw_channel in self._channel_data:
+            raw_channel['guild_id'] = self.id
+            channel = Channel(server, raw_channel, self)
             self.channels[channel.id] = channel
 
         # list of snowflakes
@@ -432,6 +430,10 @@ class Message:
 
         self.id = int(_message_data['id'])
         self.author_id = int(_message_data['author_id'])
+        if channel is None:
+            log.warning(f"Orphaned message {self.id}")
+            return
+
         self.channel_id = channel.id
 
         self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))

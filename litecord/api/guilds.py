@@ -1,6 +1,7 @@
 import json
 import logging
 from ..utils import _err, _json
+from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class GuildsEndpoint:
         _r.add_get('/api/guilds/{guild_id}/channels', self.h_get_guild_channels)
         _r.add_get('/api/guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
         _r.add_get('/api/guilds/{guild_id}/members', self.h_guild_members)
-        _r.add_post('/api/gulids', self.h_post_guilds)
+        _r.add_post('/api/guilds', self.h_post_guilds)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`
@@ -127,10 +128,11 @@ class GuildsEndpoint:
                 'name': _payload['name'],
                 'region': _payload['region'],
                 'icon': _payload['icon'],
-                'verification_level': _payload['verification_level'],
-                'default_message_notifications': _payload['default_message_notifications'],
-                'roles': _payload['roles'],
-                'channels': _payload['channels'],
+                'verification_level': _payload.get('verification_level', -1),
+                'default_message_notifications': _payload.get('default_message_notifications', -1),
+                'roles': [],
+                'channels': [],
+                'members': [str(user.id)],
             }
         except KeyError:
             return _err('incomplete payload')
@@ -138,6 +140,7 @@ class GuildsEndpoint:
         try:
             new_guild = await self.server.guild_man.new_guild(user, payload)
         except:
+            log.error(exc_info=True)
             return _err('error creating guild')
 
         return _json(new_guild.as_json)
