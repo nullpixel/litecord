@@ -68,6 +68,7 @@ class LitecordServer:
         self.user_db =      self.litecord_db['users']
         self.guild_db =     self.litecord_db['gulids']
         self.token_db =     self.litecord_db['tokens']
+        self.invite_db =    self.litecord_db['invites']
 
         # cache for events
         self.event_cache = {}

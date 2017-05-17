@@ -274,6 +274,14 @@ class Channel(LitecordObject):
             #'user_limit': self.user_limit,
         }
 
+    @property
+    def as_invite(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'type': self.type,
+        }
+
 
 class Guild(LitecordObject):
     """A general guild.
@@ -340,6 +348,8 @@ class Guild(LitecordObject):
         self.large = len(self.members) > 150
         self.member_count = len(self.members)
 
+        self.valid_invite_codes = _guild_data.get('valid_invites', [])
+
     def all_channels(self):
         """Yield all channels from a guild"""
         for channel in self.channels.values():
@@ -404,6 +414,68 @@ class Guild(LitecordObject):
             'members': self.iter_json(self.members),
             'channels': self.iter_json(self.channels),
             'presences': self.presences,
+        }
+
+    @property
+    def as_invite(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'icon': self.icons['icon'],
+            'splash': self.icons['splash'],
+        }
+
+class Invite:
+    """An invite object.
+
+    TODO: make them functional.
+
+    Attributes:
+        _data: Raw invite object.
+        code: A string, the invite code
+        channel_id: An int
+    """
+    def __init__(self, server, _data):
+        self._data = _data
+        self.id = int(_data['id'])
+
+        creation_timestamp = snowflake_time(self.id)
+        self.timestamp = datetime.datetime.fromtimestamp(creation_timestamp)
+
+        self.code = _data['code']
+
+        self.channel_id = _data['channel_id']
+        self.channel = server.guild_man.get_channel(self.channel_id)
+        if self.channel is None:
+            log.warning("Invalid invite")
+
+        self.uses = _data['uses']
+
+    def use(self):
+        if self.uses < 1:
+            return None
+
+        self.uses -= 1
+        return True
+
+    @property
+    def valid(self):
+        return self.channel is not None
+
+    @property
+    def as_db(self):
+        return {
+            'code': self.code,
+            'uses': self.uses,
+            'channel_id': self.channel_id,
+        }
+
+    @property
+    def as_json(self):
+        return {
+            'code': self.code,
+            'guild': self.guild.as_invite,
+            'channel': self.channel.as_invite,
         }
 
 

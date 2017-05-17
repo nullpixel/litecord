@@ -19,10 +19,12 @@ class GuildManager:
         self.server = server
         self.guild_db = server.guild_db
         self.message_db = server.message_db
+        self.invite_db = server.invite_db
 
         self.guilds = {}
         self.channels = {}
         self.messages = {}
+        self.invites = {}
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
@@ -58,6 +60,9 @@ class GuildManager:
         user_id = int(user_id)
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]
+
+    def get_invite(self, invite_code):
+        return self.invites.get(invite_code)
 
     def all_guilds(self):
         """Yield all available guilds."""
@@ -183,6 +188,12 @@ class GuildManager:
 
         return True
 
+    async def create_invite(self, user, channel):
+        # TODO: something something permissions
+        #if not channel.guild.permissions(user, MAKE_INVITE):
+        # return None
+        return None
+
     async def init(self):
         cursor = self.guild_db.find()
         guild_count = 0
@@ -196,6 +207,21 @@ class GuildManager:
             guild_count += 1
 
         log.info(f'[guild] Loaded {guild_count} guilds')
+
+        cursor = self.invite_db.find()
+        invite_count = 0
+        valid_invites = 0
+
+        for raw_invite in (await cursor.to_list(length=None)):
+            invite = Invite(self.server, raw_invite)
+
+            if invite.valid:
+                self.invites[invite.id] = invite
+                valid_invites += 1
+
+            invite_count += 1
+
+        log.info(f'[guild] Loaded {valid_invites} valid out of {invite_count} invites')
 
         # load messages from database
 
