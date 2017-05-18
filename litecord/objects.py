@@ -518,7 +518,7 @@ class Message:
             log.warning("Message being created with invalid userID [member not found]")
 
         self.content = _message_data['content']
-        self.edited_at = None
+        self.edited_at = _message_data.get('edited_timestamp', None)
 
     def edit(self, new_content, timestamp=None):
         """Edit a message object"""
@@ -548,7 +548,7 @@ class Message:
             'author': self.author.as_json,
             'content': self.content,
             'timestamp': dt_to_json(self.timestamp),
-            'edited_timestamp': self.edited_at or None,
+            'edited_timestamp': dt_to_json(self.edited_at),
             'tts': False,
             'mention_everyone': '@everyone' in self.content,
 
