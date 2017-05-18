@@ -1,7 +1,9 @@
 import logging
 import datetime
+import random
+
 from .utils import strip_user_data, dt_to_json
-from .snowflake import snowflake_time
+from .snowflake import snowflake_time, make_invite_token
 
 log = logging.getLogger(__name__)
 
@@ -165,6 +167,13 @@ class Member(LitecordObject):
     @property
     def connection(self):
         return self.user.connection
+
+    async def dispatch(self, evt_name, evt_data):
+        try:
+            return await self.connection.dispatch(evt_name, evt_data)
+        except:
+            log.error('Failed to dispatch event.', exc_info=True)
+            return None
 
     @property
     def as_json(self):
@@ -360,6 +369,18 @@ class Guild(LitecordObject):
         for member in self.members.values():
             yield member
 
+    async def add_member(self, user):
+        """Add a `User` to a guild.
+
+        Returns `Member`.
+        """
+
+        return (await self.guild_man.add_member(self, user))
+
+    async def dispatch_to_members(self, evt_name, evt_data):
+        for member in self.online_members:
+            await member.dispatch(evt_name, evt_data)
+
     @property
     def online_members(self):
         """Yield all members that have an identified connection"""
@@ -449,14 +470,28 @@ class Invite:
         if self.channel is None:
             log.warning("Invalid invite")
 
-        self.uses = _data['uses']
+        self.temporary = False
+
+        if _data['uses'] > 0:
+            self.invite_tokens = [make_invite_token() for use in range(_data['uses'])]
+        else:
+            try:
+                expiry_timestamp = _data['expiry_timestamp']
+            except:
+                log.error("how does that invite work???")
+                return
+
+            self.temporary = True
+            # TODO: this to be a datetime object
+            self.expiry_timestamp = expiry_timestamp
 
     def use(self):
-        if self.uses < 1:
+        try:
+            x = self.invite_tokens
+            return x.pop(random.randrange(len(x)))
+        except:
+            log.error(exc_info=True)
             return None
-
-        self.uses -= 1
-        return True
 
     @property
     def valid(self):

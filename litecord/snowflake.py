@@ -10,10 +10,16 @@ _id_in_process = 1
 
 async def get_raw_token():
     """Generate a token"""
-    random_stuff = hashlib.sha256(os.urandom(1024)).digest()
+    random_stuff = hashlib.sha512(os.urandom(4096)).digest()
     token = base64.urlsafe_b64encode(random_stuff).decode()
     return f'litecord_{token}'
 
+
+def make_invite_token():
+    """Generate an invite token."""
+    random_stuff = hashlib.sha256(os.urandom(2048)).digest()
+    invi_token = base64.urlsafe_b64encode(random_stuff).decode()
+    return f'invi_token:{invi_token}'
 
 def _snowflake(timestamp):
     """Generate a snowflake from a specific timestamp.

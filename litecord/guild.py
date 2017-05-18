@@ -117,6 +117,21 @@ class GuildManager:
 
         return True
 
+    async def reload_guild(self, guild_id):
+        """Reload one guild.
+
+        Used normally after a database update.
+        This updates cache objects.
+        """
+
+        raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
+
+        guild = Guild(self.server, raw_guild)
+        self.guilds[guild.id] = guild
+
+        for channel in guild.all_channels():
+            self.channels[channel.id] = channel
+
     async def new_guild(self, owner, payload):
         """Create a Guild.
 
@@ -187,6 +202,31 @@ class GuildManager:
             await conn.dispatch('MESSAGE_UPDATE', message.as_json)
 
         return True
+
+    async def add_member(self, guild, user):
+        """Adds a user to a guild.
+
+        Returns `Member` on success, `None` on failure.
+        """
+
+        raw_guild = guild._data
+        raw_guild['members'].append(str(user.id))
+
+        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        log.info(f"Updated {result.modified_count} guilds")
+
+        await self.reload_guild(guild.id)
+
+        new_member = guild.members.get(user.id)
+        if new_member is None:
+            return None
+
+        to_add = {'guild_id': str(guild.id)}
+        payload = {**new_member.as_json, **add}
+
+        await guild.dispatch_to_members('GUILD_MEMBER_ADD', payload)
+
+        return new_member
 
     async def create_invite(self, user, channel):
         # TODO: something something permissions

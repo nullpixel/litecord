@@ -50,8 +50,14 @@ class InvitesEndpoint:
         guild = invite.channel.guild
 
         try:
-            await invite.use()
-            await guild.add_member(user)
+            success = invite.use()
+            if not success:
+                return _err('Error using the invite.')
+
+            member = await guild.add_member(user)
+            if member is None:
+                return _err('Error adding to the guild')
+
             return _json(invite.as_json)
         except:
             log.error(exc_info=True)
