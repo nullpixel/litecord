@@ -91,10 +91,7 @@ class GuildManager:
         log.info(f"Adding message with id {result.inserted_id!r}")
 
         self.messages[message.id] = message
-
-        for member in channel.guild.online_members:
-            conn = member.connection
-            await conn.dispatch('MESSAGE_CREATE', message.as_json)
+        await channel.dispatch('MESSAGE_CREATE', message.as_json)
 
         return message
 
@@ -108,12 +105,10 @@ class GuildManager:
         result = await self.message_db.delete_one({'message_id': message.id})
         log.info(f"Deleted {result.deleted_count} messages")
 
-        for member in message.channel.guild.online_members:
-            conn = member.connection
-            await conn.dispatch('MESSAGE_DELETE', {
-                'id': str(message.id),
-                'channel_id': str(message.channel.id),
-            })
+        await message.channel.dispatch('MESSAGE_DELETE', {
+            'id': str(message.id),
+            'channel_id': str(message.channel.id),
+        })
 
         return True
 
@@ -197,10 +192,7 @@ class GuildManager:
         result = await self.message_db.replace_one({'message_id': message.id}, message.as_db)
         log.info(f"Updated {result.modified_count} messages")
 
-        for member in message.channel.guild.online_members:
-            conn = member.connection
-            await conn.dispatch('MESSAGE_UPDATE', message.as_json)
-
+        await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
         return True
 
     async def add_member(self, guild, user):
@@ -226,7 +218,7 @@ class GuildManager:
         to_add = {'guild_id': str(guild.id)}
         payload = {**new_member.as_json, **add}
 
-        await guild.dispatch_to_members('GUILD_MEMBER_ADD', payload)
+        await guild.dispatch('GUILD_MEMBER_ADD', payload)
 
         return new_member
 
@@ -245,7 +237,7 @@ class GuildManager:
         log.info(f"Updated {result.modified_count} guilds")
 
         await self.reload_guild(guild.id)
-        await guild.dispatch_to_members('GUILD_MEMBER_REMOVE', {
+        await guild.dispatch('GUILD_MEMBER_REMOVE', {
             'guild_id': str(guild.id),
             'user': user.as_json,
         })

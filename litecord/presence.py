@@ -64,13 +64,7 @@ class PresenceManager:
 
         log.info(f'{user!s} : {presence!r}, updating presences')
 
-        for member in guild.online_members:
-            if member.id == user.id:
-                continue
-
-            conn = member.connection
-            if conn:
-                await conn.dispatch('PRESENCE_UPDATE', presence.as_json)
+        await guild.dispatch('PRESENCE_UPDATE', presence.as_json)
 
     async def global_update(self, user, new_status=None):
         """Updates an user's status, globally.
@@ -98,11 +92,8 @@ class PresenceManager:
 
         # TODO: don't send events to people who can't read the channel
         #  Requires permission stuff
-        for member in channel.watchers:
-            conn = member.connection
-            if conn:
-                await conn.dispatch('TYPING_START', {
-                    'channel_id': channel_id,
-                    'user_id': user_id,
-                    'timestamp': typing_timestamp,
-                })
+        await channel.dispatch('TYPING_START', {
+            'channel_id': channel_id,
+            'user_id': user_id,
+            'timestamp': typing_timestamp,
+        })

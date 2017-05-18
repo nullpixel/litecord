@@ -232,6 +232,11 @@ class Channel(LitecordObject):
             #if member.channel_perms[self.id].READ_MESSAGES: yield member
             yield member
 
+    async def dispatch(self, evt_name, evt_data):
+        """Dispatch an event to all watchers."""
+        for member in self.watchers:
+            await member.dispatch(evt_name, evt_data)
+
     def get_message(self, message_id):
         """Get a single message from a channel."""
         try:
@@ -377,7 +382,8 @@ class Guild(LitecordObject):
 
         return (await self.guild_man.add_member(self, user))
 
-    async def dispatch_to_members(self, evt_name, evt_data):
+    async def dispatch(self, evt_name, evt_data):
+        """Dispatch an event to all online members."""
         for member in self.online_members:
             await member.dispatch(evt_name, evt_data)
 
