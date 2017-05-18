@@ -206,6 +206,7 @@ class GuildManager:
     async def add_member(self, guild, user):
         """Adds a user to a guild.
 
+        Dispatches GUILD_MEMBER_ADD to relevant clients.
         Returns `Member` on success, `None` on failure.
         """
 
@@ -216,6 +217,7 @@ class GuildManager:
         log.info(f"Updated {result.modified_count} guilds")
 
         await self.reload_guild(guild.id)
+        guild = self.server.get_guild(guild.id)
 
         new_member = guild.members.get(user.id)
         if new_member is None:
@@ -227,6 +229,26 @@ class GuildManager:
         await guild.dispatch_to_members('GUILD_MEMBER_ADD', payload)
 
         return new_member
+
+    async def remove_member(self, guild, user):
+        """Remove a user from a guild.
+
+        Dispatches GUILD_MEMBER_REMOVE to relevant clients.
+        """
+
+        user_id = str(user.id)
+
+        raw_guild = guild._data
+        raw_guild['members'].remove(user_id)
+
+        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        log.info(f"Updated {result.modified_count} guilds")
+
+        await self.reload_guild(guild.id)
+        await guild.dispatch_to_members('GUILD_MEMBER_REMOVE', {
+            'guild_id': str(guild.id),
+            'user': user.as_json,
+        })
 
     async def create_invite(self, user, channel):
         # TODO: something something permissions
