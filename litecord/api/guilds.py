@@ -1,5 +1,7 @@
 import json
 import logging
+
+from aiohttp import web
 from ..utils import _err, _json
 from ..snowflake import get_snowflake
 
@@ -17,6 +19,8 @@ class GuildsEndpoint:
         _r.add_get('/api/guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
         _r.add_get('/api/guilds/{guild_id}/members', self.h_guild_members)
         _r.add_post('/api/guilds', self.h_post_guilds)
+
+        _r.add_delete('/api/users/@me/guilds/{guild_id}', self.h_leave_guild)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`
@@ -144,3 +148,34 @@ class GuildsEndpoint:
             return _err('error creating guild')
 
         return _json(new_guild.as_json)
+
+    async def h_leave_guild(self, request):
+        """`DELETE /users/@me/guilds/{guild_id}`.
+
+        Leave a guild.
+        Fires GUILD_DELETE event.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        guild_id = request.match_info['guild_id']
+        user = self.server._user(_error_json['token'])
+
+        guild = self.server.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        if user.id not in guild.members:
+            return _err(errno=10004)
+
+        await self.server.guild_man.remove_member(guild, user)
+
+        await user.connection.dispatch("GUILD_DELETE", {
+            'id': str(guild.id),
+            'unavailable': False,
+        })
+
+        return web.Response(status=204)
