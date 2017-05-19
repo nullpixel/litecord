@@ -359,6 +359,10 @@ class Guild(LitecordObject):
             member = Member(server, self, user)
             self.members[member.id] = member
 
+        self.owner = self.members.get(int(self.owner_id))
+        if self.owner is None:
+            log.error("Guild without owner!")
+
         self.large = len(self.members) > 150
         self.member_count = len(self.members)
 

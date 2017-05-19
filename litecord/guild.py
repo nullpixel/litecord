@@ -367,7 +367,10 @@ class GuildManager:
         res = await self.invite_db.delete_one({'code': invite.code})
         log.info(f"Removed {res.deleted_count} invites")
 
-        self.invites.pop(invite.code)
+        try:
+            self.invites.pop(invite.code)
+        except:
+            pass
 
     async def init(self):
         cursor = self.guild_db.find()
