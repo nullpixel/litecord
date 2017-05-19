@@ -1,3 +1,4 @@
+import json
 import logging
 
 from aiohttp import web
@@ -14,6 +15,8 @@ class InvitesEndpoint:
         _r = app.router
         _r.add_get('/api/invites/{invite_code}', self.h_get_invite)
         _r.add_post('/api/invites/{invite_code}', self.h_accept_invite)
+
+        _r.add_post('/api/channels/{channel_id}/invites', self.h_create_invite)
 
     async def h_get_invite(self, request):
         """`GET /invites/{invite_code}`."""
@@ -50,11 +53,7 @@ class InvitesEndpoint:
         guild = invite.channel.guild
 
         try:
-            success = invite.use()
-            if not success:
-                return _err('Error using the invite.')
-
-            member = await guild.add_member(user)
+            member = await self.guild_man.use_invite(invite)
             if member is None:
                 return _err('Error adding to the guild')
 
@@ -62,3 +61,40 @@ class InvitesEndpoint:
         except:
             log.error(exc_info=True)
             return _err('Error using the invite.')
+
+    async def h_create_invite(self, request):
+        """`POST /channels/{channel_id}/invites`.
+
+        Creates an invite to a channel.
+        Returns invite object.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        channel_id = request.match_info['channel_id']
+        channel = self.guild_man.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+
+        user = self.server._user(_error_json['token'])
+
+        try:
+            payload = await request.json()
+        except:
+            return _err('error parsing JSON')
+
+        invite_payload = {
+            'max_age': payload.get('max_age', 86400),
+            'max_uses': payload.get('max_uses', 0),
+            'temporary': payload.get('temporary', False),
+            'unique': payload.get('unique', False)
+        }
+
+        invite = await self.guild_man.create_invite(channel, invite_payload)
+        if invite is None:
+            return _err('error making invite')
+
+        return _json(invite.as_json)

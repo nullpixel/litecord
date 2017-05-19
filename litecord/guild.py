@@ -1,7 +1,9 @@
 import logging
 import asyncio
-from .objects import Guild, Message
-from .snowflake import get_snowflake
+import datetime
+
+from .objects import Guild, Message, Invite
+from .snowflake import get_snowflake, get_invite_code
 
 log = logging.getLogger(__name__)
 
@@ -242,11 +244,52 @@ class GuildManager:
             'user': user.as_json,
         })
 
-    async def create_invite(self, user, channel):
+    async def create_invite(self, channel, invite_payload):
         # TODO: something something permissions
         #if not channel.guild.permissions(user, MAKE_INVITE):
         # return None
-        return None
+
+        age = invite_payload['max_age']
+        iso_timestamp = None
+        if age > 0:
+            now = datetime.datetime.now().timestamp
+            expiry_timestamp = datetime.datetime.fromtimestamp(now + age)
+            iso_timestamp = expiry_timestamp.isoformat()
+
+        uses = invite_payload.get('max_uses', -1)
+        if uses == 0:
+            uses = -1
+
+        invite_code = get_invite_code()
+        raw_invite = {
+            'code': invite_code,
+            'channel_id': str(channel.id),
+            'timestamp': iso_timestamp,
+            'uses': uses,
+            'temporary': False,
+            'unique': True,
+        }
+
+        self.invite_db.insert_one(raw_invite)
+
+        invite = Invite(self.server, raw_invite)
+        if invite.valid:
+            self.invites[invite.code] = invite
+
+        return invite
+
+    async def use_invite(self, user, invite):
+
+        invite.use()
+        await invite.update()
+
+        guild = invite.channel.guild
+        member = await self.add_member(guild, user)
+
+        if member is None:
+            return False
+
+        return member
 
     async def init(self):
         cursor = self.guild_db.find()
@@ -270,7 +313,7 @@ class GuildManager:
             invite = Invite(self.server, raw_invite)
 
             if invite.valid:
-                self.invites[invite.id] = invite
+                self.invites[invite.code] = invite
                 valid_invites += 1
 
             invite_count += 1

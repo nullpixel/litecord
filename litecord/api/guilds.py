@@ -32,7 +32,7 @@ class GuildsEndpoint:
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
-            return _err('404: Not Found')
+            return _err(errno=10004)
 
         return _json(guild.as_json)
 
@@ -50,7 +50,7 @@ class GuildsEndpoint:
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
-            return _err('404: Not Found')
+            return _err(errno=10004)
 
         return _json([channel.as_json for channel in guild.channels])
 
@@ -71,13 +71,13 @@ class GuildsEndpoint:
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
-            return _err('404: Not Found')
+            return _err(errno=10004)
 
         if user.id not in guild.members:
             return _err('401: Unauthorized')
 
         if user_id not in guild.members:
-            return _err('404: Not Found')
+            return _err(errno=10004)
 
         return _json(guild.members[user_id].as_json)
 
@@ -97,7 +97,7 @@ class GuildsEndpoint:
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
-            return _err('404: Not Found')
+            return _err(errno=10004)
 
         if user.id not in guild.members:
             return _err('401: Unauthorized')

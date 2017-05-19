@@ -3,7 +3,7 @@ import datetime
 import random
 
 from .utils import strip_user_data, dt_to_json
-from .snowflake import snowflake_time, make_invite_token
+from .snowflake import snowflake_time, get_invite_code
 
 log = logging.getLogger(__name__)
 
@@ -463,41 +463,45 @@ class Invite:
         channel_id: An int
     """
     def __init__(self, server, _data):
+        self.server = server
         self._data = _data
-        self.id = int(_data['id'])
-
-        creation_timestamp = snowflake_time(self.id)
-        self.timestamp = datetime.datetime.fromtimestamp(creation_timestamp)
 
         self.code = _data['code']
 
         self.channel_id = _data['channel_id']
         self.channel = server.guild_man.get_channel(self.channel_id)
         if self.channel is None:
-            log.warning("Invalid invite")
+            log.warning("Orphan invite")
 
-        self.temporary = False
+        self.temporary = _data.get('temporary', False)
 
-        if _data['uses'] > 0:
-            self.invite_tokens = [make_invite_token() for use in range(_data['uses'])]
-        else:
-            try:
-                expiry_timestamp = _data['expiry_timestamp']
-            except:
-                log.error("how does that invite work???")
-                return
+        self.uses = _data.get('uses', -1)
 
-            self.temporary = True
-            # TODO: this to be a datetime object
-            self.expiry_timestamp = expiry_timestamp
+        self.iso_timestamp = _data.get('timestamp', None)
+        self.infinite = True
+
+        if self.iso_timestamp is not None:
+            self.infinite = False
+            self.expiry_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
+                "%Y-%m-%dT%H:%M:%S")
 
     def use(self):
-        try:
-            x = self.invite_tokens
-            return x.pop(random.randrange(len(x)))
-        except:
-            log.error(exc_info=True)
-            return None
+        if not self.infinite:
+            now = datetime.datetime.now()
+
+            if now > self.expiry_timestamp:
+                return False
+
+        # check uses
+        if self.uses < 1:
+            return False
+
+        self.uses -= 1
+        return True
+
+    async def update(self):
+        res = await self.server.invite_db.replace_one({'code': self.code}, self.as_db)
+        log.info("Updated {res.modified_count} invites")
 
     @property
     def valid(self):
@@ -507,15 +511,18 @@ class Invite:
     def as_db(self):
         return {
             'code': self.code,
+            'channel_id': str(self.channel_id),
+            'timestamp': iso_timestamp,
             'uses': self.uses,
-            'channel_id': self.channel_id,
+            'temporary': self.temporary,
+            'unique': True,
         }
 
     @property
     def as_json(self):
         return {
             'code': self.code,
-            'guild': self.guild.as_invite,
+            'guild': self.channel.guild.as_invite,
             'channel': self.channel.as_invite,
         }
 
