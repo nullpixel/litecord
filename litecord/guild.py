@@ -244,6 +244,22 @@ class GuildManager:
             'user': user.as_json,
         })
 
+    async def make_invite_code(self):
+        """Generate an unique invite code.
+
+        This uses `snowflake.get_invite_code` and checks if the code already exists
+        in the database.
+        """
+
+        invi_code = get_invite_code()
+        raw_invite = await self.invite_db.find_one({'code': invi_code})
+
+        while raw_invite is not None:
+            invi_code = get_invite_code()
+            raw_invite = await self.invite_db.find_one({'code': invi_code})
+
+        return invi_code
+
     async def create_invite(self, channel, invite_payload):
         # TODO: something something permissions
         #if not channel.guild.permissions(user, MAKE_INVITE):
@@ -260,7 +276,7 @@ class GuildManager:
         if uses == 0:
             uses = -1
 
-        invite_code = get_invite_code()
+        invite_code = await self.make_invite_code()
         raw_invite = {
             'code': invite_code,
             'channel_id': str(channel.id),
