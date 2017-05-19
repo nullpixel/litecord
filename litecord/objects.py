@@ -487,6 +487,9 @@ class Invite:
 
     @property
     def valid(self):
+        if self.channel is None:
+            return False
+
         if not self.infinite:
             now = datetime.datetime.now()
 
@@ -503,6 +506,9 @@ class Invite:
         return True
 
     def use(self):
+        if self.channel is None:
+            return False
+
         if not self.infinite:
             now = datetime.datetime.now()
 

@@ -28,6 +28,8 @@ class GuildManager:
         self.messages = {}
         self.invites = {}
 
+        self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
+
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
         guild_id = int(guild_id)
@@ -244,6 +246,44 @@ class GuildManager:
             'user': user.as_json,
         })
 
+    async def invite_janitor(self):
+        """Janitor task for invites.
+
+        This checks every 30 minutes for invalid invites and removes them from
+        the database.
+        """
+
+        try:
+            while True:
+                cursor = self.invite_db.find()
+                now = datetime.datetime.now()
+
+                deleted, total = 0, 0
+
+                for raw_invite in (await cursor.to_list(length=None)):
+                    timestamp = raw_invite.get('timestamp', None)
+
+                    if timestamp is not None:
+                        invite_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
+                            "%Y-%m-%dT%H:%M:%S")
+
+                        if now > invite_timestamp:
+                            await self.invite.db.delete_one({'code': raw_invite['code']})
+                            try:
+                                self.invites.pop({'code': raw_invite['code']})
+                            except:
+                                pass
+
+                            deleted += 1
+                    total += 1
+
+                log.info("Deleted {deleted}/{total} invites")
+
+                # 30 minutes until next cycle
+                await asyncio.sleep(1800)
+        except asyncio.CancelledError:
+            pass
+
     async def make_invite_code(self):
         """Generate an unique invite code.
 
@@ -317,6 +357,17 @@ class GuildManager:
             return False
 
         return member
+
+    async def delete_invite(self, invite):
+        """Deletes an invite.
+
+        Removes it from database and cache.
+        """
+
+        res = self.invite_db.delete_one({'code': invite.code})
+        log.info(f"Removed {res.deleted_count} invites")
+
+        self.invites.pop(invite.code)
 
     async def init(self):
         cursor = self.guild_db.find()
