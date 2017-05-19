@@ -492,8 +492,10 @@ class Invite:
 
         if not self.infinite:
             now = datetime.datetime.now()
+            print(now, self.expiry_timestamp)
+            print(now.timestamp(), self.expiry_timestamp.timestamp())
 
-            if now > self.expiry_timestamp:
+            if now.timestamp() > self.expiry_timestamp.timestamp():
                 return False
 
         # check uses
@@ -512,7 +514,7 @@ class Invite:
         if not self.infinite:
             now = datetime.datetime.now()
 
-            if now > self.expiry_timestamp:
+            if now.timestamp() > self.expiry_timestamp.timestamp():
                 return False
 
         # check uses

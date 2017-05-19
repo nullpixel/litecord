@@ -364,7 +364,7 @@ class GuildManager:
         Removes it from database and cache.
         """
 
-        res = self.invite_db.delete_one({'code': invite.code})
+        res = await self.invite_db.delete_one({'code': invite.code})
         log.info(f"Removed {res.deleted_count} invites")
 
         self.invites.pop(invite.code)
@@ -393,6 +393,8 @@ class GuildManager:
             if invite.valid:
                 self.invites[invite.code] = invite
                 valid_invites += 1
+            else:
+                await self.delete_invite(invite)
 
             invite_count += 1
 
