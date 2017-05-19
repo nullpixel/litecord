@@ -295,8 +295,19 @@ class GuildManager:
         return invite
 
     async def use_invite(self, user, invite):
+        """Uses an invite.
 
-        invite.use()
+        Adds a user to a guild, returns `False` on failure, `Member` on success.
+        """
+
+        if not invite.sane:
+            log.warning(f"Insane invite {invite.code} to {invite.channel.guild.name}")
+            return False
+
+        success = invite.use()
+        if not success:
+            return False
+
         await invite.update()
 
         guild = invite.channel.guild

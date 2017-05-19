@@ -485,6 +485,23 @@ class Invite:
             self.expiry_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
                 "%Y-%m-%dT%H:%M:%S")
 
+    @property
+    def valid(self):
+        if not self.infinite:
+            now = datetime.datetime.now()
+
+            if now > self.expiry_timestamp:
+                return False
+
+        # check uses
+        if self.uses == -1:
+            return True
+
+        if self.uses < 1:
+            return False
+
+        return True
+
     def use(self):
         if not self.infinite:
             now = datetime.datetime.now()
@@ -493,6 +510,9 @@ class Invite:
                 return False
 
         # check uses
+        if self.uses == -1:
+            return True
+
         if self.uses < 1:
             return False
 
@@ -504,7 +524,7 @@ class Invite:
         log.info("Updated {res.modified_count} invites")
 
     @property
-    def valid(self):
+    def sane(self):
         return self.channel is not None
 
     @property
