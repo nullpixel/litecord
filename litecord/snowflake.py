@@ -17,8 +17,9 @@ async def get_raw_token():
 
 def get_invite_code():
     random_stuff = hashlib.sha512(os.urandom(4096)).digest()
-    code = base64.urlsafe_b64encode(random_stuff[:5]).decode().replace('=', '')
-    return code
+    code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \
+        .replace('_', 'W').replace('-', 'm')
+    return code[:6]
 
 def _snowflake(timestamp):
     """Generate a snowflake from a specific timestamp.
