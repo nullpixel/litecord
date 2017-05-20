@@ -363,9 +363,7 @@ class Guild(LitecordObject):
         if self.owner is None:
             log.error("Guild without owner!")
 
-        self.large = len(self.members) > 150
         self.member_count = len(self.members)
-
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
 
     def all_channels(self):

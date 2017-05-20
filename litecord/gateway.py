@@ -20,14 +20,14 @@ HB_MAX_MSEC = 6000
 log = logging.getLogger(__name__)
 
 class Connection:
-    """Represents a websocket connection to litecord
+    """Represents a websocket connection to Litecord.
 
     Attributes:
         ws:
-            The actual websocket connection
+            The actual websocket connection.
         events:
             If the connection is identified, this becomes a reference to
-            `LitecordServer.event_cache[connection.user.id]`
+            `LitecordServer.event_cache[connection.user.id]`.
         token:
             The token this connection is using.
         identified:
@@ -289,7 +289,7 @@ class Connection:
         for guild in all_guild_list:
             guild_json = guild.as_json
 
-            if len(guild.members) > large:
+            if guild.member_count > large:
                 guild_json['members'] = [m.as_json for m in gulid.online_members]
 
             guild_list.append(guild_json)
