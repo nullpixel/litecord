@@ -434,7 +434,7 @@ class Guild(LitecordObject):
             # usually clients ignore this, so we don't need to worry
 
             'joined_at': dt_to_json(self.created_at),
-            'large': self.large,
+            'large': self.member_count > 250,
             'unavailable': False,
             'member_count': self.member_count,
             'voice_states': [],

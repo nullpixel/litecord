@@ -3,11 +3,11 @@ import websockets
 import logging
 import asyncio
 import uuid
-import traceback
 import json
 import sys
 import pprint
 import random
+import zlib
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
@@ -50,6 +50,7 @@ class Connection:
         # some stuff
         self.token = None
         self.session_id = None
+        self.compress_flag = False
         self.properties = {}
 
         # flags
@@ -109,14 +110,18 @@ class Connection:
 
         return new_id
 
+    async def send_anything(self, obj):
+        """Send anything through the websocket."""
+
+        return (await self.ws.send(obj))
+
     async def send_json(self, obj):
         """Send a JSON payload through the websocket.
 
         Args:
             obj: any JSON serializable object
         """
-        res = await self.ws.send(json.dumps(obj))
-        return res
+        return (await self.send_anything(json.dumps(obj)))
 
     async def send_op(self, op, data={}):
         """Send a packet through the websocket.
@@ -161,7 +166,14 @@ class Connection:
             'd': evt_data,
         }
 
-        res = await self.send_json(payload)
+        to_send = json.dumps(payload)
+
+        if evt_name == 'READY':
+            if self.compress_flag:
+                to_send = zlib.compress(json.dumps(payload).encode())
+            log.info(f"READY: Dispatching {len(str(to_send))} bytes, compress={self.compress_flag}")
+
+        res = await self.send_anything(to_send)
         self.events['events'][sent_seq] = payload
         self.events['sent_seq'] = sent_seq
 
@@ -231,6 +243,7 @@ class Connection:
         token = data.get('token')
         prop = data.get('properties')
         large = data.get('large_threshold')
+        self.compress_flag = data.get('compress', False)
 
         # check if the client isn't trying to fuck us over
         if (token is None) or (prop is None) or (large is None):
@@ -296,8 +309,7 @@ class Connection:
 
         stripped_user = strip_user_data(self.raw_user)
 
-        log.info("New session %s, user with %d bytes, sending %d guilds", self.session_id, \
-            len(json.dumps(stripped_user)), len(guild_list))
+        log.info("New session %s, sending %d guilds", self.session_id, len(guild_list))
 
         await self.dispatch('READY', {
             'v': GATEWAY_VERSION,
