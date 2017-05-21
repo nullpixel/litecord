@@ -17,6 +17,7 @@ from .presence import PresenceManager
 from .api import users, guilds, channels, imgs, invites
 from .objects import User, Guild
 from .images import Images
+from .embedder import EmbedManager
 
 log = logging.getLogger(__name__)
 
@@ -416,6 +417,9 @@ class LitecordServer:
 
             log.info('[init] PresenceManager')
             self.presence = PresenceManager(self)
+
+            log.info('[init] EmbedManager')
+            self.embed = EmbedManager(self)
 
             log.info('[init] endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
