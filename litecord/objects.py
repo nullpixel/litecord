@@ -429,8 +429,8 @@ class Guild(LitecordObject):
             'region': self.region,
 
             # voice things aka NOT USABLE
-            'afk_channel_id': '6666666',
-            'afk_timeout': -1,
+            'afk_channel_id': '00000000000',
+            'afk_timeout': None,
 
             # TODO: how are these supposed to even work?
             'embed_enabled': None,
