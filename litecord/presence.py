@@ -19,6 +19,8 @@ class PresenceManager:
 
     def get_presence(self, guild_id, user_id):
         """Get a `Presence` object from a user's ID."""
+        guild_id = int(guild_id)
+
         try:
             guild_presences = self.presences[guild_id]
         except KeyError:
@@ -39,6 +41,16 @@ class PresenceManager:
             'name': None,
             'url': None,
         }
+
+    async def presence_count(self, guild_id):
+        """Count the approximate count of presence objects for a guild.
+
+        Returns an integer.
+        """
+
+        guild_id = int(guild_id)
+        guild_presences = self.presences.get(guild_id, {})
+        return len(guild_presences.keys())
 
     async def status_update(self, guild, user, new_status=None):
         """Update a user's status in a guild.

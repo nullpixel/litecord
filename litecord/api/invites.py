@@ -32,6 +32,22 @@ class InvitesEndpoint:
         if invite is None:
             return _err(errno=10006)
 
+        if request.query.get('with_counts', False):
+            invite_json = invite.as_json
+            guild = invite.channel.guild
+
+            invite_json['guild'].update({
+                'text_channel_count': len(guild.channels),
+                'voice_channel_count': 0,
+            })
+
+            invite_json.update({
+                'approximate_presence_count': await self.server.presence.presence_count(guild.id),
+                'approximate_member_count': len(guild.members),
+            })
+
+            return _json(invite_json)
+
         return _json(invite.as_json)
 
     async def h_accept_invite(self, request):
