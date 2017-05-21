@@ -37,6 +37,7 @@ class UsersEndpoint:
 
         user_id = request.match_info['user_id']
         user = self.server._user(_error_json['token'])
+        log.info(f"token={_error_json['token']} user={user} cache={self.server.cache['token->userid']}")
 
         if user_id == '@me':
             return _json(user.as_json)
