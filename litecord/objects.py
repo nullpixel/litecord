@@ -193,6 +193,15 @@ class Member(LitecordObject):
             'mute': self.voice_mute,
         }
 
+    @property
+    def as_invite(self):
+        return {
+            'username': self.user.username,
+            'discriminator': str(self.user.discriminator),
+            'id': str(self.user.id),
+            'avatar': self.user.avatar_hash,
+        }
+
 
 class Channel(LitecordObject):
     """A general text channel object
@@ -480,11 +489,18 @@ class Invite:
         self._data = _data
 
         self.code = _data['code']
-
         self.channel_id = _data['channel_id']
+
         self.channel = server.guild_man.get_channel(self.channel_id)
         if self.channel is None:
-            log.warning("Orphan invite")
+            log.warning("Orphan invite (channel)")
+
+        guild = self.channel.guild
+
+        self.inviter_id = int(_data['inviter_id'])
+        self.inviter = guild.members.get(self.inviter_id)
+        if self.inviter is None:
+            log.warning("Orphan invite (inviter)")
 
         self.temporary = _data.get('temporary', False)
 
@@ -568,6 +584,7 @@ class Invite:
             'code': self.code,
             'guild': self.channel.guild.as_invite,
             'channel': self.channel.as_invite,
+            'inviter': self.inviter.as_invite,
         }
 
 

@@ -300,7 +300,7 @@ class GuildManager:
 
         return invi_code
 
-    async def create_invite(self, channel, invite_payload):
+    async def create_invite(self, channel, inviter, invite_payload):
         # TODO: something something permissions
         #if not channel.guild.permissions(user, MAKE_INVITE):
         # return None
@@ -320,6 +320,7 @@ class GuildManager:
         raw_invite = {
             'code': invite_code,
             'channel_id': str(channel.id),
+            'inviter_id': str(inviter.id),
             'timestamp': iso_timestamp,
             'uses': uses,
             'temporary': False,

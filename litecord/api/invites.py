@@ -114,7 +114,7 @@ class InvitesEndpoint:
             'unique': payload.get('unique', False)
         }
 
-        invite = await self.guild_man.create_invite(channel, invite_payload)
+        invite = await self.guild_man.create_invite(channel, user, invite_payload)
         if invite is None:
             return _err('error making invite')
 
