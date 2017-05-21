@@ -17,6 +17,10 @@ class InvitesEndpoint:
         _r.add_post('/api/invites/{invite_code}', self.h_accept_invite)
         _r.add_delete('/api/invites/{invite_code}', self.h_delete_invite)
 
+        _r.add_get('/api/invite/{invite_code}', self.h_get_invite)
+        _r.add_post('/api/invite/{invite_code}', self.h_accept_invite)
+        _r.add_delete('/api/invite/{invite_code}', self.h_delete_invite)
+
         _r.add_post('/api/channels/{channel_id}/invites', self.h_create_invite)
 
     async def h_get_invite(self, request):
