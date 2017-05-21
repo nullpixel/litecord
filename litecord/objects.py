@@ -475,7 +475,9 @@ class Invite:
         _data: Raw invite object.
         code: A string, the invite code.
         channel_id: A snowflake ID of the channel being reffered in this invite.
-        channel: `Channel` object.
+        channel: `Channel` object from `channel_id`.
+        inviter_id: A snowflake ID of the person who made this invite.
+        inviter: `User` object from `inviter_id`.
         temporary: A boolean representing if this invite is temporary or not.
         uses: Integer, if the invite is infinite, this becomes `-1`.
         iso_timestamp: A ISO 8601 formatted string.
