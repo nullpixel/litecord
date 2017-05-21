@@ -7,6 +7,13 @@ from .snowflake import snowflake_time, get_invite_code
 
 log = logging.getLogger(__name__)
 
+CHANNEL_TO_INTEGER = {
+    'text': 0,
+    'private': 1,
+    'voice': 2,
+    'group': 3,
+}
+
 class LitecordObject:
     """A general Litecord object
 
@@ -218,7 +225,7 @@ class Channel(LitecordObject):
             log.error("Creating an orphaned Channel")
 
         self.name = _channel['name']
-        self.type = _channel['type']
+        self.type = CHANNEL_TO_INTEGER[_channel['type']]
         self.position = _channel['position']
         self.is_private = False
         self.topic = _channel['topic']
