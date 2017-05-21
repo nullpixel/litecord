@@ -24,19 +24,11 @@ log.addHandler(handler)
 
 app = web.Application()
 
-async def give_gateway(request):
-    ws = config.flags['server']['ws']
-    if len(ws) == 2:
-        return web.Response(text=json.dumps({"url": f"ws://{ws[0]}:{ws[1]}"}))
-    elif len(ws) == 3:
-        return web.Response(text=json.dumps({"url": f"ws://{ws[2]}:{ws[1]}"}))
-
 async def index(request):
-    return web.Response(text=json.dumps({"goto": "/api/gateway"}))
+    return web.Response(text='meme')
 
 def main():
     app.router.add_get('/', index)
-    app.router.add_get('/api/gateway', give_gateway)
 
     loop = asyncio.get_event_loop()
 

@@ -119,6 +119,7 @@ class LitecordServer:
         # create cache objects
         self.cache['id->raw_user'] = {}
         self.cache['id->user'] = {}
+        self.cache['token->userid'] = {}
 
         # reference them
         id_to_raw_user = self.cache['id->raw_user']
@@ -215,10 +216,12 @@ class LitecordServer:
 
         This is a helper function to save lines of code in endpoint objects.
         """
-        session_id = self.session_dict[token]
-        user_id = self.sessions[session_id].user.id
-        user = self.get_user(user_id)
-        return user
+        try:
+            userid = self.cache['token->userid'][token]
+        except:
+            return None
+
+        return self.get_user(userid)
 
     # token helper functions
     async def token_userid(self, user_id):
@@ -267,6 +270,13 @@ class LitecordServer:
         return _json({
             'version': self.litecord_version,
         })
+
+    async def h_give_gateway(self, request):
+        ws = self.flags['server']['ws']
+        if len(ws) == 2:
+            return _json({"url": f"ws://{ws[0]}:{ws[1]}"})
+        elif len(ws) == 3:
+            return _json({"url": f"ws://{ws[2]}:{ws[1]}"})
 
     async def login(self, request):
         """Login a user through the `POST:/auth/login` endpoint.
@@ -346,10 +356,13 @@ class LitecordServer:
             return _err('401: Unauthorized, Invalid token type')
 
         # check if token is valid
-        try:
-            self.valid_tokens.index(token_value)
-        except:
+        raw_token_object = await self.token_db.find_one({'token': token_value})
+        if raw_token_object is None:
             return _err(f'401: Unauthorized, Invalid token {token_value!r}')
+
+        # NOTE: this doesn't remove any token from cache, we need to check that
+        # this is a quickfix.
+        self.cache['token->userid'][token_value] = raw_token_object['user_id']
 
         return _json({
             'code': 1,

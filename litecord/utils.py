@@ -7,6 +7,7 @@ import os
 import hashlib
 
 from random import randint
+import aiohttp
 from aiohttp import web
 
 log = logging.getLogger(__name__)
@@ -111,7 +112,12 @@ def dt_to_json(dt):
 
 
 def _json(obj):
-    return web.json_response(obj)
+    r = web.Response(body=json.dumps(obj).encode(),
+        text=None,
+        charset=None,
+        headers={aiohttp.hdrs.CONTENT_TYPE: 'application/json'}
+    )
+    return r
 
 
 # Modification of https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks

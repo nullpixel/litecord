@@ -670,6 +670,7 @@ async def gateway_server(app, flags):
 
     app.router.add_post('/api/auth/login', server.login)
     app.router.add_get('/api/version', server.h_get_version)
+    app.router.add_get('/api/gateway', server.h_give_gateway)
 
     # start WS
     _load_lock.release()
