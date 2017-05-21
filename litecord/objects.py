@@ -207,8 +207,7 @@ class Channel(LitecordObject):
         position: Integer starting from 0. Channel's position on the guild.
         is_private: Boolean, should be False.
         topic: A string, the channel topic/description.
-
-        TODO: last_message_id: A snowflake, the last message in the channel.
+        last_message_id: A snowflake, the last message in the channel.
     """
     def __init__(self, server, _channel, guild=None):
         LitecordObject.__init__(self, server)
@@ -316,7 +315,6 @@ class Guild(LitecordObject):
         icons: A dictionary with two keys: `"icon"` and `"splash"`
         created_at: `datetime.datetime` object, the guild's creation date
         owner_id: A snowflake, the guild owner's ID.
-        TODO: region: A string.
         TODO: roles: A list of `Role` objects.
         TODO: emojis: A list of `Emoji` objects.
         features: A list of strings denoting the features this guild has.
@@ -464,12 +462,18 @@ class Guild(LitecordObject):
 class Invite:
     """An invite object.
 
-    TODO: make them functional.
-
     Attributes:
         _data: Raw invite object.
-        code: A string, the invite code
-        channel_id: An int
+        code: A string, the invite code.
+        channel_id: A snowflake ID of the channel being reffered in this invite.
+        channel: `Channel` object.
+        temporary: A boolean representing if this invite is temporary or not.
+        uses: Integer, if the invite is infinite, this becomes `-1`.
+        iso_timestamp: A ISO 8601 formatted string.
+        infinite: A boolean representing if this invite is infinite or not.
+        expiry_timestamp: Only set if the invite is not infinite.
+            A `datetime` object representing the date where this invite
+            will expire and be invalid.
     """
     def __init__(self, server, _data):
         self.server = server
@@ -488,6 +492,7 @@ class Invite:
 
         self.iso_timestamp = _data.get('timestamp', None)
         self.infinite = True
+        self.expiry_timestamp = None
 
         if self.iso_timestamp is not None:
             self.infinite = False
@@ -496,6 +501,7 @@ class Invite:
 
     @property
     def valid(self):
+        """Returns a boolean representing the validity of the invite"""
         if self.channel is None:
             return False
 
@@ -515,6 +521,7 @@ class Invite:
         return True
 
     def use(self):
+        """Returns a boolean on success/failure of using an invite"""
         if self.channel is None:
             return False
 
@@ -535,11 +542,13 @@ class Invite:
         return True
 
     async def update(self):
+        """Update an invite in the database."""
         res = await self.server.invite_db.replace_one({'code': self.code}, self.as_db)
         log.info("Updated {res.modified_count} invites")
 
     @property
     def sane(self):
+        """Checks if an invite is sane."""
         return self.channel is not None
 
     @property
