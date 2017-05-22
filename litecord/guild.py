@@ -230,6 +230,7 @@ class GuildManager:
         """Remove a user from a guild.
 
         Dispatches GUILD_MEMBER_REMOVE to relevant clients.
+        Dispatches GUILD_DELETE to the user being removed from the guild.
         """
 
         user_id = str(user.id)
@@ -245,6 +246,26 @@ class GuildManager:
             'guild_id': str(guild.id),
             'user': user.as_json,
         })
+
+        await user.dispatch("GUILD_DELETE", {
+            'id': str(guild.id),
+            'unavailable': False,
+        })
+
+    async def ban_member(self, member):
+        pass
+
+    async def unban_member(self, user):
+        pass
+
+    async def kick_member(self, member):
+        guild = member.guild
+        try:
+            await self.remove_member(guild, member.user)
+            return True
+        except:
+            log.error("Error kicking member.", exc_info=True)
+            return False
 
     async def create_channel(self, guild, channel_payload):
         pass

@@ -11,6 +11,7 @@ class GuildsEndpoint:
     """Manager for guild-related endpoints."""
     def __init__(self, server):
         self.server = server
+        self.guild_man = server.guild_man
 
     def register(self, app):
         _r = app.router
@@ -21,6 +22,7 @@ class GuildsEndpoint:
         _r.add_post('/api/guilds', self.h_post_guilds)
 
         _r.add_delete('/api/users/@me/guilds/{guild_id}', self.h_leave_guild)
+        _r.add_delete('/api/guilds/{guild_id}/members/{user_id}', self.h_kick_member)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`
@@ -34,7 +36,7 @@ class GuildsEndpoint:
 
         guild_id = request.match_info['guild_id']
 
-        guild = self.server.guild_man.get_guild(guild_id)
+        guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
 
@@ -52,7 +54,7 @@ class GuildsEndpoint:
 
         guild_id = request.match_info['guild_id']
 
-        guild = self.server.guild_man.get_guild(guild_id)
+        guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
 
@@ -73,7 +75,7 @@ class GuildsEndpoint:
         user_id = request.match_info['user_id']
         user = self.server._user(_error_json['token'])
 
-        guild = self.server.guild_man.get_guild(guild_id)
+        guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
 
@@ -99,7 +101,7 @@ class GuildsEndpoint:
         guild_id = request.match_info['guild_id']
         user = self.server._user(_error_json['token'])
 
-        guild = self.server.guild_man.get_guild(guild_id)
+        guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
 
@@ -142,7 +144,7 @@ class GuildsEndpoint:
             return _err('incomplete payload')
 
         try:
-            new_guild = await self.server.guild_man.new_guild(user, payload)
+            new_guild = await self.guild_man.new_guild(user, payload)
         except:
             log.error(exc_info=True)
             return _err('error creating guild')
@@ -164,18 +166,48 @@ class GuildsEndpoint:
         guild_id = request.match_info['guild_id']
         user = self.server._user(_error_json['token'])
 
-        guild = self.server.guild_man.get_guild(guild_id)
+        guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
 
         if user.id not in guild.members:
             return _err(errno=10004)
 
-        await self.server.guild_man.remove_member(guild, user)
-
-        await user.connection.dispatch("GUILD_DELETE", {
-            'id': str(guild.id),
-            'unavailable': False,
-        })
-
+        await self.guild_man.remove_member(guild, user)
         return web.Response(status=204)
+
+    async def h_kick_member(self, request):
+        """`DELETE /gulids/{guild_id}/members/{user_id}`.
+
+        Kick a member.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        guild_id = request.match_info['guild_id']
+        member_id = request.match_info['user_id']
+
+        user = self.server._user(_error_json['token'])
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        if user.id not in guild.members:
+            return _err(errno=10004)
+
+        member = guild.members.get(member_id)
+        if member is None:
+            return _err(errno=10007)
+
+        try:
+            res = await self.guild_man.kick_member(member)
+            if not res:
+                return _err("Kicking failed.")
+            return web.Response(status=204)
+        except Exception as err:
+            log.error("Error kicking member", exc_info=True)
+            return _err('Error kicking member: {err!r}')
