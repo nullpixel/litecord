@@ -486,6 +486,11 @@ class LitecordServer:
             # this is a hack
             self.setup_apinum(app)
 
+            _r = app.router
+            _r.add_post('/api/auth/login', self.login)
+            _r.add_get('/api/version', self.h_get_version)
+            _r.add_get('/api/gateway', self.h_give_gateway)
+
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)
 

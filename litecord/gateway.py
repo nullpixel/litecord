@@ -660,8 +660,6 @@ async def gateway_server(app, flags, loop=None):
     created to represent it, its `.run()` method is called and the
     connection will stay alive forever until it gets closed or the client
     stops heartbeating with us.
-
-    This function registers the `/api/auth/login` route.
     """
     await _load_lock.acquire()
 
@@ -688,10 +686,6 @@ async def gateway_server(app, flags, loop=None):
 
         # do cleanup shit!!
         conn.cleanup()
-
-    app.router.add_post('/api/auth/login', server.login)
-    app.router.add_get('/api/version', server.h_get_version)
-    app.router.add_get('/api/gateway', server.h_give_gateway)
 
     # start WS
     _load_lock.release()
