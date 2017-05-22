@@ -11,7 +11,8 @@
         },
         "avatar": "",
         "bot": false,
-        "verified": true
+        "verified": true,
+        "admin": true
     },{
         "id": "149260046338",
         "email": "jack@null.net",
@@ -50,7 +51,8 @@
         },
         "avatar": "",
         "bot": false,
-        "verified": true
+        "verified": true,
+        "admin": true
     },{
         "id": "152329949185",
         "username": "Alex",
@@ -63,6 +65,7 @@
         },
         "avatar": "",
         "bot": false,
-        "verified": true
+        "verified": true,
+        "admin": true
     }
 ]

@@ -112,6 +112,7 @@ class User(LitecordObject):
         self.avatar_hash = _data['avatar']
 
         self.email = _data.get('email')
+        self.admin = _data.get('admin', False)
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'

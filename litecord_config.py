@@ -17,5 +17,9 @@ flags = {
     },
     'images': {
         'local': True,
-    }
+    },
+    'boilerplate.update': {
+        'user': False,
+        'guild': False
+    },
 }

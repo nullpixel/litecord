@@ -90,6 +90,8 @@ class LitecordServer:
     async def boilerplate_init(self):
         """Load boilerplate data."""
 
+        b_flags = self.flags.get('boilerplate.update')
+
         for key in BOILERPLATES:
             path = BOILERPLATES[key]
             data = None
@@ -103,7 +105,7 @@ class LitecordServer:
 
             for element in data:
                 existing = await db_to_update.find_one({'id': element['id']})
-                if (existing is not None) and key == 'user':
+                if (existing is not None) and not (b_flags.get(key)):
                     continue
 
                 res = await db_to_update.replace_one({'id': element['id']}, element, True)
