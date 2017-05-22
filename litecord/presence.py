@@ -52,6 +52,12 @@ class PresenceManager:
         guild_presences = self.presences.get(guild_id, {})
         return len(guild_presences.keys())
 
+    async def count_all(self):
+        """Return a count for all available presence objects."""
+
+        return sum([await self.presence_count(guild_id) for guild_id in \
+            self.server.guild_man.guilds.keys()])
+
     async def status_update(self, guild, user, new_status=None):
         """Update a user's status in a guild.
 

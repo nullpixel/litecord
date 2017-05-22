@@ -14,7 +14,7 @@ from .snowflake import get_raw_token, get_snowflake
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
-from .api import users, guilds, channels, imgs, invites
+from .api import users, guilds, channels, imgs, invites, admin
 from .objects import User, Guild
 from .images import Images
 from .embedder import EmbedManager
@@ -396,6 +396,15 @@ class LitecordServer:
                 log.info(f'[discrim] Generated discrim {discrim!r} for {username!r}')
                 return discrim
 
+    async def make_counts(self):
+        """Return a dictionary with some counts."""
+        return {
+            'user_count': len(self.cache['id->raw_user']),
+            'guild_count': len(self.guild_man.guilds),
+            'channel_count': len(self.guild_man.channels),
+            'presence_count': await self.presence.count_all(),
+        }
+
     async def init(self, app):
         """Initialize the server.
 
@@ -439,6 +448,9 @@ class LitecordServer:
 
             self.images_endpoint = imgs.ImageEndpoint(self)
             self.images_endpoint.register(app)
+
+            self.admins_endpoint = admin.AdminEndpoints(self)
+            self.admins_endpoint.register(app)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)
