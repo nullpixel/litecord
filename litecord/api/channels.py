@@ -1,10 +1,12 @@
 import json
 import logging
+
+import aiohttp
 from aiohttp import web
+
 from ..utils import _err, _json, strip_user_data
 from ..snowflake import get_snowflake
 from ..objects import Message
-
 from ..ratelimits import ratelimit
 
 log = logging.getLogger(__name__)
@@ -87,6 +89,12 @@ class ChannelsEndpoint:
         Send a message.
         Dispatches MESSAGE_CREATE events to relevant clients.
         """
+
+        try:
+            print('ctype', request.content_type)
+        except Exception as err:
+            print(f'rip {err!r}')
+            pass
 
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)

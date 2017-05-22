@@ -420,6 +420,7 @@ class LitecordServer:
 
             log.info('[init] EmbedManager')
             self.embed = EmbedManager(self)
+            self.embed.init(app)
 
             log.info('[init] endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)

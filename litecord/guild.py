@@ -246,6 +246,15 @@ class GuildManager:
             'user': user.as_json,
         })
 
+    async def create_channel(self, guild, channel_payload):
+        pass
+
+    async def edit_channel(self, guild, new_payload):
+        pass
+
+    async def delete_channel(self, channel):
+        pass
+
     async def invite_janitor(self):
         """Janitor task for invites.
 

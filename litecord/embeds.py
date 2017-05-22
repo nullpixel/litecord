@@ -2,13 +2,14 @@ import datetime
 import logging
 
 from .objects import LitecordObject
+from .utils import dt_to_json
 
 log = logging.getLogger(__name__)
 
 class EmbedFooter(LitecordObject):
     def __init__(self, _data):
-        self.url = _data['url']
-        self.text = _data['text']
+        self.url = _data.get('icon_url')
+        self.text = _data.get('text')
 
     @property
     def as_json(self):
@@ -20,10 +21,10 @@ class EmbedFooter(LitecordObject):
 class EmbedImage(LitecordObject):
     def __init__(self, _data):
         self._data = _data
-        self.url = _data['url']
-        self.proxy_url = _data.get('proxy_url', None)
-        self.height = _data['height']
-        self.width = _data['width']
+        self.url = _data.get('url')
+        self.proxy_url = _data.get('proxy_url')
+        self.height = _data.get('height')
+        self.width = _data.get('width')
 
     @property
     def as_json(self):
@@ -37,10 +38,10 @@ class EmbedImage(LitecordObject):
 class EmbedThumbnail(LitecordObject):
     def __init__(self, _data):
         self._data = _data
-        self.url = _data['url']
+        self.url = _data.get('url')
         self.proxy_url = _data.get('proxy_url', None)
-        self.height = _data['height']
-        self.width = _data['width']
+        self.height = _data.get('height')
+        self.width = _data.get('width')
 
     @property
     def as_json(self):
@@ -53,9 +54,9 @@ class EmbedThumbnail(LitecordObject):
 
 class EmbedVideo(LitecordObject):
     def __init__(self, _data):
-        self.url = _data['url']
-        self.height = _data['height']
-        self.width = _data['width']
+        self.url = _data.get('url')
+        self.height = _data.get('height')
+        self.width = _data.get('width')
 
     @property
     def as_json(self):
@@ -67,8 +68,8 @@ class EmbedVideo(LitecordObject):
 
 class EmbedProvider(LitecordObject):
     def __init__(self, _data):
-        self.name = _data['name']
-        self.url = _data['url']
+        self.name = _data.get('name')
+        self.url = _data.get('url')
 
     @property
     def as_json(self):
@@ -79,10 +80,10 @@ class EmbedProvider(LitecordObject):
 
 class EmbedAuthor(LitecordObject):
     def __init__(self, _data):
-        self.name = _data['name']
-        self.url = _data['url']
-        self.icon_url = _data['icon_url']
-        self.proxy_icon_url = _data['proxy_icon_url']
+        self.name = _data.get('name')
+        self.url = _data.get('url')
+        self.icon_url = _data.get('icon_url')
+        self.proxy_icon_url = _data.get('proxy_icon_url')
 
     @property
     def as_json(self):
@@ -95,9 +96,9 @@ class EmbedAuthor(LitecordObject):
 
 class EmbedField(LitecordObject):
     def __init__(self, _data):
-        self.name = _data['name']
-        self.value = _data['value']
-        self.inline = _data['inline']
+        self.name = _data.get('name')
+        self.value = _data.get('value')
+        self.inline = _data.get('inline')
 
     @property
     def as_json(self):
@@ -118,11 +119,22 @@ class Embed(LitecordObject):
         LitecordObject.__init__(self, server)
         self._data = raw_embed
         self.title = raw_embed['title']
-        self.embed_type = raw_embed['type']
-        self.description = raw_embed['description']
-        self.url = raw_embed['url']
+        self.embed_type = 'rich'
+        self.description = raw_embed.get('description')
+        self.url = raw_embed.get('url')
         self.timestamp = datetime.datetime.now()
-        self.color = raw_embed['color']
+        self.color = raw_embed.get('color')
+
+        _get = lambda field: raw_embed.get(field, {})
+
+        self.footer = EmbedFooter(_get('footer'))
+        self.image = EmbedImage(_get('image'))
+        self.thumbnail = EmbedThumbnail(_get('thumbnail'))
+        self.video = EmbedVideo(_get('video'))
+        self.provider = EmbedProvider(_get('provider'))
+        self.author = EmbedAuthor(_get('author'))
+
+        self.fields = [EmbedField(raw_efield) for raw_efield in _get('fields')]
 
     @property
     def as_json(self):
@@ -133,4 +145,13 @@ class Embed(LitecordObject):
             'url': self.url,
             'timestamp': dt_to_json(self.timestamp),
             'color': self.color,
+
+            'footer': self.footer.as_json,
+            'image': self.image.as_json,
+            'thumbnail': self.thumbnail.as_json,
+            'video': self.video.as_json,
+            'provider': self.provider.as_json,
+            'author': self.author.as_json,
+
+            'fields': [field.as_json for field in self.fields],
         }
