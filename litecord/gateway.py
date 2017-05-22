@@ -620,6 +620,18 @@ class Connection:
 
 _load_lock = asyncio.Lock()
 
+# Modification of
+# https://github.com/Rapptz/discord.py/blob/bed2e90e825f9cf90fc1ecbae3f49472de05ad3c/discord/client.py#L520
+def _stop(loop):
+    pending = asyncio.Task.all_tasks(loop=loop)
+    gathered = asyncio.gather(*pending, loop=loop)
+    try:
+        gathered.cancel()
+        loop.run_until_complete(gathered)
+        gathered.exception()
+    except:
+        pass
+
 async def http_server(app, flags):
     """Main function to start the HTTP server.
 
@@ -638,7 +650,7 @@ async def http_server(app, flags):
     f = app.loop.create_server(handler, http[0], http[1])
     await f
 
-async def gateway_server(app, flags):
+async def gateway_server(app, flags, loop=None):
     """Main function to start the websocket server
 
     This function initializes a LitecordServer object, which
@@ -653,11 +665,20 @@ async def gateway_server(app, flags):
     """
     await _load_lock.acquire()
 
-    server = LitecordServer(flags)
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    try:
+        server = LitecordServer(flags, loop)
+    except:
+        log.error("We had an error loading the litecord server")
+        _stop(loop)
+        return
 
     if not (await server.init(app)):
         log.error("We had an error initializing the Litecord Server.")
-        sys.exit(1)
+        _stop(loop)
+        return
 
     async def henlo(websocket, path):
         log.info("Opening connection")
@@ -679,3 +700,4 @@ async def gateway_server(app, flags):
 
     ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
     await ws_server
+    return True

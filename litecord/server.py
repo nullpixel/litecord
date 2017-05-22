@@ -19,6 +19,7 @@ from .api import users, guilds, channels, imgs, invites, admin
 from .objects import User, Guild
 from .images import Images
 from .embedder import EmbedManager
+from .err import ConfigError
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,13 @@ BOILERPLATES = {
     'user': 'boilerplate_data/users.json',
     'guild': 'boilerplate_data/guilds.json',
 }
+
+
+def check_configuration(flags):
+    required_fields = ['server', 'ratelimits', 'images', 'boilerplate.update']
+    for field in required_fields:
+        if field not in flags:
+            raise ConfigError(f"Field {field!r} not found in configuration")
 
 
 class LitecordServer:
@@ -50,17 +58,20 @@ class LitecordServer:
         TODO: rest_ratelimits.
         TODO: ws_ratelimits.
     """
-    def __init__(self, flags=None):
+    def __init__(self, flags=None, loop=None):
         if flags is None:
             flags = {}
 
         self.flags = flags
+        check_configuration(flags)
 
         self.rest_ratelimits = {}
         self.ws_ratelimits = {}
 
         # if anybody needs
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop
+        if loop is None:
+            self.loop = asyncio.get_event_loop()
 
         # mongodb stuff
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
