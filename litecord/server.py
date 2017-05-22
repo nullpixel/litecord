@@ -6,6 +6,7 @@ import base64
 import hashlib
 import time
 import subprocess
+import re
 
 import motor.motor_asyncio
 from aiohttp import web
@@ -341,7 +342,10 @@ class LitecordServer:
 
         NOTE: This function doesn't check for OAuth2 Bearer tokens.
         """
-        auth_header = request.headers['Authorization']
+        auth_header = request.headers.get('Authorization')
+        if auth_header is None:
+            return _err('401: Unauthorized, no token provided')
+
         if len(auth_header) < 1:
             return _err('401: Unauthorized, Malformed request')
 
@@ -405,6 +409,22 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
+    async def reroute_apinum(self, request):
+        """Route `/api/vN` requests to `/api`."""
+
+        _path = request.url.path
+        un_numbered_path = re.sub(r'/v\d+', '', _path)
+
+        new_request = request.clone(rel_url=un_numbered_path)
+
+        # we reroute to /api instead of /api/vN
+        res = await request.app.router.resolve(new_request)
+        return (await res.handler(new_request))
+
+    def setup_apinum(self, app):
+        _r = app.router
+        _r.add_route('*', '/api/v{version}/{anything:.*}', self.reroute_apinum)
+
     async def init(self, app):
         """Initialize the server.
 
@@ -451,6 +471,9 @@ class LitecordServer:
 
             self.admins_endpoint = admin.AdminEndpoints(self)
             self.admins_endpoint.register(app)
+
+            # this is a hack
+            self.setup_apinum(app)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)
