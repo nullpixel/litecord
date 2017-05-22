@@ -40,10 +40,12 @@ def main():
 
     try:
         loop.run_forever()
+    except KeyboardInterrupt:
+        log.info("Exiting from a CTRL-C...")
+        litecord._stop(loop)
     except:
-        log.info("Exiting...")
-        gateway_task.cancel()
-        loop.close()
+        log.error("Oh no! We received an error. Exiting.", exc_info=True)
+        litecord._stop(loop)
 
 if __name__ == "__main__":
     main()
