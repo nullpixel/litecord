@@ -119,6 +119,9 @@ class ChannelsEndpoint:
 
         try:
             content = payload['content']
+            if len(content) < 1:
+                return _err(errno=50006)
+
             if len(content) > 2000:
                 return web.response(status=400)
         except:
