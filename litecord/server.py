@@ -444,27 +444,27 @@ class LitecordServer:
         try:
             t_init = time.monotonic()
 
-            log.info("[load] boilerplate data")
+            log.debug("[load] boilerplate data")
             await self.boilerplate_init()
 
-            log.info('[load] user database')
+            log.debug('[load] user database')
             await self.load_users()
 
-            log.info('[load] Images')
+            log.debug('[load] Images')
             self.images = Images(self, self.flags.get('images', {}))
 
-            log.info('[init] GuildManager')
+            log.debug('[init] GuildManager')
             self.guild_man = GuildManager(self)
             await self.guild_man.init()
 
-            log.info('[init] PresenceManager')
+            log.debug('[init] PresenceManager')
             self.presence = PresenceManager(self)
 
-            log.info('[init] EmbedManager')
+            log.debug('[init] EmbedManager')
             self.embed = EmbedManager(self)
             self.embed.init(app)
 
-            log.info('[init] endpoint objects')
+            log.debug('[init] endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
             self.users_endpoint.register(app)
 
