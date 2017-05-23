@@ -511,7 +511,7 @@ class Connection:
 
             await self.dispatch('GUILD_SYNC', {
                 'id': guild_id,
-                'presences': [self.presence.get_presence(guild_id, member.id) \
+                'presences': [self.presence.get_presence(guild_id, member.id).as_json \
                     for member in guild.online_members],
                 'members': [member.as_json for member in guild.online_members],
             })
