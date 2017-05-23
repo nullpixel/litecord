@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+"""
+eval.py - Evaluate code in a litecord server.
+"""
 import requests
 import json
 import readline
