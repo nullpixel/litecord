@@ -160,15 +160,25 @@ class Member(LitecordObject):
         joined_at: A `datetime.datetime` object representing the date
             the member joined the guild.
     """
-    def __init__(self, server, guild, user):
+    def __init__(self, server, guild, user, raw_member):
         LitecordObject.__init__(self, server)
+        self._data = raw_member
         self.user = user
         self.guild = guild
 
         self.id = self.user.id
-        self.owner = self.id in self.guild.member_ids
-        self.nick = None
-        self.joined_at = datetime.datetime.now()
+        self.owner = self.id == self.guild.owner_id
+        self.nick = raw_member.get('nick')
+
+        joined_timestamp = raw_member.get('joined')
+
+        if joined_timestamp is not None:
+            self.joined_at = datetime.datetime.strptime(joined_timestamp, \
+                "%Y-%m-%dT%H:%M:%S.%f")
+        else:
+            log.warning("Member without joined timestamp.")
+
+        self.roles = []
         self.voice_deaf = False
         self.voice_mute = False
 
@@ -188,7 +198,7 @@ class Member(LitecordObject):
         return {
             'user': self.user.as_json,
             'nick': self.nick,
-            'roles': [],
+            'roles': self.roles,
             'joined_at': dt_to_json(self.joined_at),
             'deaf': self.voice_deaf,
             'mute': self.voice_mute,
@@ -371,7 +381,11 @@ class Guild(LitecordObject):
             user = self.server.get_user(member_id)
             if user is None:
                 log.warning(f"user {member_id} not found")
-            member = Member(server, self, user)
+                continue
+
+            raw_member = server.guild_man.get_raw_member(user.id)
+
+            member = Member(server, self, user, raw_member)
             self.members[member.id] = member
 
         self.owner = self.members.get(int(self.owner_id))
@@ -516,7 +530,7 @@ class Invite:
         if self.iso_timestamp is not None:
             self.infinite = False
             self.expiry_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
-                "%Y-%m-%dT%H:%M:%S")
+                "%Y-%m-%dT%H:%M:%S.%f")
 
     @property
     def valid(self):

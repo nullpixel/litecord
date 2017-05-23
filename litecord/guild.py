@@ -19,7 +19,9 @@ class GuildManager:
     """
     def __init__(self, server):
         self.server = server
+
         self.guild_db = server.guild_db
+        self.member_db = server.member_db
         self.message_db = server.message_db
         self.invite_db = server.invite_db
 
@@ -27,6 +29,7 @@ class GuildManager:
         self.channels = {}
         self.messages = {}
         self.invites = {}
+        self.raw_members = {}
 
         self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
 
@@ -67,6 +70,10 @@ class GuildManager:
 
     def get_invite(self, invite_code):
         return self.invites.get(invite_code)
+
+    def get_raw_member(self, member_id):
+        member_id = int(member_id)
+        return self.raw_members.get(member_id)
 
     def all_guilds(self):
         """Yield all available guilds."""
@@ -114,6 +121,22 @@ class GuildManager:
             'channel_id': str(message.channel.id),
         })
 
+        return True
+
+    async def edit_message(self, message, payload):
+        """Edit a message.
+
+        Dispatches MESSAGE_UPDATE events to respective clients.
+        Returns `True` on success, `False` on failure.
+        """
+
+        new_content = payload['content']
+        message.edit(new_content)
+
+        result = await self.message_db.replace_one({'message_id': message.id}, message.as_db)
+        log.info(f"Updated {result.modified_count} messages")
+
+        await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
         return True
 
     async def reload_guild(self, guild_id):
@@ -183,22 +206,6 @@ class GuildManager:
 
         return guild
 
-    async def edit_message(self, message, payload):
-        """Edit a message.
-
-        Dispatches MESSAGE_UPDATE events to respective clients.
-        Returns `True` on success, `False` on failure.
-        """
-
-        new_content = payload['content']
-        message.edit(new_content)
-
-        result = await self.message_db.replace_one({'message_id': message.id}, message.as_db)
-        log.info(f"Updated {result.modified_count} messages")
-
-        await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
-        return True
-
     async def add_member(self, guild, user):
         """Adds a user to a guild.
 
@@ -225,6 +232,14 @@ class GuildManager:
         await guild.dispatch('GUILD_MEMBER_ADD', payload)
 
         return new_member
+
+    async def edit_member(self, member, new_data):
+        """Edit a member.
+
+        Dispatches GUILD_MEMBER_UPDATE to relevant clients.
+        """
+
+        pass
 
     async def remove_member(self, guild, user):
         """Remove a user from a guild.
@@ -404,10 +419,36 @@ class GuildManager:
             pass
 
     async def init(self):
+        cursor = self.member_db.find()
+        member_count = 0
+
+        for raw_member in await cursor.to_list(length=None):
+            self.raw_members[int(raw_member['user_id'])] = raw_member
+            member_count += 1
+
+        log.info(f'[guild] loaded {member_count} members')
+
         cursor = self.guild_db.find()
         guild_count = 0
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
+
+            for member_id in raw_guild['members']:
+                if member_id in self.raw_members:
+                    continue
+
+                raw_member = {
+                    'guild_id': raw_guild['id'],
+                    'user_id': member_id,
+                    'nick': '',
+                    'joined': datetime.datetime.now().isoformat(),
+                    'deaf': False,
+                    'mute': False,
+                }
+
+                await self.member_db.insert_one(raw_member)
+                self.raw_members[int(member_id)] = raw_member
+
             guild = Guild(self.server, raw_guild)
             self.guilds[guild.id] = guild
 

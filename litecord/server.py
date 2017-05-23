@@ -7,6 +7,7 @@ import hashlib
 import time
 import subprocess
 import re
+import random
 
 import motor.motor_asyncio
 from aiohttp import web
@@ -28,6 +29,11 @@ BOILERPLATES = {
     'user': 'boilerplate_data/users.json',
     'guild': 'boilerplate_data/guilds.json',
 }
+
+
+LOADING_LINES = [
+    'Loading...',
+]
 
 
 def check_configuration(flags):
@@ -82,6 +88,7 @@ class LitecordServer:
         self.guild_db =     self.litecord_db['gulids']
         self.token_db =     self.litecord_db['tokens']
         self.invite_db =    self.litecord_db['invites']
+        self.member_db =    self.litecord_db['members']
 
         # cache for events
         self.event_cache = {}
@@ -420,6 +427,20 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
+    async def h_give_loadline(self, request):
+        """`GET /api/loadingline`.
+
+        Give a random loading line.
+        """
+
+        try:
+            payload = await request.json()
+        except:
+            payload = {}
+
+        amount = payload.get('amount', 1)
+        return _json([random.choice(LOADING_LINES) for i in range(amount)])
+
     async def reroute_apinum(self, request):
         """Route `/api/vN` requests to `/api`."""
 
@@ -490,6 +511,7 @@ class LitecordServer:
             _r.add_post('/api/auth/login', self.login)
             _r.add_get('/api/version', self.h_get_version)
             _r.add_get('/api/gateway', self.h_give_gateway)
+            _r.add_get('/api/loadingline', self.h_give_loadline)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)

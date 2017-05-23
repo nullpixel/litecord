@@ -18,7 +18,7 @@ class AdminEndpoints:
 
     @admin_endpoint
     async def h_get_counts(self, request, user):
-        """`GET:/counts`.
+        """`GET /counts`.
 
         Return some statistics.
         """
