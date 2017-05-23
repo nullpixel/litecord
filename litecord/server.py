@@ -36,6 +36,15 @@ LOADING_LINES = [
 ]
 
 
+API_PREFIXES = [
+    '/api',
+    '/api/v4',
+    '/api/v5',
+    '/api/v6',
+    '/api/v7'
+]
+
+
 def check_configuration(flags):
     required_fields = ['server', 'ratelimits', 'images', 'boilerplate.update']
     for field in required_fields:
@@ -102,6 +111,7 @@ class LitecordServer:
 
         self.presence = None
         self.guild_man = None
+        self.app = None
 
         self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
             shell=True).decode('utf-8').strip()
@@ -456,7 +466,35 @@ class LitecordServer:
 
     def setup_apinum(self, app):
         _r = app.router
-        _r.add_route('*', '/api/v{version}/{anything:.*}', self.reroute_apinum)
+        #_r.add_route('*', '/api/v{version}/{anything:.*}', self.reroute_apinum)
+
+    def add_get(self, route_path, route_handler):
+        _r = self.app.router
+
+        routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
+        for route in routes:
+            _r.add_get(route, route_handler)
+
+    def add_post(self, route_path, route_handler):
+        _r = self.app.router
+
+        routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
+        for route in routes:
+            _r.add_post(route, route_handler)
+
+    def add_patch(self, route_path, route_handler):
+        _r = self.app.router
+
+        routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
+        for route in routes:
+            _r.add_patch(route, route_handler)
+
+    def add_delete(self, route_path, route_handler):
+        _r = self.app.router
+
+        routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
+        for route in routes:
+            _r.add_delete(route, route_handler)
 
     async def init(self, app):
         """Initialize the server.
@@ -465,6 +503,8 @@ class LitecordServer:
         """
         try:
             t_init = time.monotonic()
+
+            self.app = app
 
             log.debug("[load] boilerplate data")
             await self.boilerplate_init()
@@ -508,11 +548,10 @@ class LitecordServer:
             # this is a hack
             self.setup_apinum(app)
 
-            _r = app.router
-            _r.add_post('/api/auth/login', self.login)
-            _r.add_get('/api/version', self.h_get_version)
-            _r.add_get('/api/gateway', self.h_give_gateway)
-            _r.add_get('/api/loadingline', self.h_give_loadline)
+            self.add_post('auth/login', self.login)
+            self.add_get('version', self.h_get_version)
+            self.add_get('gateway', self.h_give_gateway)
+            self.add_get('loadingline', self.h_give_loadline)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)

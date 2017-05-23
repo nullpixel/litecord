@@ -13,8 +13,7 @@ class AdminEndpoints:
         self.guild_man = server.guild_man
 
     def register(self, app):
-        _r = app.router
-        _r.add_get('/api/count', self.h_get_counts)
+        self.server.add_get('count', self.h_get_counts)
 
     @admin_endpoint
     async def h_get_counts(self, request, user):

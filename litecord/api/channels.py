@@ -17,20 +17,20 @@ class ChannelsEndpoint:
         self.server = server
 
     def register(self, app):
-        _r = app.router
-        _r.add_get('/api/channels/{channel_id}', self.h_get_channel)
 
-        _r.add_get('/api/channels/{channel_id}/messages', self.h_get_messages)
-        _r.add_get('/api/channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
+        self.server.add_get('channels/{channel_id}', self.h_get_channel)
 
-        _r.add_post('/api/channels/{channel_id}/messages', self.h_post_message)
-        _r.add_patch('/api/channels/{channel_id}/messages/{message_id}',
+        self.server.add_get('channels/{channel_id}/messages', self.h_get_messages)
+        self.server.add_get('channels/{channel_id}/messages/{message_id}', self.h_get_single_message)
+
+        self.server.add_post('channels/{channel_id}/messages', self.h_post_message)
+        self.server.add_patch('channels/{channel_id}/messages/{message_id}',
                        self.h_patch_message)
 
-        _r.add_delete('/api/channels/{channel_id}/messages/{message_id}',
+        self.server.add_delete('channels/{channel_id}/messages/{message_id}',
                         self.h_delete_message)
 
-        _r.add_post('/api/channels/{channel_id}/typing', self.h_post_typing)
+        self.server.add_post('channels/{channel_id}/typing', self.h_post_typing)
 
     async def h_get_channel(self, request):
         """`GET /channels/{channel_id}`.
@@ -179,6 +179,7 @@ class ChannelsEndpoint:
         if _error_json['code'] == 0:
             return _error
 
+        log.info("{request!r}")
         channel_id = request.match_info['channel_id']
 
         user = self.server._user(_error_json['token'])

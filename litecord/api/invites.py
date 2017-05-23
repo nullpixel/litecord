@@ -13,15 +13,15 @@ class InvitesEndpoint:
 
     def register(self, app):
         _r = app.router
-        _r.add_get('/api/invites/{invite_code}', self.h_get_invite)
-        _r.add_post('/api/invites/{invite_code}', self.h_accept_invite)
-        _r.add_delete('/api/invites/{invite_code}', self.h_delete_invite)
+        self.server.add_get('invites/{invite_code}', self.h_get_invite)
+        self.server.add_post('invites/{invite_code}', self.h_accept_invite)
+        self.server.add_delete('invites/{invite_code}', self.h_delete_invite)
 
-        _r.add_get('/api/invite/{invite_code}', self.h_get_invite)
-        _r.add_post('/api/invite/{invite_code}', self.h_accept_invite)
-        _r.add_delete('/api/invite/{invite_code}', self.h_delete_invite)
+        self.server.add_get('invite/{invite_code}', self.h_get_invite)
+        self.server.add_post('invite/{invite_code}', self.h_accept_invite)
+        self.server.add_delete('invite/{invite_code}', self.h_delete_invite)
 
-        _r.add_post('/api/channels/{channel_id}/invites', self.h_create_invite)
+        self.server.add_post('channels/{channel_id}/invites', self.h_create_invite)
 
     async def h_get_invite(self, request):
         """`GET /invites/{invite_code}`."""

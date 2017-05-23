@@ -14,15 +14,14 @@ class GuildsEndpoint:
         self.guild_man = server.guild_man
 
     def register(self, app):
-        _r = app.router
-        _r.add_get('/api/guilds/{guild_id}', self.h_guilds)
-        _r.add_get('/api/guilds/{guild_id}/channels', self.h_get_guild_channels)
-        _r.add_get('/api/guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
-        _r.add_get('/api/guilds/{guild_id}/members', self.h_guild_members)
-        _r.add_post('/api/guilds', self.h_post_guilds)
+        self.server.add_get('guilds/{guild_id}', self.h_guilds)
+        self.server.add_get('guilds/{guild_id}/channels', self.h_get_guild_channels)
+        self.server.add_get('guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
+        self.server.add_get('guilds/{guild_id}/members', self.h_guild_members)
+        self.server.add_post('guilds', self.h_post_guilds)
 
-        _r.add_delete('/api/users/@me/guilds/{guild_id}', self.h_leave_guild)
-        _r.add_delete('/api/guilds/{guild_id}/members/{user_id}', self.h_kick_member)
+        self.server.add_delete('users/@me/guilds/{guild_id}', self.h_leave_guild)
+        self.server.add_delete('guilds/{guild_id}/members/{user_id}', self.h_kick_member)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`

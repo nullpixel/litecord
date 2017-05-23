@@ -14,13 +14,12 @@ class UsersEndpoint:
         self.server = server
 
     def register(self, app):
-        _r = app.router
-        _r.add_get('/api/users/{user_id}', self.h_users)
+        self.server.add_get('users/{user_id}', self.h_users)
 
-        _r.add_post('/api/users/add', self.h_add_user)
-        _r.add_patch('/api/users/@me', self.h_patch_me)
+        self.server.add_post('users/add', self.h_add_user)
+        self.server.add_patch('users/@me', self.h_patch_me)
 
-        _r.add_get('/api/users/@me/settings', self.h_get_me_settings)
+        self.server.add_get('users/@me/settings', self.h_get_me_settings)
 
         #_r.add_get('/api/users/@me/guilds', server.h_users_me_guild)
         #_r.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
