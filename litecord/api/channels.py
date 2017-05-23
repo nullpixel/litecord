@@ -1,12 +1,10 @@
 import json
 import logging
 
-import aiohttp
 from aiohttp import web
 
-from ..utils import _err, _json, strip_user_data
+from ..utils import _err, _json
 from ..snowflake import get_snowflake
-from ..objects import Message
 from ..ratelimits import ratelimit
 
 log = logging.getLogger(__name__)
@@ -127,7 +125,7 @@ class ChannelsEndpoint:
         except:
             return _err('no useful content provided')
 
-        tts = payload.get('tts', False)
+        #tts = payload.get('tts', False)
 
         _data = {
             'id': get_snowflake(),
@@ -212,7 +210,6 @@ class ChannelsEndpoint:
         except:
             return _err('parameters are not integers')
 
-        _l = [around, before, after]
         message_list = await channel.last_messages(limit)
 
         if around != -1:

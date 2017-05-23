@@ -12,7 +12,6 @@ class InvitesEndpoint:
         self.guild_man = server.guild_man
 
     def register(self, app):
-        _r = app.router
         self.server.add_get('invites/{invite_code}', self.h_get_invite)
         self.server.add_post('invites/{invite_code}', self.h_accept_invite)
         self.server.add_delete('invites/{invite_code}', self.h_delete_invite)
@@ -71,10 +70,8 @@ class InvitesEndpoint:
         if not invite.valid:
             return _err('Invalid invite')
 
-        guild = invite.channel.guild
-
         try:
-            member = await self.guild_man.use_invite(invite)
+            member = await self.guild_man.use_invite(user, invite)
             if member is None:
                 return _err('Error adding to the guild')
 
@@ -126,7 +123,7 @@ class InvitesEndpoint:
         Delete an invite.
         """
 
-        error = await self.server.check_request(request)
+        _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:
             return _error
@@ -134,14 +131,14 @@ class InvitesEndpoint:
         invite_code = request.match_info['invite_code']
         user = self.server._user(_error_json['token'])
 
+        invite = self.server.guild_man.get_invite(invite_code)
+        if invite is None:
+            return _err(errno=10006)
+
         guild = invite.channel.guild
 
         if guild.owner.id != user.id:
             return _err(errno=40001)
-
-        invite = self.server.guild_man.get_invite(invite_code)
-        if invite is None:
-            return _err(errno=10006)
 
         try:
             await self.guild_man.delete_invite(invite)

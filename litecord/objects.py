@@ -1,9 +1,8 @@
 import logging
 import datetime
-import random
 
 from .utils import strip_user_data, dt_to_json
-from .snowflake import snowflake_time, get_invite_code
+from .snowflake import snowflake_time
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +181,7 @@ class Member(LitecordObject):
         self.voice_deaf = False
         self.voice_mute = False
 
-    def update(new_data):
+    def update(self, new_data):
         """Update a member object based on new data."""
         self.nick = new_data.get('nick') or self.nick
 
@@ -581,7 +580,7 @@ class Invite:
     async def update(self):
         """Update an invite in the database."""
         res = await self.server.invite_db.replace_one({'code': self.code}, self.as_db)
-        log.info("Updated {res.modified_count} invites")
+        log.info(f"Updated {res.modified_count} invites")
 
     @property
     def sane(self):
@@ -593,7 +592,7 @@ class Invite:
         return {
             'code': self.code,
             'channel_id': str(self.channel_id),
-            'timestamp': iso_timestamp,
+            'timestamp': self.iso_timestamp,
             'uses': self.uses,
             'temporary': self.temporary,
             'unique': True,

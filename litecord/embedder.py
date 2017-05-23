@@ -85,8 +85,6 @@ class EmbedManager:
         return em
 
     async def url_to_embed(self, url):
-        soup = None
-
         if url in self.cache:
             return self.cache[url]
 

@@ -111,7 +111,6 @@ class GuildManager:
         Returns a `Message` object.
         """
 
-        message_id = get_snowflake()
         message = Message(self.server, channel, raw)
 
         result = await self.message_db.insert_one(message.as_db)
@@ -243,7 +242,7 @@ class GuildManager:
             return None
 
         to_add = {'guild_id': str(guild.id)}
-        payload = {**new_member.as_json, **add}
+        payload = {**new_member.as_json, **to_add}
 
         await guild.dispatch('GUILD_MEMBER_ADD', payload)
 

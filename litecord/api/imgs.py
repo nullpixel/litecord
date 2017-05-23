@@ -17,13 +17,15 @@ class ImageEndpoint:
         #_r.add_get('/embed/avatars/{default_id}.{img_format}', self.h_get_default_avatar)
 
     async def h_get_user_avatar(self, request):
-        """`GET /images/avatars/{user_id}`.
+        """`GET /images/avatars/{user_id}/{avatar_hash}.{img_format}`.
 
         Retrieve a user's avatar.
         """
 
         user_id = request.match_info['user_id']
         avatar_hash = request.match_info['avatar_hash']
+
+        # TODO: convert image to img_format
         img_format = request.match_info['img_format']
 
         user = self.server.get_user(user_id)

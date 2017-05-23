@@ -3,9 +3,6 @@ import websockets
 import logging
 import asyncio
 import uuid
-import json
-import sys
-import pprint
 import random
 import zlib
 
@@ -62,10 +59,9 @@ class Connection:
         self.user = None
         self.raw_user = None
 
-        # reference to LitecordServer
+        # reference to LitecordServer, GuildManager and PresenceManager
         self.server = server
-
-        # reference to PresenceManager
+        self.guild_man = server.guild_man
         self.presence = server.presence
 
         # OP handlers
@@ -303,7 +299,7 @@ class Connection:
             guild_json = guild.as_json
 
             if guild.member_count > large:
-                guild_json['members'] = [m.as_json for m in gulid.online_members]
+                guild_json['members'] = [m.as_json for m in guild.online_members]
 
             guild_list.append(guild_json)
 
@@ -343,6 +339,10 @@ class Connection:
 
         if limit > 1000: limit = 1000
         if limit <= 0: limit = 1000
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return
 
         all_members = [member.as_json for member in guild.members]
         member_list = []
@@ -474,7 +474,9 @@ class Connection:
             await self.ws.close(4003)
             return False
 
+        # TODO: what do we do with this?
         idle_since = data.get('idle_since', 'nothing')
+
         game = data.get('game')
         if game is not None:
             game_name = game.get('name')

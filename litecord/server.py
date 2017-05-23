@@ -1,23 +1,18 @@
 import asyncio
 import json
 import logging
-import os
-import base64
-import hashlib
 import time
 import subprocess
-import re
 import random
 
 import motor.motor_asyncio
-from aiohttp import web
 
-from .snowflake import get_raw_token, get_snowflake
+from .snowflake import get_raw_token
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
 from .api import users, guilds, channels, imgs, invites, admin
-from .objects import User, Guild
+from .objects import User
 from .images import Images
 from .embedder import EmbedManager
 from .err import ConfigError
@@ -137,7 +132,7 @@ class LitecordServer:
                 if (existing is not None) and not (b_flags.get(key)):
                     continue
 
-                res = await db_to_update.replace_one({'id': element['id']}, element, True)
+                await db_to_update.replace_one({'id': element['id']}, element, True)
                 tot += 1
 
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
@@ -213,8 +208,10 @@ class LitecordServer:
                         await conn.dispatch('USER_UPDATE', user.as_json)
                         events += 1
 
+                # update the references in internal cache
                 cached_raw_user = raw_user
                 cached_user = user
+
                 updated_users += 1
 
         log.info(f'[userdb_update] Updated {updated_users} users, dispatched {events} events')

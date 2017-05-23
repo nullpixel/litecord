@@ -3,7 +3,6 @@ import logging
 
 from aiohttp import web
 from ..utils import _err, _json
-from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
