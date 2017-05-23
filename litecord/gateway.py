@@ -315,6 +315,7 @@ class Connection:
             'v': GATEWAY_VERSION,
             'user': stripped_user,
             'private_channels': [],
+            'relationships': [],
             'guilds': guild_list,
             'session_id': self.session_id,
         })
