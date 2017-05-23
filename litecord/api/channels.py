@@ -291,7 +291,7 @@ class ChannelsEndpoint:
             return _err(errno=10008)
 
         if user.id != message.author.id:
-            return _err(errno=40001)
+            return _err(errno=50005)
 
         try:
             payload = await request.json()

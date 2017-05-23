@@ -182,6 +182,10 @@ class Member(LitecordObject):
         self.voice_deaf = False
         self.voice_mute = False
 
+    def update(new_data):
+        """Update a member object based on new data."""
+        self.nick = new_data.get('nick') or self.nick
+
     @property
     def connection(self):
         return self.user.connection

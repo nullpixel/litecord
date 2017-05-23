@@ -239,7 +239,14 @@ class GuildManager:
         Dispatches GUILD_MEMBER_UPDATE to relevant clients.
         """
 
-        pass
+        guild = member.guild
+        user = member.user
+
+        await self.member_db.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
+            {'$set': new_data})
+
+        member.update(new_data)
+        await guild.dispatch('GUILD_MEMBER_UPDATE', member.as_json)
 
     async def remove_member(self, guild, user):
         """Remove a user from a guild.

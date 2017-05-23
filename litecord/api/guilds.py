@@ -22,6 +22,7 @@ class GuildsEndpoint:
 
         self.server.add_delete('users/@me/guilds/{guild_id}', self.h_leave_guild)
         self.server.add_delete('guilds/{guild_id}/members/{user_id}', self.h_kick_member)
+        self.server.add_patch('guilds/{guild_id}/members/@me/nick', self.h_change_nick)
 
     async def h_guilds(self, request):
         """`GET /guilds/{guild_id}`
@@ -210,3 +211,44 @@ class GuildsEndpoint:
         except Exception as err:
             log.error("Error kicking member", exc_info=True)
             return _err('Error kicking member: {err!r}')
+
+    async def h_change_nick(self, request):
+        """`PATCH /guilds/{guild_id}/members/@me/nick`.
+
+        Modify your nickname.
+        Returns a 200.
+        Dispatches GUILD_MEMBER_UPDATE to relevant clients.
+        """
+
+        _error = await self.server.check_request(request)
+        _error_json = json.loads(_error.text)
+        if _error_json['code'] == 0:
+            return _error
+
+        guild_id = request.match_info['guild_id']
+        user = self.server._user(_error_json['token'])
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        if user.id not in guild.members:
+            return _err(errno=10004)
+
+        member = guild.members.get(user.id)
+
+        try:
+            payload = await request.json()
+        except:
+            return _err('error parsing payload')
+
+        nickname = str(payload.get('nick', ''))
+
+        if len(nickname) > 32:
+            return _err('Nickname is over 32 chars.')
+
+        await self.guild_man.edit_member(member, {
+            'nick': nickname,
+        })
+
+        return web.response(status=200, text=nickname)
