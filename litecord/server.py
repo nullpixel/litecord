@@ -451,23 +451,6 @@ class LitecordServer:
         amount = payload.get('amount', 1)
         return _json([random.choice(LOADING_LINES) for i in range(amount)])
 
-    async def reroute_apinum(self, request):
-        """Route `/api/vN` requests to `/api`."""
-
-        _path = request.url.path
-        un_numbered_path = re.sub(r'/v\d+', '', _path)
-
-        new_request = request.clone(rel_url=un_numbered_path)
-        log.debug(f'converting numbered API request: {request!r} => {new_request!r}')
-
-        # we reroute to /api instead of /api/vN
-        res = await request.app.router.resolve(new_request)
-        return (await res.handler(new_request))
-
-    def setup_apinum(self, app):
-        _r = app.router
-        #_r.add_route('*', '/api/v{version}/{anything:.*}', self.reroute_apinum)
-
     def add_get(self, route_path, route_handler):
         _r = self.app.router
 
@@ -545,9 +528,7 @@ class LitecordServer:
             self.admins_endpoint = admin.AdminEndpoints(self)
             self.admins_endpoint.register(app)
 
-            # this is a hack
-            self.setup_apinum(app)
-
+            # setup internal stuff
             self.add_post('auth/login', self.login)
             self.add_get('version', self.h_get_version)
             self.add_get('gateway', self.h_give_gateway)

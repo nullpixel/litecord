@@ -432,9 +432,8 @@ class GuildManager:
         guild_count = 0
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
-
             for member_id in raw_guild['members']:
-                if member_id in self.raw_members:
+                if int(member_id) in self.raw_members:
                     continue
 
                 raw_member = {

@@ -14,6 +14,7 @@ class ImageEndpoint:
     def register(self, app):
         _r = app.router
         _r.add_get('/images/avatars/{user_id}/{avatar_hash}.{img_format}', self.h_get_user_avatar)
+        #_r.add_get('/embed/avatars/{default_id}.{img_format}', self.h_get_default_avatar)
 
     async def h_get_user_avatar(self, request):
         """`GET /images/avatars/{user_id}`.
