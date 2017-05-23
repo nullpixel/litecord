@@ -504,10 +504,14 @@ class Connection:
             return False
 
         # ASSUMPTION: data is a list of guild IDs
-        # TODO: check if client can access the provided guilds
 
         for guild_id in data:
             guild = self.server.guild_man.get_guild(guild_id)
+            if guild is None:
+                continue
+
+            if self.user.id not in guild.members:
+                continue
 
             await self.dispatch('GUILD_SYNC', {
                 'id': guild_id,

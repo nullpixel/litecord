@@ -35,12 +35,19 @@ class GuildManager:
 
     def get_guild(self, guild_id):
         """Get a `Guild` object by its ID."""
-        guild_id = int(guild_id)
+        try:
+            guild_id = int(guild_id)
+        except:
+            return None
         return self.guilds.get(guild_id)
 
     def get_channel(self, channel_id):
         """Get a `Channel` object by its ID."""
-        channel_id = int(channel_id)
+        try:
+            channel_id = int(channel_id)
+        except:
+            return None
+
         channel = self.channels.get(channel_id)
         if channel is None:
             return None
@@ -59,12 +66,18 @@ class GuildManager:
 
     def get_message(self, message_id):
         """Get a `Message` object by its ID."""
-        message_id = int(message_id)
+        try:
+            message_id = int(message_id)
+        except:
+            return None
         return self.messages.get(message_id)
 
     def get_guilds(self, user_id):
         """Get a list of all `Guild`s a user is on."""
-        user_id = int(user_id)
+        try:
+            user_id = int(user_id)
+        except:
+            return None
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]
 
@@ -72,7 +85,10 @@ class GuildManager:
         return self.invites.get(invite_code)
 
     def get_raw_member(self, member_id):
-        member_id = int(member_id)
+        try:
+            member_id = int(member_id)
+        except:
+            return None
         return self.raw_members.get(member_id)
 
     def all_guilds(self):
