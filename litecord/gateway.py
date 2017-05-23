@@ -318,6 +318,7 @@ class Connection:
             'relationships': [],
             'guilds': guild_list,
             'session_id': self.session_id,
+            '_trace': ['litecord-gateway-prd-69']
         })
 
         return True
