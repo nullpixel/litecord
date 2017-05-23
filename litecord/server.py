@@ -448,6 +448,7 @@ class LitecordServer:
         un_numbered_path = re.sub(r'/v\d+', '', _path)
 
         new_request = request.clone(rel_url=un_numbered_path)
+        log.debug(f'converting numbered API request: {request!r} => {new_request!r}')
 
         # we reroute to /api instead of /api/vN
         res = await request.app.router.resolve(new_request)
