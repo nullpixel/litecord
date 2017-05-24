@@ -250,4 +250,4 @@ class GuildsEndpoint:
             'nick': nickname,
         })
 
-        return web.response(status=200, text=nickname)
+        return web.Response(status=200, text=nickname)

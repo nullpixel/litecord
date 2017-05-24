@@ -46,7 +46,7 @@ class AdminEndpoints:
 
     @admin_endpoint
     async def h_eval(self, request, user):
-        """`POST:/admin_eval`
+        """`POST /admin_eval`
 
         Evaluate code.
         Most part of this code is modified from https://github.com/Rapptz/RoboDanny/blob/master/cogs/repl.py
