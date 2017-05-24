@@ -16,6 +16,12 @@ HB_MAX_MSEC = 6000
 
 log = logging.getLogger(__name__)
 
+SERVERS = {
+    'hello': ['litecord-hello-1'],
+    'ready': ['litecord-session-0'],
+    'resume': ['litecord-resumer-0'],
+}
+
 class Connection:
     """Represents a websocket connection to Litecord.
 
@@ -83,13 +89,16 @@ class Connection:
         #   However we should be ready when it happens, right?
         self.event_handlers = {}
 
+    def get_identifiers(self, module):
+        return SERVERS.get(module, ['litecord-general-1'])
+
     def basic_hello(self):
         """Returns a JSON serializable OP 10 Hello packet."""
         return {
             'op': OP["HELLO"],
             'd': {
                 'heartbeat_interval': self.hb_interval,
-                '_trace': ["litecord-gateway-prd-1-69"],
+                '_trace': self.get_identifiers('hello'),
             }
         }
 
@@ -314,7 +323,7 @@ class Connection:
             'relationships': [],
             'guilds': guild_list,
             'session_id': self.session_id,
-            '_trace': ['litecord-gateway-prd-69']
+            '_trace': self.get_identifiers('ready')
         })
 
         return True
@@ -458,7 +467,7 @@ class Connection:
         self.identified = True
 
         await self.dispatch('RESUMED', {
-            '_trace': ['litecord-gateway-prd-1-666']
+            '_trace': self.get_identifiers('resume')
         })
 
         return True
