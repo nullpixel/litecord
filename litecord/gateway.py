@@ -11,8 +11,8 @@ from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 
 MAX_TRIES = 10
-HB_MIN_MSEC = 4000
-HB_MAX_MSEC = 6000
+HB_MIN_MSEC = 40000
+HB_MAX_MSEC = 42000
 
 log = logging.getLogger(__name__)
 
