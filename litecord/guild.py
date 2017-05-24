@@ -10,12 +10,15 @@ log = logging.getLogger(__name__)
 class GuildManager:
     """Manage guild, channel and message data.
 
+    .. _LitecordServer: server.html
+    .. _AsyncIOMotorCollection: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
+
     Attributes:
-        server: A `LitecordServer` instance
-        guild_db: A direct reference to the server's guild database
-        message_db: a direct reference to the server's message database
-        guilds: A dictionary, list of all available guilds
-        channels: Dictionary, list of all available channels
+        server(`LitecordServer`_): Server instance
+        guild_db(`AsyncIOMotorCollection`_): A direct reference to the server's guild database
+        message_db(`AsyncIOMotorCollection`_): a direct reference to the server's message database
+        guilds(dict): All available guilds
+        channels(dict): All available channels
     """
     def __init__(self, server):
         self.server = server
@@ -65,7 +68,7 @@ class GuildManager:
         return channel
 
     def get_message(self, message_id):
-        """Get a `Message` object by its ID."""
+        """Get a `Message`_ object by its ID."""
         try:
             message_id = int(message_id)
         except:
@@ -73,7 +76,7 @@ class GuildManager:
         return self.messages.get(message_id)
 
     def get_guilds(self, user_id):
-        """Get a list of all `Guild`s a user is on."""
+        """Get a list of all `Guild`_ a user is on."""
         try:
             user_id = int(user_id)
         except:
@@ -82,9 +85,11 @@ class GuildManager:
             if user_id in self.guilds[guild_id].member_ids]
 
     def get_invite(self, invite_code):
+        """Get a `Invite`_ object."""
         return self.invites.get(invite_code)
 
     def get_raw_member(self, member_id):
+        """Get a raw member."""
         try:
             member_id = int(member_id)
         except:

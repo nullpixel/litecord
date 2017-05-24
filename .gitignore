@@ -97,3 +97,4 @@ ENV/
 /site
 
 py_litecord/*
+litecord/_assets/*

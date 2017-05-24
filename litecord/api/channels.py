@@ -30,6 +30,13 @@ class ChannelsEndpoint:
 
         self.server.add_post('channels/{channel_id}/typing', self.h_post_typing)
 
+        # Fill /assets with the good shit
+        app.router.add_get('/channels/@me', self.meme)
+        app.router.add_static('/assets', '~/lkmnds.github/litecord/litecord/_assets')
+
+    async def meme(self, request):
+        return web.FileResponse('/home/luna/lkmnds.github/litecord/litecord/_assets/channels/@me/index.html')
+
     async def h_get_channel(self, request):
         """`GET /channels/{channel_id}`.
 

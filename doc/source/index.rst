@@ -35,6 +35,7 @@ Limitations:
    server
    guild
    presence
+   objects
 
 
 
