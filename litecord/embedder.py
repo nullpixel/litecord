@@ -69,8 +69,6 @@ class EmbedManager:
 
         log.info(f"XKCD: {len(str(xkcd_data))} bytes")
 
-        log.info("Making embed")
-
         em = Embed(self.server, {
             'title': f'[xkcd: {xkcd_data["title"]}]({full_url})',
             'image': {
@@ -94,7 +92,7 @@ class EmbedManager:
         try:
             em = await self.parsers[identifier](parsed)
             if em is not None:
-                log.info("Caching embed!")
+                log.info("Caching embed")
                 self.cache[url] = em
             return em
         except:

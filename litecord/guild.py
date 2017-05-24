@@ -290,12 +290,24 @@ class GuildManager:
         })
 
     async def ban_member(self, member):
+        """Ban a member from a guild.
+
+        Dispatches GUILD_BAN_ADD and GUILD_MEMBER_REMOVE to relevant clients.
+        """
         pass
 
     async def unban_member(self, user):
-        pass
+        """Unban a member from a guild.
+
+        Dispatches GUILD_BAN_REMOVE to relevant clients.
+        """
 
     async def kick_member(self, member):
+        """Kick a member from a guild.
+
+        Dispatches GUILD_MEMBER_REMOVE to relevant clients.
+        """
+
         guild = member.guild
         try:
             await self.remove_member(guild, member.user)
@@ -305,12 +317,23 @@ class GuildManager:
             return False
 
     async def create_channel(self, guild, channel_payload):
-        pass
+        """Create a channel in a guild.
+
+        Dispatches CHANNEL_CREATE to relevant clients.
+        """
 
     async def edit_channel(self, guild, new_payload):
+        """Edits a channel in a guild.
+
+        Dispatches CHANNEL_UPDATE to relevant clients.
+        """
         pass
 
     async def delete_channel(self, channel):
+        """Deletes a channel from a guild.
+
+        Dispatches CHANNEL_DELETE to relevant clients
+        """
         pass
 
     async def invite_janitor(self):

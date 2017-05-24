@@ -1,0 +1,8 @@
+
+class RelationManager:
+    def __init__(self, server):
+        self.server = server
+        self.guild_man = server.guild_man
+
+    async def get_relationships(self, user_id):
+        return []
