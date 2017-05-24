@@ -45,7 +45,15 @@ class PresenceManager:
     async def presence_count(self, guild_id):
         """Count the approximate count of presence objects for a guild.
 
-        Returns an integer.
+        Parameters
+        ----------
+        guild_id: int
+            ID of the guild to search.
+
+        Returns
+        -------
+        int:
+            Amount of presence objects in a guild.
         """
 
         guild_id = int(guild_id)
@@ -62,6 +70,20 @@ class PresenceManager:
         """Update a user's status in a guild.
 
         Dispatches PRESENCE_UPDATE events to relevant clients in the guild.
+
+        Parameters
+        ----------
+        guild: :class:`Guild`
+            The guild that we want to update our presence on.
+        user: :class:`User`
+            The user we want to update presence from.
+        new_status: dict, optional
+            New raw presence data.
+
+        Returns
+        -------
+        ``None``
+
         """
 
         if new_status is None:
@@ -88,6 +110,13 @@ class PresenceManager:
         """Updates an user's status, globally.
 
         Dispatches PRESENCE_UPDATE events to relevant clients.
+
+        Parameters
+        ----------
+        user: :class:`User`
+            The user we are updating.
+        new_status: dict, optional
+            Raw presence object
         """
 
         if user is None:
@@ -98,7 +127,15 @@ class PresenceManager:
             await self.status_update(guild, user, new_status)
 
     async def typing_start(self, user_id, channel_id):
-        """Sends a TYPING_START to relevant clients in the channel's guild."""
+        """Sends a TYPING_START to relevant clients in the channel.
+
+        Parameters
+        ----------
+        user_id: str
+            User's snowflake ID.
+        channel_id: str
+            Channel's snowflake ID.
+        """
         typing_timestamp = int(time.time())
         channel = self.server.guild_man.get_channel(channel_id)
 
