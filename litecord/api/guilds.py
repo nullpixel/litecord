@@ -21,6 +21,8 @@ class GuildsEndpoint:
 
         self.server.add_delete('users/@me/guilds/{guild_id}', self.h_leave_guild)
         self.server.add_delete('guilds/{guild_id}/members/{user_id}', self.h_kick_member)
+        #self.server.add_put('guilds/{guild_id}/bans/{user_id}', self.h_ban_member)
+        #self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
         self.server.add_patch('guilds/{guild_id}/members/@me/nick', self.h_change_nick)
 
     async def h_guilds(self, request):
