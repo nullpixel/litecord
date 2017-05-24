@@ -55,24 +55,37 @@ class LitecordServer:
     .. _GuildManager: guild.html
     .. _PresenceManager: presence.html
 
-    Args:
-        flags(dict): Server configuration flags.
-        loop: Event loop used for ``asyncio``.
+    Arguments
+    ---------
+    flags : dict
+        Server configuration flags.
+    loop : event loop
+        Event loop used for ``asyncio``.
 
-    Attributes:
-        flags (dict): Server configuration.
-        loop: asyncio event loop.
-        mongo_client: An instance of `AsyncIOMotorClient`_.
-        event_cache (dict): Relates user IDs to the last events they received.
-            Used for resuming.
-        cache(dict): Dictionary that relates IDs to objects/raw objects.
-        valid_tokens(list): List of valid tokens(strings).
-            A valid token is a token that was used in a connection and it is still,
-            being used in that connection.
-        session_dict(dict): Relates tokens to their respective `Connection`_ object.
-        sessions(dict): Relates session IDs to their respective `Connection`_ object.
-        guild_man(`GuildManager`_): meme.
-        presence(`PresenceManager`_): meme.
+    Attributes
+    ----------
+    flags : dict
+        Server configuration.
+    loop : event loop
+        asyncio event loop.
+    mongo_client : `AsyncIOMotorClient`_
+        MongoDB Client.
+    event_cache : dict
+        Relates user IDs to the last events they received. Used for resuming.
+    cache : dict
+        Relates IDs to objects/raw objects.
+    valid_tokens : list
+        List of valid tokens(strings).
+        A valid token is a token that was used in a connection and it is still,
+        being used in that connection.
+    session_dict : dict
+        Relates tokens to their respective `Connection`_ object.
+    sessions : dict
+        Relates session IDs to their respective `Connection`_ object.
+    guild_man : `GuildManager`_
+        meme.
+    presence : `PresenceManager`_
+        meme.
     """
     def __init__(self, flags=None, loop=None):
         if flags is None:
@@ -292,14 +305,20 @@ class LitecordServer:
         return res
 
     async def h_get_version(self, request):
-        """`GET:/api/version`.
+        """`GET /version`.
 
+        .. highlight:: python
+
+        Get the server's git revision.
         This endpoint doesn't require authentication.
 
-        Output: A JSON object:
+        Returns
+        -------
+        dictionary::
             {
                 "version": "string, the full git revision"
             }
+
         """
 
         return _json({
@@ -316,17 +335,23 @@ class LitecordServer:
     async def login(self, request):
         """Login a user through the `POST:/auth/login` endpoint.
 
-        Input: a JSON object:
+        With the provided token you can connect to the
+        gateway and send an IDENTIFY payload.
+
+        Parameters
+        ----------
+        request: dict
             {
                 "email": "the email of the user",
                 "password": "the plaintext password of the user",
             }
 
-        Output: Another JSON object:
+        Returns
+        -------
+        dict:
             {
                 "token": "user token"
             }
-            With the token you can connect to the gateway and send an IDENTIFY payload
 
         """
         try:
@@ -443,7 +468,7 @@ class LitecordServer:
     async def h_give_loadline(self, request):
         """`GET /api/loadingline`.
 
-        Give a random loading line.
+        Give a (list of) random loading lines.
         """
 
         try:

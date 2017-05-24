@@ -13,12 +13,18 @@ class GuildManager:
     .. _LitecordServer: server.html
     .. _AsyncIOMotorCollection: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
 
-    Attributes:
-        server(`LitecordServer`_): Server instance
-        guild_db(`AsyncIOMotorCollection`_): A direct reference to the server's guild database
-        message_db(`AsyncIOMotorCollection`_): a direct reference to the server's message database
-        guilds(dict): All available guilds
-        channels(dict): All available channels
+    Attributes
+    ----------
+    server : [`LitecordServer`_]
+        Server instance.
+    guild_db : [`AsyncIOMotorCollection`_]
+        Guild database. Handles raw guild data.
+    message_db : [`AsyncIOMotorCollection`_]
+        Message database. Handles raw message data.
+    guilds : dict
+        All available guilds
+    channels : dict
+        All available channels
     """
     def __init__(self, server):
         self.server = server
