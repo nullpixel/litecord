@@ -10,9 +10,16 @@ from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 
-MAX_TRIES = 10
+# Maximum amount of tries to generate a session ID.
+MAX_TRIES = 20
+
+# Heartbeating intervals, actual heartbeating interval is random value
+# between HB_MIN_MSEC and HB_MAX_MSEC
 HB_MIN_MSEC = 40000
 HB_MAX_MSEC = 42000
+
+# The maximum amount of events you can lose before your session gets invalidated.
+RESUME_MAX_EVENTS = 50
 
 log = logging.getLogger(__name__)
 
@@ -175,18 +182,14 @@ class Connection:
 
         if evt_name == 'READY':
             if self.compress_flag:
-                to_send = zlib.compress(json.dumps(payload).encode())
-            log.info(f"READY: Dispatching {len(str(to_send))} bytes, compress={self.compress_flag}")
+                to_send = zlib.compress(to_send.encode())
+            log.info(f"READY: Sending {len(str(to_send))} bytes, compress={self.compress_flag}")
 
         res = await self.send_anything(to_send)
         self.events['events'][sent_seq] = payload
         self.events['sent_seq'] = sent_seq
 
         return res
-
-    async def get_myself(self):
-        """Get the raw user that this connection represents."""
-        return self.raw_user
 
     async def hb_wait_task(self):
         try:
@@ -381,6 +384,12 @@ class Connection:
         return True
 
     async def invalidate(self, flag=False, session_id=None):
+        """Invalidates a session.
+
+        Arguments:
+            flag: A boolean, flags the session as resumable/not resumable.
+            session_id: ¯\_(ツ)_/¯
+        """
         log.info(f"Invalidated, can resume: {flag}")
         await self.send_op(OP['INVALID_SESSION'], flag)
         if not flag:
@@ -393,13 +402,15 @@ class Connection:
     async def resume_handler(self, data):
         """Handler for OP 6 Resume.
 
-        TODO: fix this implementaiton.
+        This replays events to the connection.
         """
 
         log.info("[resume] Resuming a connection...")
 
         self.resume_count += 1
-        if self.resume_count > 3:
+        # We shouldn't continue with clients that already did 10 resumes
+        if self.resume_count > 10:
+            await self.invalidate()
             await self.ws.close(4001)
             return
 
@@ -433,9 +444,9 @@ class Connection:
             await self.invalidate(True)
             return True
 
-        # if the client loses more than 20 events while its offline,
-        # invalidate it.
-        if abs(replay_seq - sent_seq) > 20:
+        # if the session lost more than RESUME_MAX_EVENTS
+        # events while its offline invalidate it.
+        if abs(replay_seq - sent_seq) > RESUME_MAX_EVENTS:
             log.warning("[resume] invalidated from seq delta")
             await self.invalidate(False, session_id=session_id)
             return
