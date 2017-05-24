@@ -31,6 +31,11 @@ Limitations:
    :maxdepth: 2
    :caption: Contents:
 
+   connecting
+   server
+   guild
+   presence
+
 
 
 Indices and tables

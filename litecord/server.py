@@ -50,23 +50,29 @@ def check_configuration(flags):
 class LitecordServer:
     """Main class for the Litecord server.
 
-    Attributes:
-        flags: A dictionary, server configuration goes there.
-        loop: asyncio event loop.
-        mongo_client: An instance of `AsyncIOMotorClient`.
-        event_cache: A dictionary that relates user IDs to the last events they received.
-            Used for resuming.
-        cache: An internal dictionary that relates IDs to objects/raw objects.
-        valid_tokens: List of valid tokens(strings),
-            A valid token is a token that was used in a connection and it is still,
-            being used in that connection
-        session_dict: A dictionary relating tokens to their respective `Connection`.
-        sessions: A dictionary relating session IDs to their respective `Connection` object.
-        guild_man: An instance of `GuildManager`.
-        presence: An instance of `PresenceManager`.
+    .. _AsyncIOMotorClient: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_client.html
+    .. _Connection: connecting.html
+    .. _GuildManager: guild.html
+    .. _PresenceManager: presence.html
 
-        TODO: rest_ratelimits.
-        TODO: ws_ratelimits.
+    Args:
+        flags(dict): Server configuration flags.
+        loop: Event loop used for ``asyncio``.
+
+    Attributes:
+        flags (dict): Server configuration.
+        loop: asyncio event loop.
+        mongo_client: An instance of `AsyncIOMotorClient`_.
+        event_cache (dict): Relates user IDs to the last events they received.
+            Used for resuming.
+        cache(dict): Dictionary that relates IDs to objects/raw objects.
+        valid_tokens(list): List of valid tokens(strings).
+            A valid token is a token that was used in a connection and it is still,
+            being used in that connection.
+        session_dict(dict): Relates tokens to their respective `Connection`_ object.
+        sessions(dict): Relates session IDs to their respective `Connection`_ object.
+        guild_man(`GuildManager`_): meme.
+        presence(`PresenceManager`_): meme.
     """
     def __init__(self, flags=None, loop=None):
         if flags is None:
