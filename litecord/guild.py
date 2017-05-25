@@ -22,9 +22,9 @@ class GuildManager:
     message_db : [`AsyncIOMotorCollection`_]
         Message database. Handles raw message data.
     guilds : dict
-        All available guilds
+        All available :class:`Guild` objects.
     channels : dict
-        All available channels
+        All available :class:`Channel` objects.
     """
     def __init__(self, server):
         self.server = server
@@ -43,7 +43,7 @@ class GuildManager:
         self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
 
     def get_guild(self, guild_id):
-        """Get a `Guild` object by its ID."""
+        """Get a :class:`Guild` object by its ID."""
         try:
             guild_id = int(guild_id)
         except:
@@ -51,7 +51,7 @@ class GuildManager:
         return self.guilds.get(guild_id)
 
     def get_channel(self, channel_id):
-        """Get a `Channel` object by its ID."""
+        """Get a :class:`Channel` object by its ID."""
         try:
             channel_id = int(channel_id)
         except:
@@ -74,7 +74,7 @@ class GuildManager:
         return channel
 
     def get_message(self, message_id):
-        """Get a `Message`_ object by its ID."""
+        """Get a :class:`Message` object by its ID."""
         try:
             message_id = int(message_id)
         except:
@@ -82,7 +82,17 @@ class GuildManager:
         return self.messages.get(message_id)
 
     def get_guilds(self, user_id):
-        """Get a list of all `Guild`_ a user is on."""
+        """Get a list of all guilds a user is on.
+
+        Parameters
+        ----------
+        user_id: int
+            The user ID we want to get the guilds from.
+
+        Returns
+        -------
+        List of :class:`Guild`
+        """
         try:
             user_id = int(user_id)
         except:
@@ -91,7 +101,7 @@ class GuildManager:
             if user_id in self.guilds[guild_id].member_ids]
 
     def get_invite(self, invite_code):
-        """Get a `Invite`_ object."""
+        """Get an :class:`Invite` object."""
         return self.invites.get(invite_code)
 
     def get_raw_member(self, member_id):
@@ -119,6 +129,16 @@ class GuildManager:
         """Create a new message and put it in the database.
 
         Dispatches MESSAGE_CREATE events to respective clients.
+
+        Parameters
+        ----------
+        channel: :class:`Channel`
+            The channel where to put the new message.
+        author: :class:`User`
+            The author of the message.
+        raw: dict
+            Raw message object.
+
         Returns a `Message` object.
         """
 
@@ -136,7 +156,15 @@ class GuildManager:
         """Delete a message.
 
         Dispatches MESSAGE_DELETE events to respective clients.
-        Returns `True` on success, `False` on failure.
+
+        Parameters
+        ----------
+        message: :class:`Message`
+            Message to delete.
+
+        Returns
+        -------
+        bool
         """
 
         result = await self.message_db.delete_one({'message_id': message.id})
@@ -153,7 +181,15 @@ class GuildManager:
         """Edit a message.
 
         Dispatches MESSAGE_UPDATE events to respective clients.
-        Returns `True` on success, `False` on failure.
+
+        Parameters
+        ----------
+        message: :class:`Message`
+            Message to edit.
+
+        Returns
+        -------
+        bool
         """
 
         new_content = payload['content']
@@ -168,8 +204,8 @@ class GuildManager:
     async def reload_guild(self, guild_id):
         """Reload one guild.
 
-        Used normally after a database update.
-        This updates cache objects.
+        Used normally after a updating the guild dataabse.
+        Updates cache objects.
         """
 
         raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
@@ -184,12 +220,14 @@ class GuildManager:
         """Create a Guild.
 
         Dispatches GUILD_CREATE event to the owner of the new guild.
-        Returns a `Guild` object.
 
-        Arguments:
-            owner: A `User` object representing the guild's owner.
-            payload: A guild payload:
-            {
+        Parameters
+        ----------
+        owner: :class:`User`
+            The owner of the guild to be created
+        payload: dict
+            guild payload::
+                {
                 "name": "Name of the guild",
                 "region": "guild voice region, ignored",
                 "verification_level": TODO,
@@ -197,7 +235,11 @@ class GuildManager:
                 "roles": [List of role payloads],
                 "channels": [List of channel payloads],
                 "icon": "base64 128x128 jpeg image for the guild icon",
-            }
+                }
+
+        Returns
+        -------
+        :class:`Guild`
         """
 
         conn = owner.connection
@@ -236,7 +278,17 @@ class GuildManager:
         """Adds a user to a guild.
 
         Dispatches GUILD_MEMBER_ADD to relevant clients.
-        Returns `Member` on success, `None` on failure.
+
+        Parameters
+        ----------
+        guild: :class:`Guild`
+            The guild to add the user to.
+        user: :class:`User`
+            The user that is going to be added to the guild.
+
+        Returns
+        -------
+        :class:`Member` on success or :py:const:`None` on failure
         """
 
         raw_guild = guild._data
@@ -263,6 +315,13 @@ class GuildManager:
         """Edit a member.
 
         Dispatches GUILD_MEMBER_UPDATE to relevant clients.
+
+        Parameters
+        ----------
+        member: :class:`Member`
+            Member to edit data.
+        new_data: dict
+            Raw member data.
         """
 
         guild = member.guild
@@ -279,6 +338,13 @@ class GuildManager:
 
         Dispatches GUILD_MEMBER_REMOVE to relevant clients.
         Dispatches GUILD_DELETE to the user being removed from the guild.
+
+        Parameters
+        ----------
+        guild: :class:`Guild`
+            Guild to remove the user from.
+        user: :class:`User`
+            User to remove from the guild.
         """
 
         user_id = str(user.id)
@@ -317,6 +383,11 @@ class GuildManager:
         """Kick a member from a guild.
 
         Dispatches GUILD_MEMBER_REMOVE to relevant clients.
+
+        Parameters
+        ----------
+        member: :class:`Member`
+            The member to kick.
         """
 
         guild = member.guild
@@ -402,6 +473,21 @@ class GuildManager:
         return invi_code
 
     async def create_invite(self, channel, inviter, invite_payload):
+        """Create an invite to a channel.
+
+        Parameters
+        ----------
+        channel: :class:`Channel`
+            The channel to make the invite refer to.
+        inviter: :class:`User`
+            The user that made the invite.
+        invite_payload: dict
+            Invite payload.
+
+        Returns
+        -------
+        :class:`Invite`
+        """
         # TODO: something something permissions
         #if not channel.guild.permissions(user, MAKE_INVITE):
         # return None
@@ -439,7 +525,18 @@ class GuildManager:
     async def use_invite(self, user, invite):
         """Uses an invite.
 
-        Adds a user to a guild, returns `False` on failure, `Member` on success.
+        Adds a user to a guild.
+
+        Parameters
+        ----------
+        user: :class:`User`
+            The user that is going to use the invite.
+        invite: :class:`Invite`
+            Invite object to be used.
+
+        Returns
+        -------
+        :class:`Member` or ``None``
         """
 
         if not invite.sane:
@@ -475,6 +572,10 @@ class GuildManager:
             pass
 
     async def init(self):
+        """Initialize the GuildManager.
+
+        Loads member data, guild data and messages into memory.
+        """
         cursor = self.member_db.find()
         member_count = 0
 
