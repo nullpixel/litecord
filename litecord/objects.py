@@ -221,7 +221,7 @@ class Member(LitecordObject):
     guild: :class:`Guild`
         The guild this member is from.
     id: int
-        The member's snowflake ID. This is the same as `user.id`
+        The member's snowflake ID. This is the same as :py:meth:`User.id`.
     nick: str
         Member's nickname, becomes :py:const:`None` if no nickname is set.
     joined_at: datetime.datetime
@@ -282,7 +282,7 @@ class Member(LitecordObject):
 
     @property
     def as_invite(self):
-        """Returns a version to be used in :py:meth:`Invite.as_json`"""
+        """Returns a version to be used in :py:meth:`Invite.as_json`."""
         return {
             'username': self.user.username,
             'discriminator': str(self.user.discriminator),
@@ -350,7 +350,7 @@ class Channel(LitecordObject):
 
     @property
     def watchers(self):
-        """Yields all `Member`s who are online and can watch the channel."""
+        """Yields all :class:`Member` who are online and can watch the channel."""
         for member in self.guild.online_members:
             #if member.channel_perms[self.id].READ_MESSAGES: yield member
             yield member
@@ -375,7 +375,7 @@ class Channel(LitecordObject):
 
         Returns
         -------
-        list(:class:`Message`)
+        list: list of :py:meth:`Message`
             Ordered(by time) list of message objects.
         """
         res = []

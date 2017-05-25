@@ -6,6 +6,8 @@
 Welcome to Litecord
 ====================================
 
+.. _Atomic-Discord: https://git.memework.org/heatingdevice/atomic-discord
+
 Litecord is an implementation of Discord's backend.
 
 **DISCLAIMER: LITECORD IS NOT DISCORD. WE DON'T PLAN TO BE 100% DISCORD.
@@ -24,8 +26,6 @@ Limitations:
  - Voice doesn't work nor is planned to be implemented into Litecord.
  - Litecord is made using Python and it wasn't made to be resilient, don't DDoS a Litecord server
  - Ratelimits doesn't exist, yet.
-
-.. _Atomic-Discord: https://git.memework.org/heatingdevice/atomic-discord
 
 .. toctree::
    :maxdepth: 2
