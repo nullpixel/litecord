@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -a
+SPHINXOPTS    = -E -a -j4
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = Litecord
 SOURCEDIR     = source

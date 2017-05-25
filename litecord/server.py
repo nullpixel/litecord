@@ -352,18 +352,13 @@ class LitecordServer:
     async def h_get_version(self, request):
         """`GET /version`.
 
-        .. highlight:: python
-
         Get the server's git revision.
         This endpoint doesn't require authentication.
 
         Returns
         -------
-        dictionary::
-            {
-                "version": "string, the full git revision"
-            }
-
+        dict:
+            With a `version` key
         """
 
         return _json({
@@ -378,7 +373,7 @@ class LitecordServer:
             return _json({"url": f"ws://{ws[2]}:{ws[1]}"})
 
     async def login(self, request):
-        """Login a user through the `POST:/auth/login` endpoint.
+        """Login a user through the `POST /auth/login` endpoint.
 
         With the provided token you can connect to the
         gateway and send an IDENTIFY payload.
@@ -386,18 +381,12 @@ class LitecordServer:
         Parameters
         ----------
         request: dict
-            {
-                "email": "the email of the user",
-                "password": "the plaintext password of the user",
-            }
+            Two keys, `email` and `password`, password is in plaintext.
 
         Returns
         -------
         dict:
-            {
-                "token": "user token"
-            }
-
+            With a `token` field.
         """
         try:
             payload = await request.json()
