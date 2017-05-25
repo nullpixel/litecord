@@ -16,20 +16,26 @@ CHANNEL_TO_INTEGER = {
 class LitecordObject:
     """A general Litecord object
 
-    Attributes:
-        server: A `LitecordServer` instance
+    Attributes
+    ----------
+    server: :class:`LitecordServer`
+        Server instance
 
-    Properties:
-        guild_man: Returns the server's `GuildManager`
     """
     def __init__(self, server):
         self.server = server
 
     @property
     def guild_man(self):
+        """The server's :class:`GuildManager`."""
         # This property is needed for things to work
         # since guild_man is None when initializing databases
         return self.server.guild_man
+
+    @property
+    def as_db(self):
+        """Get a version of the object to be inserted into the database."""
+        raise NotImplemented
 
     @property
     def as_json(self):
@@ -51,10 +57,21 @@ class Presence:
     Presence objects are used to signal clients that someone is playing a game,
     or that someone went Online, Idle/AFK or DnD(Do not Disturb).
 
-    Attributes:
-        game: A dictionary representing the currently playing game/status.
-        user: The user that this presence object is linked to.
-        guild_id: An optional attribute, only used in `Presence.as_json`
+    Parameters
+    ----------
+    guild: :class:`Guild`
+        Guild that this presence object relates to.
+    user: :class:`User`
+        User that this presence object relates to.
+    status: dict, optional
+        Status data to load into the presence object.
+
+    Attributes
+    ----------
+    game: dict
+        The currently playing game/status.
+    user: :class:`User`
+        The user that this presence object is linked to.
     """
     def __init__(self, guild, user, status=None):
         _default = {
@@ -95,11 +112,29 @@ class Presence:
 class User(LitecordObject):
     """A general user object.
 
-    Attributes:
-        _data: raw user data.
-        id: The user's snowflake ID.
-        username: A string denoting the user's username
-        discriminator: A string denoting the user's discriminator
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance
+    _data: dict
+        Raw user data.
+
+    Attributes
+    ----------
+    _data: dict
+        Raw user data.
+    id: int
+        Snowflake ID of this user.
+    username: str
+        User's username.
+    discriminator: str
+        User's discriminator.
+    avatar_hash: str
+        User's avatar hash, used to retrieve the user's avatar data.
+    email: str
+        User's email, can be :py:const:`None`
+    admin: bool
+        Flag that shows if the user is an admin user.
     """
     def __init__(self, server, _data):
         LitecordObject.__init__(self, server)
@@ -133,9 +168,9 @@ class User(LitecordObject):
 
     @property
     def connection(self):
-        """Return the user's `Connection` object, if possible
+        """Return the user's :class:`Connection` object, if possible
 
-        Returns `None` when a client is offline/no connection attached.
+        Returns :py:const:`None` when there isn't any connection attached.
         """
         for session_id in self.server.sessions:
             connection = self.server.sessions[session_id]
@@ -150,14 +185,31 @@ class Member(LitecordObject):
 
     A member is linked to a guild.
 
-    Attributes:
-        user: A `User` instance representing this member.
-        guild: A `Guild` instance which the user is on.
-        id: The member's snowflake ID, Equals to the user's ID.
-        nick: A string denoting the member's nickname, can be `None`
-            if no nickname is set.
-        joined_at: A `datetime.datetime` object representing the date
-            the member joined the guild.
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        server instance.
+    guild: :class:`Guild`
+        The guild this member is from.
+    user: :class:`User`
+        The user this member represents.
+    raw_member: dict
+        Raw member data.
+
+    Attributes
+    ----------
+    _data: dict
+        Raw member data.
+    user: :class:`User`
+        The user this member represents.
+    guild: :class:`Guild`
+        The guild this member is from.
+    id: int
+        The member's snowflake ID. This is the same as `user.id`
+    nick: str
+        Member's nickname, becomes :py:const:`None` if no nickname is set.
+    joined_at: datetime.datetime
+        The date where this member was created in the guild
     """
     def __init__(self, server, guild, user, raw_member):
         LitecordObject.__init__(self, server)
@@ -187,9 +239,15 @@ class Member(LitecordObject):
 
     @property
     def connection(self):
+        """Get the user's connection."""
         return self.user.connection
 
     async def dispatch(self, evt_name, evt_data):
+        """Dispatch an event to a member.
+
+        Dispatches an event in the same way :py:meth:`Connection.dispatch` does.
+        However, if dispatching fails, it fails silently instead of raising an exception.
+        """
         try:
             return await self.connection.dispatch(evt_name, evt_data)
         except:
@@ -209,6 +267,7 @@ class Member(LitecordObject):
 
     @property
     def as_invite(self):
+        """Returns a version to be used in :py:meth:`Invite.as_json`"""
         return {
             'username': self.user.username,
             'discriminator': str(self.user.discriminator),
@@ -218,19 +277,39 @@ class Member(LitecordObject):
 
 
 class Channel(LitecordObject):
-    """A general text channel object
+    """A general text channel object.
 
-    Attributes:
-        _data: Raw channel data.
-        id: The channel's snowflake ID.
-        guild_id: The guild's ID this channel is in.
-        guild: A `Guild` object, follows the same as `guild_id`.
-        name: A string denoting the channel's name.
-        type: A string representing the channel's type, usually it is `"text"`.
-        position: Integer starting from 0. Channel's position on the guild.
-        is_private: Boolean, should be False.
-        topic: A string, the channel topic/description.
-        last_message_id: A snowflake, the last message in the channel.
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    _channel: dict
+        Raw channel data.
+    guild: :class:`Guild`, optional
+        Guild that this channel refers to.
+
+    Attributes
+    ----------
+    _data: dict
+        Raw channel data.
+    id: int
+        The channel's snowflake ID.
+    guild_id: int
+        The guild's ID this channel is in.
+    guild: :class:`Guild`
+        The guild that this channel refers to, can be :py:const:`None`.
+    name: str
+        Channel's name.
+    type: str
+        Channel's type, usually it is ``"text"``.
+    position: int
+        Channel's position on the guild, channel position starts from 0.
+    is_private: bool
+        Should be False.
+    topic: str
+        Channel topic/description.
+    last_message_id: int
+        The last message created in the channel.
     """
     def __init__(self, server, _channel, guild=None):
         LitecordObject.__init__(self, server)
@@ -279,7 +358,10 @@ class Channel(LitecordObject):
     async def last_messages(self, limit=50):
         """Get the last messages from a channel.
 
-        Returns an ordered list of `Message` objects.
+        Returns
+        -------
+        list(:class:`Message`)
+            Ordered(by time) list of message objects.
         """
         res = []
         cursor = self.server.message_db.find({'channel_id': self.id}).sort('message_id')
@@ -329,23 +411,44 @@ class Channel(LitecordObject):
 class Guild(LitecordObject):
     """A general guild.
 
-    Attributes:
-        _data: Raw guild data.
-        _channel_data: Raw channel data for the guild.
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    _guild_data: dict
+        Raw gulid data.
 
-        id: The guild's snowflake ID.
-        name: The guild's name.
-        icons: A dictionary with two keys: `"icon"` and `"splash"`
-        created_at: `datetime.datetime` object, the guild's creation date
-        owner_id: A snowflake, the guild owner's ID.
-        TODO: roles: A list of `Role` objects.
-        TODO: emojis: A list of `Emoji` objects.
-        features: A list of strings denoting the features this guild has.
-        channels: A dictionary relating channel ID to its `Channel` object.
-        member_ids: A list of snowflakes, contains the IDs for all the guild's members.
-        members: A dictionary relating user ID to its `Member` object.
-        large: A boolean, `True` if the gulid has more than 150 members.
-        member_count: An integer, the number of members in this guild.
+    Attributes
+    ----------
+    _data: dict
+        Raw guild data.
+    _channel_data: list(raw channel)
+        Raw channel data for the guild.
+
+    id: int
+        The guild's snowflake ID.
+    name: str
+        Guild's name.
+    icons: dict
+        Contains two keys: ``"icon"`` and ``"splash"``.
+    created_at: datetime.datetime
+        Guild's creation date.
+    owner_id: int
+        Guild owner's ID.
+    features: list(str)
+        Features this guild has.
+    channels: dict
+        Channels this guild has.
+    member_ids: list(int)
+        Guild member ids.
+    members: dict
+        Members this guild has.
+    member_count: int
+        Amount of members in this guild.
+
+    TODO:
+        roles: A list of `Role` objects.
+        emojis: A list of `Emoji` objects.
     """
     def __init__(self, server, _guild_data):
         LitecordObject.__init__(self, server)
@@ -409,15 +512,17 @@ class Guild(LitecordObject):
             yield member
 
     async def add_member(self, user):
-        """Add a `User` to a guild.
+        """Add a :class:`User` to a guild.
 
-        Returns `Member`.
+        Returns
+        -------
+        :class:`Member`.
         """
 
         return (await self.guild_man.add_member(self, user))
 
     async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all online members."""
+        """Dispatch an event to all online members in the guild."""
         for member in self.online_members:
             await member.dispatch(evt_name, evt_data)
 
@@ -432,7 +537,7 @@ class Guild(LitecordObject):
 
     @property
     def presences(self):
-        """Returns a list of `Presence` objects for all online members."""
+        """Returns a list of :class:`Presence` objects for all online members."""
         return [self.server.presence.get_presence(self.id, member.id).as_json \
             for member in self.online_members]
 
@@ -489,27 +594,45 @@ class Guild(LitecordObject):
 class Invite:
     """An invite object.
 
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    _data: dict
+        Raw invite data.
+
     Attributes:
-        _data: Raw invite object.
-        code: A string, the invite code.
-        channel_id: A snowflake ID of the channel being reffered in this invite.
-        channel: `Channel` object from `channel_id`.
-        inviter_id: A snowflake ID of the person who made this invite.
-        inviter: `User` object from `inviter_id`.
-        temporary: A boolean representing if this invite is temporary or not.
-        uses: Integer, if the invite is infinite, this becomes `-1`.
-        iso_timestamp: A ISO 8601 formatted string.
-        infinite: A boolean representing if this invite is infinite or not.
-        expiry_timestamp: Only set if the invite is not infinite.
-            A `datetime` object representing the date where this invite
-            will expire and be invalid.
+    _data: dict
+        Raw invite object.
+    code: str
+        Invite code.
+    channel_id: int
+        Channel's ID being reffered in this invite.
+    channel: :class:`Channel`
+        Channel being reffered in ``channel_id``. Can be :py:const:`None`.
+    inviter_id: int
+        User's ID who made the invite.
+    inviter: :class:`User`
+        User who made the invite. Can be :py:const:`None`.
+    temporary: bool
+        Flag if this invite is temprary or not.
+    uses: int
+        Uses this invite has. If the invite is infinite, this becomes ``-1``.
+    iso_timestamp: str
+        A ISO 8601 formatted string.
+    infinite: bool
+        Flag if this invite is infinite or not.
+    expiry_timestamp: `datetime.datetime`
+        If the invite is not infinite, this is the date when the invite will
+        expire and be invalid.
+        If not, this becomes :py:const:`None`.
     """
     def __init__(self, server, _data):
         self.server = server
         self._data = _data
 
         self.code = _data['code']
-        self.channel_id = _data['channel_id']
+        self.channel_id = int(_data['channel_id'])
 
         self.channel = server.guild_man.get_channel(self.channel_id)
         if self.channel is None:
@@ -611,19 +734,38 @@ class Invite:
 class Message:
     """A general message object.
 
-    Attributes:
-        _data: Raw message data.
-        id: The message's snowflake ID.
-        author_id: The message author's snowflake ID.
-        channel_id: The message channel's snowflake ID.
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    channel: :class:`Channel`
+        Channel that this message comes from.
+    _message_data: dict
+        Raw message data.
 
-        timestamp: A `datetime.datetime` object, the message's creation time.
-        channel: A `Channel` object, which channel the message comes from.
-        author: A `User` object, the user that made the message, can be `None`.
-        member: A `Member` object, the member that made the message, can be `None`.
-        content: A string, the message content.
-        edited_at: If the message was edited, this is set to a
-            `datetime.datetime` representing the time at which the message was edited.
+    Attributes:
+    _data: dict
+        Raw message data.
+    id: int
+        Message's snowflake ID.
+    author_id: int
+        Message author's snowflake ID.
+    channel_id: int
+        Message channel's snowflake ID.
+
+    timestamp: `datetime.datetime`
+        Message's creation time.
+    channel: :class:`Channel`
+        Channel where this message comes from.
+    author: :class:`User`
+        The user that made the message, can be :py:const:`None`.
+    member: :class:`Member`
+        Member that made the message, can be :py:const:`None`..
+    content: str
+        Message content.
+    edited_at: `datetime.datetime`
+        Default is :py:const:`None`.
+        If the message was edited, this is set to the time at which this message was edited.
     """
     def __init__(self, server, channel, _message_data):
         LitecordObject.__init__(self, server)
