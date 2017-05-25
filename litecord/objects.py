@@ -516,6 +516,9 @@ class Guild(LitecordObject):
         self.member_count = len(self.members)
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
 
+    def __repr__(self):
+        return f'Guild({self.id}, {self.name!r})'
+
     def all_channels(self):
         """Yield all channels from a guild"""
         for channel in self.channels.values():

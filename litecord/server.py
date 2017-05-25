@@ -152,7 +152,7 @@ class LitecordServer:
         session_id = str(session_id)
 
         try:
-            conn = self.sessions.pop(conn.session_id)
+            conn = self.sessions.pop(session_id)
         except:
             return
 
@@ -172,6 +172,9 @@ class LitecordServer:
     def get_connections(self, user_id):
         for conn in self.connections[user_id]:
             yield conn
+
+    def count_connections(self, user_id):
+        return len(self.connections[user_id])
 
     async def boilerplate_init(self):
         """Load boilerplate data."""

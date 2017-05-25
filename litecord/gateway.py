@@ -96,6 +96,9 @@ class Connection:
         #   However we should be ready when it happens, right?
         self.event_handlers = {}
 
+    def __repr__(self):
+        return f'Connection(sid={self.session_id} u={self.user!r})'
+
     def get_identifiers(self, module):
         return SERVERS.get(module, ['litecord-general-1'])
 
@@ -584,14 +587,14 @@ class Connection:
                 received = await self.ws.recv()
                 if len(received) > 4096:
                     await self.ws.close(4002)
-                    self.cleanup()
+                    await self.cleanup()
                     break
 
                 try:
                     payload = json.loads(received)
                 except:
                     await self.ws.close(4002)
-                    self.cleanup()
+                    await self.cleanup()
                     break
 
                 continue_flag = await self.process_recv(payload)
@@ -600,23 +603,21 @@ class Connection:
                 # process_recv will very probably close the websocket already
                 if not continue_flag:
                     log.info("Stopped processing")
-                    self.cleanup()
+                    await self.cleanup()
                     break
         except websockets.ConnectionClosed as err:
-            # signal clients that this one is offline
             log.info(f"[ws] closed, code {err.code!r}")
-            self.cleanup()
-            await self.presence.global_update(self.user, self.presence.offline())
+            await self.cleanup()
         except Exception as err:
             # if any error we just close with 4000
             log.error('Error while running the connection', exc_info=True)
             await self.ws.close(4000, f'Unknown error: {err!r}')
-            self.cleanup()
+            await self.cleanup()
             return
 
         await self.ws.close(1000)
 
-    def cleanup(self):
+    async def cleanup(self):
         """Remove the connection from being found
 
         The cleanup only happens if the connection is open and identified.
@@ -633,11 +634,18 @@ class Connection:
             log.warning("Cleaning up a connection while it is open")
 
         if self.token is not None:
-            log.debug(f'cleaning up session ID {self.session_id!r}')
             try:
                 self.server.remove_connection(self.session_id)
+                log.debug(f'Success cleaning up sid={self.session_id!r}')
             except:
-                log.warning("Error while cleaning up the connection.")
+                log.warning("Error while detaching the connection.")
+
+            # client is only offline if there's no connections attached to it
+            amount_conns = self.server.count_connections(self.user.id)
+            log.info(f"{self.user!r} now with {amount_conns} connections")
+            if amount_conns < 1:
+                await self.presence.global_update(self.user, self.presence.offline())
+
             self.token = None
 
 
@@ -708,7 +716,7 @@ async def gateway_server(app, flags, loop=None):
         log.info("Stopped connection", exc_info=True)
 
         # do cleanup shit!!
-        conn.cleanup()
+        await conn.cleanup()
 
     # start WS
     _load_lock.release()
