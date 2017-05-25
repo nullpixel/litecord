@@ -138,13 +138,17 @@ class Connection:
         """
         return (await self.send_anything(json.dumps(obj)))
 
-    async def send_op(self, op, data={}):
+    async def send_op(self, op, data=None):
         """Send a packet through the websocket.
 
         Args:
             op: Integer representing the packet's OP
             data: any JSON serializable object
         """
+
+        if data is None:
+            data = {}
+
         payload = {
             # op is always an int
             # data can be a dict, int or bool
@@ -153,7 +157,7 @@ class Connection:
         }
         return (await self.send_json(payload))
 
-    async def dispatch(self, evt_name, evt_data={}):
+    async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
 
         Saves the packet in the `LitecordServer`'s event cache.
@@ -162,6 +166,10 @@ class Connection:
             evt_name: Event name, follows the same pattern as Discord's event names
             evt_data: any JSON serializable object
         """
+
+        if evt_data is None:
+            evt_data = {}
+
         try:
             sent_seq = self.events['sent_seq']
         except:
