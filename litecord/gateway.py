@@ -32,20 +32,25 @@ SERVERS = {
 class Connection:
     """Represents a websocket connection to Litecord.
 
-    Attributes:
-        ws:
-            The actual websocket connection.
-        events:
-            If the connection is identified, this becomes a reference to
-            `LitecordServer.event_cache[connection.user.id]`.
-        token:
-            The token this connection is using.
-        identified:
-            A boolean showing if the client had a successful IDENTIFY or not.
-        properties:
-            Dictionary with connection properties like OS, browser and the large_threshold.
-        user:
-            Becomes a raw user object if the connection is properly identified.
+    .. _WebSocketServerProtocol: https://websockets.readthedocs.io/en/stable/api.html#websockets.server.WebSocketServerProtocol
+
+    Attributes
+    ----------
+    ws: `WebSocketServerProtocol`_
+        The actual websocket connection.
+    events: dict
+        If the connection is identified, this becomes a reference to
+        `LitecordServer.event_cache[connection.user.id]`.
+    token: str
+        The token this connection is using.
+    identified: bool
+        Connection had a successful `IDENTIFY` or not.
+    properties: dict
+        Connection properties like OS, browser and the large_threshold.
+    user: :class:`User`
+        Becomes a user object if the connection is properly identified.
+    raw_user: dict
+        Same as :attr:`user`
     """
     def __init__(self, server, ws, path):
         self.ws = ws
@@ -133,17 +138,22 @@ class Connection:
     async def send_json(self, obj):
         """Send a JSON payload through the websocket.
 
-        Args:
-            obj: any JSON serializable object
+        Parameters
+        ----------
+        obj: any
+            any JSON serializable object.
         """
         return (await self.send_anything(json.dumps(obj)))
 
     async def send_op(self, op, data=None):
         """Send a packet through the websocket.
 
-        Args:
-            op: Integer representing the packet's OP
-            data: any JSON serializable object
+        Parameters
+        ----------
+        op: int
+            Packet's OP code.
+        data: any
+            Any JSON serializable object.
         """
 
         if data is None:
@@ -162,9 +172,12 @@ class Connection:
 
         Saves the packet in the `LitecordServer`'s event cache.
 
-        Args:
-            evt_name: Event name, follows the same pattern as Discord's event names
-            evt_data: any JSON serializable object
+        Parameters
+        ----------
+        evt_name: str
+            Follows the same pattern as Discord's event names
+        evt_data: any
+            Any JSON serializable object.
         """
 
         if evt_data is None:
@@ -214,13 +227,12 @@ class Connection:
 
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
-
-        Saves the last sequence number received by the
-        client in `Connection.events['recv_seq']`.
         Sends a OP 11 Heartbeat ACK packet.
 
-        Args:
-            data: An integer or None.
+        Parameters
+        ----------
+        data: int or :py:const:`None`
+            Sequence number to be saved in ``Connection.events['recv_seq']``
         """
         try:
             self.wait_task.cancel()
@@ -256,8 +268,10 @@ class Connection:
         Checks if the token given in the packet is valid, and if it is,
         dispatched a READY event.
 
-        Args:
-            data: A dictionary, https://discordapp.com/developers/docs/topics/gateway#gateway-identify
+        Parameters
+        ----------
+        data: dict
+            https://discordapp.com/developers/docs/topics/gateway#gateway-identify
         """
         token = data.get('token')
         prop = data.get('properties')
@@ -391,9 +405,12 @@ class Connection:
     async def invalidate(self, flag=False, session_id=None):
         """Invalidates a session.
 
-        Arguments:
-            flag: A boolean, flags the session as resumable/not resumable.
-            session_id: ¯\_(ツ)_/¯
+        Parameters
+        ----------
+        flag: bool
+            Flags the session as resumable/not resumable.
+        session_id: str, optional
+            ¯\_(ツ)_/¯
         """
         log.info(f"Invalidated, can resume: {flag}")
         await self.send_op(OP['INVALID_SESSION'], flag)
@@ -553,8 +570,10 @@ class Connection:
     async def process_recv(self, payload):
         """Process a payload sent by the client.
 
-        The client has to send a payload in this format:
-        https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
+        Parameters
+        ----------
+        payload: dict
+            https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
         """
 
         op = payload.get('op')
@@ -626,7 +645,7 @@ class Connection:
         await self.ws.close(1000)
 
     async def cleanup(self):
-        """Remove the connection from being found
+        """Remove the connection from being found.
 
         The cleanup only happens if the connection is open and identified.
         This method can only be called once in a connection.
