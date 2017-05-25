@@ -4,6 +4,7 @@ import logging
 import time
 import subprocess
 import random
+import collections
 
 import motor.motor_asyncio
 
@@ -119,9 +120,9 @@ class LitecordServer:
         # cache for objects
         self.cache = {}
 
-        self.valid_tokens = []
         self.session_dict = {}
         self.sessions = {}
+        self.connections = collections.defaultdict(list)
 
         self.presence = None
         self.guild_man = None
@@ -129,6 +130,48 @@ class LitecordServer:
 
         self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
             shell=True).decode('utf-8').strip()
+
+    def add_connection(self, user_id, conn):
+        """Add a connection and tie it to a user.
+
+        Parameters
+        ----------
+        user_id: int
+            The user that is going to have this connection referred to.
+        conn: :class:`Connection`
+            Connection object.
+        """
+        user_id = int(user_id)
+        log.debug(f"Adding sid={conn.session_id} to uid={user_id}")
+
+        self.connections[user_id].append(conn)
+        self.sessions[conn.session_id] = conn
+
+    def remove_connection(self, session_id):
+        """Remove a connection from the connection table."""
+        session_id = str(session_id)
+
+        try:
+            conn = self.sessions.pop(conn.session_id)
+        except:
+            return
+
+        try:
+            user_id = conn.user.id
+        except:
+            return
+
+        log.debug(f"Removing sid={session_id} from uid={user_id}")
+
+        ref = self.connections[user_id]
+        for i, conn in enumerate(ref):
+            if conn.session_id == session_id:
+                del ref[i]
+                break
+
+    def get_connections(self, user_id):
+        for conn in self.connections[user_id]:
+            yield conn
 
     async def boilerplate_init(self):
         """Load boilerplate data."""

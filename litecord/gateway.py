@@ -270,11 +270,6 @@ class Connection:
         self.session_id = self.gen_sessid()
         self.token = token
 
-        try:
-            self.server.valid_tokens.index(self.token)
-        except:
-            self.server.valid_tokens.append(self.token)
-
         # lol properties
         _prop = self.properties
         _prop['token'] = self.token
@@ -282,8 +277,7 @@ class Connection:
         _prop['browser'] = prop.get('$browser')
         _prop['large'] = large
 
-        self.server.sessions[self.session_id] = self
-        self.server.session_dict[self.token] = self.session_id
+        self.server.add_connection(self.user.id, self)
 
         if self.session_id not in self.server.event_cache:
             self.server.event_cache[self.session_id] = {
@@ -474,6 +468,7 @@ class Connection:
             }
 
         self.events = self.server.event_cache[self.session_id]
+        self.server.add_connection(self.user.id, self)
 
         self.identified = True
 
@@ -640,9 +635,7 @@ class Connection:
         if self.token is not None:
             log.debug(f'cleaning up session ID {self.session_id!r}')
             try:
-                self.server.session_dict.pop(self.token)
-                self.server.valid_tokens.remove(self.token)
-                self.server.sessions.pop(self.session_id)
+                self.server.remove_connection(self.session_id)
             except:
                 log.warning("Error while cleaning up the connection.")
             self.token = None

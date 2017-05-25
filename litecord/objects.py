@@ -179,6 +179,22 @@ class User(LitecordObject):
                     return connection
         return None
 
+    @property
+    def connections(self):
+        """Yield all connections that are related to this user."""
+        for conn in self.server.get_connections(self.id):
+            yield conn
+
+    async def dispatch(self, evt_name, evt_data):
+        """Dispatch an event to all connections a user has."""
+        log.debug(f"Dispatching {evt_name} to {self.id}")
+        for conn in self.connections:
+            try:
+                await conn.dispatch(evt_name, evt_data)
+                log.debug(f"Dispatched to {conn.session_id!r}")
+            except:
+                log.debug(f"Failed to dispatch event to {conn.session_id!r}")
+
 
 class Member(LitecordObject):
     """A general member object.
@@ -238,9 +254,9 @@ class Member(LitecordObject):
         self.nick = new_data.get('nick') or self.nick
 
     @property
-    def connection(self):
-        """Get the user's connection."""
-        return self.user.connection
+    def connections(self):
+        """Yield the user's connections."""
+        return self.user.connections
 
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to a member.
@@ -249,10 +265,9 @@ class Member(LitecordObject):
         However, if dispatching fails, it fails silently instead of raising an exception.
         """
         try:
-            return await self.connection.dispatch(evt_name, evt_data)
+            await self.user.dispatch(evt_name, evt_data)
         except:
             log.error('Failed to dispatch event.', exc_info=True)
-            return None
 
     @property
     def as_json(self):

@@ -15,7 +15,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
     if message.content.startswith('!editme'):
-        msg = await client.send_message(message.author, '10')
+        msg = await client.send_message(message.channel, '10')
         await asyncio.sleep(3)
         await client.edit_message(msg, '40')
 
