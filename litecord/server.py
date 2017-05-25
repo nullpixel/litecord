@@ -79,8 +79,6 @@ class LitecordServer:
         List of valid tokens(strings).
         A valid token is a token that was used in a connection and it is still,
         being used in that connection.
-    session_dict : dict
-        Relates tokens to their respective `Connection`_ object.
     sessions : dict
         Relates session IDs to their respective `Connection`_ object.
     guild_man : `GuildManager`_
@@ -121,6 +119,7 @@ class LitecordServer:
         self.cache = {}
 
         self.session_dict = {}
+        self.atomic_markers = {}
         self.sessions = {}
         self.connections = collections.defaultdict(list)
 

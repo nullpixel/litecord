@@ -8,7 +8,7 @@ import io
 from aiohttp import web
 
 from ..utils import _err, _json
-from ..ratelimits import admin_endpoint
+from ..ratelimits import admin_endpoint, auth_route
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ class AdminEndpoints:
     def register(self, app):
         self.server.add_get('count', self.h_get_counts)
         self.server.add_post('admin_eval', self.h_eval)
+        self.server.add_post('iamatomic', self.h_flag_atomic)
 
     @admin_endpoint
     async def h_get_counts(self, request, user):
@@ -116,3 +117,26 @@ class AdminEndpoints:
                 return _json(out)
 
         return _json(out)
+
+    @auth_route
+    async def h_flag_atomic(self, request, user):
+        """`POST /iamatomic`.
+
+        Marks a connection as being from Atomic-Discord.
+        See https://git.memework.org/lnmds/litecord/issues/16 for details on why this exists.
+        """
+
+        try:
+            payload = await request.json()
+        except:
+            return _err('erroneous payload')
+
+        session_id = payload.get('session_id')
+        if session_id is None:
+            return _err('provide session ID')
+
+        self.server.atomic_markers[session_id] = True
+
+        return _json({
+            'type': 'litecord',
+        })
