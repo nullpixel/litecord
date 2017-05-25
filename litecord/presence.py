@@ -98,13 +98,15 @@ class PresenceManager:
         guild_presences = self.presences[guild_id]
         guild_presences[user_id] = Presence(guild, user, new_status)
 
-        # TODO: just do presence.game.update if needed
-        presence = guild_presences[user_id]
-        presence.game.update(new_status)
+        user_presence = guild_presences[user_id]
 
-        log.info(f'{user!s} : {presence!r}, updating presences')
-
-        await guild.dispatch('PRESENCE_UPDATE', presence.as_json)
+        differences = set(user_presence.game.values()) ^ set(new_status.values())
+        if len(differences) > 0:
+            presence.game.update(new_status)
+            log.info(f'[presence] {user!s} -> {presence!r}, updating')
+            await guild.dispatch('PRESENCE_UPDATE', presence.as_json)
+        else:
+            log.debug(f"[presence] ignoring upd for {user!r}")
 
     async def global_update(self, user, new_status=None):
         """Updates an user's status, globally.
