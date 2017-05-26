@@ -355,7 +355,11 @@ class Connection:
             'v': GATEWAY_VERSION,
             'user': stripped_user,
             'private_channels': [],
+
+            # discord.js why u use undocumented shit
             'relationships': [],
+            'user_settings': {},
+
             'guilds': guild_list,
             'session_id': self.session_id,
             '_trace': self.get_identifiers('ready')

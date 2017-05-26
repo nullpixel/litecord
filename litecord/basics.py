@@ -8,7 +8,7 @@ OP = {
 
     # Those OPs are used for VOICE
     # Therefore they are only here as a matter of documentation
-    # They won't be used at the current state of LiteCord.
+    # They won't be used at the current state of Litecord.
     'VOICE_STATE_UPDATE': 4,
     'VOICE_SERVER_PING': 5,
 
