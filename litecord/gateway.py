@@ -10,6 +10,7 @@ import hashlib
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
+from .err import VoiceError
 
 # Maximum amount of tries to generate a session ID.
 MAX_TRIES = 20
@@ -88,6 +89,9 @@ class Connection:
             OP['HEARTBEAT']: self.heartbeat_handler,
             OP['IDENTIFY']: self.identify_handler,
             OP['STATUS_UPDATE']: self.status_handler,
+
+            OP['VOICE_STATE_UPDATE']: self.v_state_update_handler,
+            OP['VOICE_SERVER_PING']: self.v_ping_handler,
 
             OP['RESUME']: self.resume_handler,
             OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
@@ -587,6 +591,54 @@ class Connection:
 
         return True
 
+    async def v_state_update_handler(self, data):
+        """Handle OP 4 Voice State Update.
+
+        This starts a VoiceConnection attached to the client.
+        """
+
+        guild_id = data.get('guild_id')
+        channel_id = data.get('channel_id')
+        self_mute = data.get('self_mute', False)
+        self_deaf = data.get('self_deaf', False)
+
+        if guild_id is None or channel_id is None:
+            return True
+
+        try:
+            guild_id = int(guild_id)
+            channel_id = int(channel_id)
+        except:
+            return True
+
+        guild = self.server.guild_man.get_guild(guild_id)
+        if guild is None:
+            return True
+
+        channel = guild.channels.get(channel_id)
+        if channel is None:
+            return True
+
+        if channel.type != 'voice':
+            return True
+
+        # We request a VoiceState from the voice manager
+        # VoiceState contains voice info used for the client to have a connection
+        # with the voice gateway at 0.0.0.0:6969
+        try:
+            v_state = await self.server.voice.link_connection(self, guild, channel)
+        except VoiceError:
+            log.error('error while trying voice', exc_info=True)
+            return True
+
+        await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
+        await self.dispatch('VOICE_SERVER_UPDATE', v_state.v_server.as_event)
+
+    async def v_ping_handler(self, data):
+        """Handle OP 5 Voice Server Ping."""
+        log.info("Received OP5 VOICE_SERVER_PING what do i do")
+        return True
+
     async def process_recv(self, payload):
         """Process a payload sent by the client.
 
@@ -722,11 +774,11 @@ async def http_server(app, flags):
     await _load_lock.acquire()
     http = flags['server']['http']
 
-    log.info(f'[http] starting at {http[0]}:{http[1]}')
-
     handler = app.make_handler()
     f = app.loop.create_server(handler, http[0], http[1])
     await f
+
+    log.info(f'[http] running at {http[0]}:{http[1]}')
 
 async def gateway_server(app, flags, loop=None):
     """Main function to start the websocket server

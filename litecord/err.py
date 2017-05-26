@@ -4,3 +4,6 @@ class ImageError(Exception):
 
 class ConfigError(Exception):
     pass
+
+class VoiceError(Exception):
+    pass

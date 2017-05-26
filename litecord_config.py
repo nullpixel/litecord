@@ -7,6 +7,7 @@ flags = {
         # its a tuple (host, port)
         'http': ('0.0.0.0', 8000),
         'ws': ('0.0.0.0', 12000),
+        'voice_ws': ('0.0.0.0', 6969),
     },
     'ratelimits': {
         'rest': True,

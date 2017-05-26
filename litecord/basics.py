@@ -6,9 +6,6 @@ OP = {
     'IDENTIFY': 2,
     'STATUS_UPDATE': 3,
 
-    # Those OPs are used for VOICE
-    # Therefore they are only here as a matter of documentation
-    # They won't be used at the current state of Litecord.
     'VOICE_STATE_UPDATE': 4,
     'VOICE_SERVER_PING': 5,
 
@@ -25,3 +22,11 @@ OP = {
     # TODO: meme op code because we can do that here :^)
     #'MEME': 69,
 }
+
+class VOICE_OP:
+    IDENTIFY = 0
+    SELECT_PROTOCOL = 1
+    READY = 2
+    HEARTBEAT = 3
+    SESSION_DESCRIPTION = 4
+    SPEAKING = 5

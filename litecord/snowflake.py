@@ -8,11 +8,11 @@ process_id = 0
 EPOCH = 1420081200
 _id_in_process = 1
 
-async def get_raw_token():
+async def get_raw_token(prefix='litecord_'):
     """Generate a token"""
     random_stuff = hashlib.sha512(os.urandom(4096)).digest()
-    token = base64.urlsafe_b64encode(random_stuff).decode()
-    return f'litecord_{token}'
+    token = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '')
+    return f'{prefix}{token}'
 
 
 def get_invite_code():

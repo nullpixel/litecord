@@ -12,6 +12,7 @@ from .snowflake import get_raw_token
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
+from .voice import VoiceManager
 from .api import users, guilds, channels, imgs, invites, admin
 from .objects import User
 from .images import Images
@@ -570,6 +571,10 @@ class LitecordServer:
             log.debug('[init] EmbedManager')
             self.embed = EmbedManager(self)
             self.embed.init(app)
+
+            log.debug('[init] VoiceManager')
+            self.voice = VoiceManager(self)
+            self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
 
             log.debug('[init] endpoint objects')
             self.users_endpoint = users.UsersEndpoint(self)
