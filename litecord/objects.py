@@ -495,7 +495,6 @@ class Guild(LitecordObject):
 
         self.owner_id = _guild_data['owner_id']
         self.region = _guild_data['region']
-        self.roles = []
         self.emojis = []
         self.features = _guild_data['features']
 
@@ -527,6 +526,13 @@ class Guild(LitecordObject):
         self.owner = self.members.get(int(self.owner_id))
         if self.owner is None:
             log.error("Guild without owner!")
+
+        self._role_data = _guild_data['roles']
+        self.roles = {}
+
+        for raw_role in self._role_data:
+            role = Role(server, self, raw_role)
+            self.roles[role.id] = role
 
         self.member_count = len(self.members)
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
@@ -635,7 +641,7 @@ class Guild(LitecordObject):
 
             'verification_level': 0, # TODO
             'default_message_notifications': -1, # TODO
-            'roles': self.roles,
+            'roles': self.iter_json(self.roles),
             'emojis': self.emojis,
             'features': self.features,
             'mfa_level': -1, # TODO
@@ -665,7 +671,62 @@ class Guild(LitecordObject):
             'splash': self.icons['splash'],
         }
 
-class Invite:
+class Role:
+    """A role object.
+
+    Parameters
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    _data: dict
+        Raw role data.
+    """
+    def __init__(self, server, guild, _data):
+        LitecordObject.__init__(self, server)
+        self._data = _data
+
+        self.id = int(_data['id'])
+        self.guild = guild
+
+        if self.id == guild.id:
+            self.name = '@everyone'
+        else:
+            self.name = _data['name']
+
+        self.color = 0
+        self.hoist = True
+        self.position = 0
+        self.permissions = 0
+        self.managed = False
+        self.mentionable = True
+
+    @property
+    def as_db(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'color': self.color,
+            'hoist': self.hoist,
+            'position': self.position,
+            'permissions': self.permissions,
+            'managed': self.managed,
+            'mentionable': self.mentionable,
+        }
+
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'color': self.color,
+            'hoist': self.hoist,
+            'position': self.position,
+            'permissions': self.permissions,
+            'managed': self.managed,
+            'mentionable': self.mentionable,
+        }
+
+class Invite(LitecordObject):
     """An invite object.
 
     Parameters
@@ -702,6 +763,7 @@ class Invite:
         If not, this becomes :py:const:`None`.
     """
     def __init__(self, server, _data):
+        LitecordObject.__init__(self, server)
         self.server = server
         self._data = _data
 
