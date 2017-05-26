@@ -186,14 +186,32 @@ class User(LitecordObject):
             yield conn
 
     async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all connections a user has."""
+        """Dispatch an event to all connections a user has.
+
+        Parameters
+        ----------
+        evt_name: str
+            Event name.
+        evt_data: any
+            Event data.
+
+        Returns
+        -------
+        bool
+
+        """
         log.debug(f"Dispatching {evt_name} to {self.id}")
+        if len(self.connections) < 1:
+            return False
+
         for conn in self.connections:
             try:
                 await conn.dispatch(evt_name, evt_data)
                 log.debug(f"Dispatched to {conn.session_id!r}")
             except:
                 log.debug(f"Failed to dispatch event to {conn.session_id!r}")
+
+        return True
 
 
 class Member(LitecordObject):
@@ -261,13 +279,9 @@ class Member(LitecordObject):
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to a member.
 
-        Dispatches an event in the same way :py:meth:`Connection.dispatch` does.
-        However, if dispatching fails, it fails silently instead of raising an exception.
+        Dispatches an event in the same way :py:meth:`User.dispatch` does.
         """
-        try:
-            await self.user.dispatch(evt_name, evt_data)
-        except:
-            log.error('Failed to dispatch event.', exc_info=True)
+        return await self.user.dispatch(evt_name, evt_data)
 
     @property
     def as_json(self):
@@ -515,9 +529,30 @@ class Guild(LitecordObject):
 
         self.member_count = len(self.members)
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
+        self.viewers = []
 
     def __repr__(self):
         return f'Guild({self.id}, {self.name!r})'
+
+    def mark_watcher(self, user_id):
+        """Mark a user ID as a viewer in that guild, meaning it will receive
+        events from that gulid using :py:ref:`Guild.dispatch`.
+        """
+        user_id = int(user_id)
+        try:
+            self.viewers.index(user_id)
+        except:
+            self.viewers.append(user_id)
+            log.debug(f'Marked {user_id} as watcher of {self!r}')
+
+    def unmark_watcher(self, user_id):
+        """Unmark user from being a viewer in this guild."""
+        user_id = int(user_id)
+        try:
+            self.viewers.remove(user_id)
+            log.debug(f'Unmarked {user_id} as watcher of {self!r}')
+        except:
+            pass
 
     def all_channels(self):
         """Yield all channels from a guild"""
@@ -539,10 +574,21 @@ class Guild(LitecordObject):
 
         return (await self.guild_man.add_member(self, user))
 
-    async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all online members in the guild."""
-        for member in self.online_members:
-            await member.dispatch(evt_name, evt_data)
+    @property
+    def viewers(self):
+        """Yield all members that are viewers of this guild.
+
+        Keep in mind that :py:ref:`Guild.viewers` can be different from :py:ref:`Guild.online_members`.
+
+        Members can be viewers, but if they are Atomic-Discord clients,
+        they only *are* viewers if they send a OP 12 Guild Sync(:py:ref:`Connection.`) to the gateway.
+        """
+        for member in self.members.values():
+            try:
+                self.viewers.index(member.id)
+                yield member
+            except:
+                pass
 
     @property
     def online_members(self):
@@ -552,6 +598,14 @@ class Guild(LitecordObject):
             if conn is not None:
                 if conn.identified:
                     yield member
+
+    async def dispatch(self, evt_name, evt_data):
+        """Dispatch an event to all online members in the guild."""
+        for member in self.viewers:
+            success = await member.dispatch(evt_name, evt_data)
+
+            if not success:
+                self.unmark_watcher(member.id)
 
     @property
     def presences(self):

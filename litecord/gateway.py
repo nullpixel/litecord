@@ -220,6 +220,11 @@ class Connection:
 
         return res
 
+    @property
+    def is_atomic(self):
+        """Returns boolean."""
+        return self.server.atomic_markers.get(self.session_id, False)
+
     async def hb_wait_task(self):
         try:
             await asyncio.sleep((self.hb_interval) / 1000)
@@ -332,6 +337,9 @@ class Connection:
         guild_list = []
 
         for guild in all_guild_list:
+            if not self.is_atomic:
+                guild.mark_watcher(self.user.id)
+
             guild_json = guild.as_json
 
             if guild.member_count > large:
@@ -562,6 +570,9 @@ class Connection:
 
             if self.user.id not in guild.members:
                 continue
+
+            if self.is_atomic:
+                guild.mark_watcher(self.user.id)
 
             await self.dispatch('GUILD_SYNC', {
                 'id': guild_id,
