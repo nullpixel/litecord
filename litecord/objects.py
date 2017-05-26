@@ -201,10 +201,11 @@ class User(LitecordObject):
 
         """
         log.debug(f"Dispatching {evt_name} to {self.id}")
-        if len(self.connections) < 1:
+        _conns = list(self.connections)
+        if len(_conns) < 1:
             return False
 
-        for conn in self.connections:
+        for conn in _conns:
             try:
                 await conn.dispatch(evt_name, evt_data)
                 log.debug(f"Dispatched to {conn.session_id!r}")
