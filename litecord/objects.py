@@ -137,7 +137,7 @@ class User(LitecordObject):
         Flag that shows if the user is an admin user.
     """
     def __init__(self, server, _data):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = _data
 
         self.id = int(_data['id'])
@@ -247,7 +247,7 @@ class Member(LitecordObject):
         The date where this member was created in the guild
     """
     def __init__(self, server, guild, user, raw_member):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = raw_member
         self.user = user
         self.guild = guild
@@ -342,7 +342,7 @@ class Channel(LitecordObject):
         The last message created in the channel.
     """
     def __init__(self, server, _channel, guild=None):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = _channel
         self.id = int(_channel['id'])
         self.guild_id = int(_channel['guild_id'])
@@ -481,7 +481,7 @@ class Guild(LitecordObject):
         emojis: A list of `Emoji` objects.
     """
     def __init__(self, server, _guild_data):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = _guild_data
         self.id = int(_guild_data['id'])
         self.name = _guild_data['name']
@@ -671,7 +671,7 @@ class Guild(LitecordObject):
             'splash': self.icons['splash'],
         }
 
-class Role:
+class Role(LitecordObject):
     """A role object.
 
     Parameters
@@ -682,7 +682,7 @@ class Role:
         Raw role data.
     """
     def __init__(self, server, guild, _data):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = _data
 
         self.id = int(_data['id'])
@@ -763,7 +763,7 @@ class Invite(LitecordObject):
         If not, this becomes :py:const:`None`.
     """
     def __init__(self, server, _data):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self.server = server
         self._data = _data
 
@@ -867,7 +867,7 @@ class Invite(LitecordObject):
         }
 
 
-class Message:
+class Message(LitecordObject):
     """A general message object.
 
     Parameters
@@ -904,7 +904,7 @@ class Message:
         If the message was edited, this is set to the time at which this message was edited.
     """
     def __init__(self, server, channel, _message_data):
-        LitecordObject.__init__(self, server)
+        super().__init__(server)
         self._data = _message_data
 
         self.id = int(_message_data['id'])
