@@ -529,7 +529,7 @@ class Guild(LitecordObject):
 
         self.member_count = len(self.members)
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
-        self.viewers = []
+        self._viewers = []
 
     def __repr__(self):
         return f'Guild({self.id}, {self.name!r})'
@@ -540,16 +540,16 @@ class Guild(LitecordObject):
         """
         user_id = int(user_id)
         try:
-            self.viewers.index(user_id)
+            self._viewers.index(user_id)
         except:
-            self.viewers.append(user_id)
+            self._viewers.append(user_id)
             log.debug(f'Marked {user_id} as watcher of {self!r}')
 
     def unmark_watcher(self, user_id):
         """Unmark user from being a viewer in this guild."""
         user_id = int(user_id)
         try:
-            self.viewers.remove(user_id)
+            self._viewers.remove(user_id)
             log.debug(f'Unmarked {user_id} as watcher of {self!r}')
         except:
             pass
@@ -581,11 +581,12 @@ class Guild(LitecordObject):
         Keep in mind that :py:ref:`Guild.viewers` can be different from :py:ref:`Guild.online_members`.
 
         Members can be viewers, but if they are Atomic-Discord clients,
-        they only *are* viewers if they send a OP 12 Guild Sync(:py:ref:`Connection.`) to the gateway.
+        they only *are* viewers if they send a OP 12 Guild Sync(:py:ref:`Connection.guild_sync_handler`)
+        to the gateway.
         """
         for member in self.members.values():
             try:
-                self.viewers.index(member.id)
+                self._viewers.index(member.id)
                 yield member
             except:
                 pass
