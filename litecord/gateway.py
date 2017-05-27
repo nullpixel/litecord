@@ -11,6 +11,7 @@ from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 from .err import VoiceError
+from .ratelimits import ws_ratelimit
 
 # Maximum amount of tries to generate a session ID.
 MAX_TRIES = 20
@@ -70,6 +71,9 @@ class Connection:
         self.compress_flag = False
         self.properties = {}
 
+        self.ratelimit_tasks = {}
+        self.request_counter = 0
+
         # flags
         self.identified = False
         self.resume_count = 0
@@ -103,7 +107,8 @@ class Connection:
         # Event handlers
         #  Fired when a client sends an OP 0 DISPATCH
         #  NOTE: This is unlikely to happen.
-        #   However we should be ready when it happens, right?
+        #   However we should be ready when it might happen
+        #   (in something called gateway v7), right?
         self.event_handlers = {}
 
     def __repr__(self):
@@ -646,6 +651,7 @@ class Connection:
         log.info("Received OP5 VOICE_SERVER_PING what do i do")
         return True
 
+    @ws_ratelimit()
     async def process_recv(self, payload):
         """Process a payload sent by the client.
 
