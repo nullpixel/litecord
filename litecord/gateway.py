@@ -7,7 +7,7 @@ import random
 import zlib
 import hashlib
 
-from .basics import OP, GATEWAY_VERSION
+from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 from .err import VoiceError
@@ -603,36 +603,43 @@ class Connection:
         self_deaf = data.get('self_deaf', False)
 
         if guild_id is None or channel_id is None:
+            log.warning("[vsu] missing params")
             return True
 
         try:
             guild_id = int(guild_id)
             channel_id = int(channel_id)
         except:
+            log.warning("[vsu] not ints")
             return True
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
+            log.warning("[vsu] unknown guild")
             return True
 
         channel = guild.channels.get(channel_id)
         if channel is None:
+            log.warning("[vsu] unknown channel")
             return True
 
-        if channel.type != 'voice':
+        if channel.str_type != 'voice':
+            log.warning("[vsu] not voice channel")
             return True
 
         # We request a VoiceState from the voice manager
         # VoiceState contains voice info used for the client to have a connection
         # with the voice gateway at 0.0.0.0:6969
         try:
-            v_state = await self.server.voice.link_connection(self, guild, channel)
+            v_state = await self.server.voice.link_connection(self, channel)
         except VoiceError:
             log.error('error while trying voice', exc_info=True)
             return True
 
+        log.info(f"{self.user!r} Requesting voice connection to {channel!r}")
         await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
         await self.dispatch('VOICE_SERVER_UPDATE', v_state.v_server.as_event)
+        return True
 
     async def v_ping_handler(self, data):
         """Handle OP 5 Voice Server Ping."""

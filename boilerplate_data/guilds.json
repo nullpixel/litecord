@@ -13,6 +13,13 @@
                 "type": "text",
                 "position": 0,
                 "topic": "general but it is general"
+            },
+            {
+                "id": "155280142337",
+                "name": "general-voice",
+                "type": "voice",
+                "position": 1,
+                "topic": "dude cry"
             }
         ],
         "roles": [

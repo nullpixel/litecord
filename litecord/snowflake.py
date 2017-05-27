@@ -15,6 +15,12 @@ async def get_raw_token(prefix='litecord_'):
     return f'{prefix}{token}'
 
 
+def sync_get_raw_token(prefix='litecord_'):
+    random_stuff = hashlib.sha512(os.urandom(4096)).digest()
+    token = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '')
+    return f'{prefix}{token}'
+
+
 def get_invite_code():
     random_stuff = hashlib.sha512(os.urandom(4096)).digest()
     code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \

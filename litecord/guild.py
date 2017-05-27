@@ -495,7 +495,7 @@ class GuildManager:
         age = invite_payload['max_age']
         iso_timestamp = None
         if age > 0:
-            now = datetime.datetime.now().timestamp
+            now = datetime.datetime.now().timestamp()
             expiry_timestamp = datetime.datetime.fromtimestamp(now + age)
             iso_timestamp = expiry_timestamp.isoformat()
 

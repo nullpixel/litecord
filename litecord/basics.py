@@ -30,3 +30,10 @@ class VOICE_OP:
     HEARTBEAT = 3
     SESSION_DESCRIPTION = 4
     SPEAKING = 5
+
+CHANNEL_TO_INTEGER = {
+    'text': 0,
+    'private': 1,
+    'voice': 2,
+    'group': 3,
+}

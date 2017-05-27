@@ -1,12 +1,13 @@
 import json
 import logging
+import asyncio
 
 import websockets
 
 from .basics import VOICE_OP
 from .objects import LitecordObject
 from .err import VoiceError
-from .snowflake import get_raw_token
+from .snowflake import sync_get_raw_token
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ class VoiceState(LitecordObject):
         LitecordObject.__init__(self, server)
         #self._data = data
 
+        self.v_man = server.voice
         self.v_server = v_server
+
         self.channel = channel
         self.guild = channel.guild
         self.user = conn.user
@@ -54,7 +57,7 @@ class VoiceServer(LitecordObject):
         self.guild = self.server.guild_man.get_guild(guild_id)
         self.endpoint = 'ws://0.0.0.0:6969'
 
-        self.token = get_raw_token('litecord-vws_')
+        self.token = sync_get_raw_token('litecord-vws_')
 
         self.voice_clients = {}
 
@@ -261,17 +264,17 @@ class VoiceManager:
     def __init__(self, server):
         self.server = server
 
-        self.only_server = VoiceServer(server, 0)
+        self.only_server = VoiceServer(server, "150501171201")
 
     def get_voiceserver(self, guild_id):
-        return self.uniq_server
+        return self.only_server
 
     async def link_connection(self, conn, channel):
-        if channel.type != 'voice':
+        if channel.str_type != 'voice':
             raise VoiceError('Channel is not a voice channel')
 
         v_server = self.get_voiceserver(channel.guild.id)
-        v_state = VoiceState(server, v_server, channel, conn)
+        v_state = VoiceState(conn.server, v_server, channel, conn)
         return v_state
 
     async def init_task(self, flags):
@@ -287,6 +290,7 @@ class VoiceManager:
 
         vws = flags['server']['voice_ws']
         log.info(f'[voice_ws] running at {vws[0]}:{vws[1]}')
+        self.vws_tuple = vws
 
         ws_server = websockets.serve(voice_henlo, host=vws[0], port=vws[1])
         await ws_server
