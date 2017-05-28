@@ -8,7 +8,7 @@ import io
 from aiohttp import web
 
 from ..utils import _err, _json
-from ..ratelimits import admin_endpoint, auth_route
+from ..decorators import admin_endpoint, auth_route
 
 log = logging.getLogger(__name__)
 
