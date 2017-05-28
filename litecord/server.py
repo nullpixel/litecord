@@ -350,6 +350,26 @@ class LitecordServer:
         res = self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
         return res
 
+    async def check(self):
+        """Returns a dictionary with check data."""
+
+        report = {
+            'good': True
+        }
+
+        t1 = time.monotonic()
+        result = await self.mongo_client.admin.command({'ping': 1})
+        t2 = time.monotonic()
+
+        mongo_ping_msec = round((t2 - t1) * 1000, 4)
+        report['mongo_ping'] = mongo_ping_msec
+
+        # dude the mongodb is local 5ms would be alarming
+        if mongo_ping_msec > 3:
+            report['good'] = False
+
+        return report
+
     async def h_get_version(self, request):
         """`GET /version`.
 

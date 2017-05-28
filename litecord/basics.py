@@ -19,6 +19,9 @@ OP = {
     # Undocumented OP code
     'GUILD_SYNC': 12,
 
+    # This is an internal OP code for litecord.
+    'INTERNAL_PING': 42,
+
     # TODO: meme op code because we can do that here :^)
     #'MEME': 69,
 }

@@ -6,6 +6,7 @@ import uuid
 import random
 import zlib
 import hashlib
+import time
 
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
@@ -717,6 +718,11 @@ class Connection:
                     log.info("Stopped processing")
                     await self.cleanup()
                     break
+        except asyncio.CancelledError:
+            # I try.
+            log.info(f"[ws] Cancelled, cleaning {self!r}")
+            await self.ws.close(1006)
+            await self.cleanup()
         except websockets.ConnectionClosed as err:
             log.info(f"[ws] closed, code {err.code!r}")
             await self.cleanup()
@@ -773,6 +779,25 @@ def _stop(loop):
         loop.run_until_complete(gathered)
         gathered.exception()
     except:
+        pass
+
+async def server_sentry(server):
+    log.info('Starting sentry')
+    try:
+        while True:
+            check_data = await server.check()
+
+            if not check_data.get('good', False):
+                log.warning('[sentry] we are NOT GOOD.')
+
+            log.info(f"[sentry] Mongo ping: {check_data['mongo_ping']}msec")
+
+            #log.info(f"[sentry] HTTP throughput: {check_data['http_throughput']}requests/s")
+            #log.info(f"[sentry] WS throughput: {check_data['ws_throughput']}packets/s")
+
+            await asyncio.sleep(10)
+    except:
+        log.error(exc_info=True)
         pass
 
 async def http_server(app, flags):
@@ -837,4 +862,6 @@ async def gateway_server(app, flags, loop=None):
 
     ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
     await ws_server
+
+    ws_watcher_task = loop.create_task(server_sentry(server))
     return True
