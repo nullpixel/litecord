@@ -2,6 +2,8 @@ import logging
 import asyncio
 import datetime
 
+from collections import defaultdict
+
 from .objects import Guild, Message, Invite
 from .snowflake import get_snowflake, get_invite_code
 
@@ -38,7 +40,7 @@ class GuildManager:
         self.channels = {}
         self.messages = {}
         self.invites = {}
-        self.raw_members = {}
+        self.raw_members = defaultdict(dict)
 
         self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
 
@@ -580,7 +582,7 @@ class GuildManager:
         member_count = 0
 
         for raw_member in await cursor.to_list(length=None):
-            self.raw_members[int(raw_member['user_id'])] = raw_member
+            self.raw_members[int(raw_member['guild_id'])][int(raw_member['user_id'])] = raw_member
             member_count += 1
 
         log.info(f'[guild] loaded {member_count} members')
