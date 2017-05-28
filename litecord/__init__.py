@@ -10,6 +10,7 @@ from .guild import GuildManager
 from .snowflake import get_raw_token, get_snowflake, snowflake_time, _snowflake_raw, get_invite_code
 from .objects import LitecordObject, Presence, User, Member, Channel, Guild, Invite, Message
 from .presence import PresenceManager
-from .ratelimits import ratelimit, ws_ratelimit, admin_endpoint
+from .ratelimits import ratelimit, ws_ratelimit
+from .decorators import admin_endpoint
 from .server import LitecordServer
 from .snowflake import get_snowflake
