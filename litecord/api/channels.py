@@ -184,9 +184,7 @@ class ChannelsEndpoint:
         if _error_json['code'] == 0:
             return _error
 
-        log.info("{request!r}")
         channel_id = request.match_info['channel_id']
-
         user = self.server._user(_error_json['token'])
         channel = self.server.guild_man.get_channel(channel_id)
 
