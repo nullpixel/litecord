@@ -2,3 +2,4 @@ aiohttp==2.0.7
 websockets==3.3
 motor==1.1
 beautifulsoup4==4.6.0
+uvloop==0.8.0

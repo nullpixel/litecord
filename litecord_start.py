@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import logging
-from aiohttp import web
 import asyncio
-import json
+
+import uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 import aiohttp
-import litecord
+from aiohttp import web
 
+import litecord
 import litecord_config as config
 
 logging.basicConfig(level=logging.DEBUG, \
