@@ -6,6 +6,7 @@ from aiohttp import web
 from ..utils import _err, _json
 from ..snowflake import get_snowflake
 from ..ratelimits import ratelimit
+from ..decorators import auth_route
 
 log = logging.getLogger(__name__)
 
@@ -37,19 +38,14 @@ class ChannelsEndpoint:
     async def meme(self, request):
         return web.FileResponse('/home/luna/lkmnds.github/litecord/litecord/_assets/channels/@me/index.html')
 
-    async def h_get_channel(self, request):
+    @auth_route
+    async def h_get_channel(self, request, user):
         """`GET /channels/{channel_id}`.
 
         Returns a channel object
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
-        user = self.server._user(_error_json['token'])
 
         channel = self.server.guild_man.get_channel(channel_id)
         if channel is None:
@@ -143,21 +139,16 @@ class ChannelsEndpoint:
         new_message = await self.server.guild_man.new_message(channel, user, _data)
         return _json(new_message.as_json)
 
-    async def h_get_single_message(self, request):
+    @auth_route
+    async def h_get_single_message(self, request, user):
         """`GET /channels/{channel_id}/messages/{message_id}`.
 
         Get a single message by its snowflake ID.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        user = self.server._user(_error_json['token'])
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:
@@ -232,21 +223,16 @@ class ChannelsEndpoint:
 
         return _json([m.as_json for m in message_list])
 
-    async def h_delete_message(self, request):
+    @auth_route
+    async def h_delete_message(self, request, user):
         """`DELETE /channels/{channel_id}/messages/{message_id}`.
 
         Delete a message sent by the user.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        user = self.server._user(_error_json['token'])
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:
@@ -265,21 +251,16 @@ class ChannelsEndpoint:
         await self.server.guild_man.delete_message(message)
         return web.Response(status=204)
 
-    async def h_patch_message(self, request):
+    @auth_route
+    async def h_patch_message(self, request, user):
         """`PATCH /channels/{channel_id}/messages/{message_id}`.
 
         Update a message sent by the current user.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        user = self.server._user(_error_json['token'])
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:
