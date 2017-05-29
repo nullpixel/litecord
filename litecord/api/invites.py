@@ -20,6 +20,8 @@ class InvitesEndpoint:
         self.server.add_post('invite/{invite_code}', self.h_accept_invite)
         self.server.add_delete('invite/{invite_code}', self.h_delete_invite)
 
+        app.router.add_get('/i/{invite_code}', self.h_get_invite)
+
         self.server.add_post('channels/{channel_id}/invites', self.h_create_invite)
 
     async def h_get_invite(self, request):
