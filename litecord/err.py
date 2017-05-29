@@ -7,3 +7,6 @@ class ConfigError(Exception):
 
 class VoiceError(Exception):
     pass
+
+class PayloadLengthExceeded(Exception):
+    pass

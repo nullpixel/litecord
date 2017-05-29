@@ -9,10 +9,12 @@ import hashlib
 import time
 import urllib.parse as urlparse
 
+import earl
+
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
-from .err import VoiceError
+from .err import VoiceError, PayloadLengthExceeded
 from .ratelimits import ws_ratelimit
 
 # Maximum amount of tries to generate a session ID.
@@ -34,13 +36,27 @@ SERVERS = {
     'resume': ['litecord-resumer-0'],
 }
 
+
+async def decode_dict(data):
+    if isinstance(data, bytes):
+        return str(data, 'utf-8')
+    elif isinstance(data, dict):
+        _copy = dict(data)
+        for key in _copy:
+            data[await decode_dict(key)] = await decode_dict(data[key])
+        return data
+    else:
+        return data
+
+
 class Connection:
     """Represents a websocket connection to Litecord.
 
     .. _the documentation about it here: https://discordapp.com/developers/docs/topics/gateway
     .. _WebSocketServerProtocol: https://websockets.readthedocs.io/en/stable/api.html#websockets.server.WebSocketServerProtocol
 
-    This connection only handles Discord's gateway version 6,
+    This connection only handles A mix of Discord's gateway version 5 and 6,
+    it adheres with the docs which are v5, but handles some stuff from v6(see :py:meth:`Connection.guild_sync_handler`)
     you can find `the documentation about it here`_.
 
     Attributes
@@ -150,20 +166,51 @@ class Connection:
 
         return new_id
 
-    async def send_anything(self, obj):
-        """Send anything through the websocket."""
+    async def send_payload(self, payload, compress=False):
+        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending."""
 
-        return (await self.ws.send(obj))
+        encoding = self.options['encoding']
+        data = None
 
-    async def send_json(self, obj):
-        """Send a JSON payload through the websocket.
+        if encoding == 'json':
+            data = json.dumps(payload)
+        elif encoding == 'etf':
+            data = earl.pack(payload)
+        else:
+            log.warning("NO ENCODING SET?????")
 
-        Parameters
-        ----------
-        obj: any
-            any JSON serializable object.
-        """
-        return (await self.send_anything(json.dumps(obj)))
+        if compress and encoding == 'json':
+            if isinstance(data, str):
+                data = data.encode()
+            data = zlib.compress(data)
+
+        await self.ws.send(data)
+        return len(data)
+
+    async def recv_payload(self):
+        """Receive a payload from the websocket. Will be decoded using JSON or ETF to a Python object."""
+
+        raw_data = await self.ws.recv()
+        if len(raw_data) > 4096:
+            raise PayloadLengthExceeded()
+
+        data = None
+
+        encoding = self.options['encoding']
+        if encoding == 'json':
+            data = json.loads(raw_data)
+        elif encoding == 'etf':
+            data = earl.unpack(raw_data)
+
+            # Earl makes all keys and values bytes object.
+            # We convert them into UTF-8
+            if isinstance(data, dict):
+                data = await decode_dict(data)
+        else:
+            log.warning("NO ENCODING SET?????")
+            return None
+
+        return data
 
     async def send_op(self, op, data=None):
         """Send a packet through the websocket.
@@ -185,7 +232,11 @@ class Connection:
             'op': op,
             'd': data,
         }
-        return (await self.send_json(payload))
+        return (await self.send_payload(payload))
+
+    def _register(self, sent_seq, payload):
+        self.events['events'][sent_seq] = payload
+        self.events['sent_seq'] = sent_seq
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
@@ -222,18 +273,16 @@ class Connection:
             'd': evt_data,
         }
 
-        to_send = json.dumps(payload)
+        amount = None
 
         if evt_name == 'READY':
-            if self.compress_flag:
-                to_send = zlib.compress(to_send.encode())
-            log.info(f"READY: Sending {len(str(to_send))} bytes, compress={self.compress_flag}")
+            amount = await self.send_payload(payload, self.compress_flag)
+            log.info(f"READY: Sent {amount} bytes, compress={self.compress_flag}")
+        else:
+            amount = await self.send_payload(payload)
 
-        res = await self.send_anything(to_send)
-        self.events['events'][sent_seq] = payload
-        self.events['sent_seq'] = sent_seq
-
-        return res
+        self._register(sent_seq, payload)
+        return amount
 
     @property
     def is_atomic(self):
@@ -397,6 +446,7 @@ class Connection:
         limit = data.get('limit')
 
         if guild_id is None or query is None or limit is None:
+            log.info("Invalid OP 8")
             await self.ws.close(4001)
             return False
 
@@ -510,7 +560,7 @@ class Connection:
 
         for seq in seqs_to_replay:
             try:
-                await self.send_json(event_data['events'][seq])
+                await self.send_payload(event_data['events'][seq])
             except KeyError:
                 log.info(f"Event {seq} not found")
 
@@ -696,21 +746,14 @@ class Connection:
         The server sends an OP 10 Hello packet to the client, and after that
         it relays payloads sent by the client to `Connection.process_recv`
         """
-        # send OP HELLO
-        log.info("Sending OP HELLO")
-        await self.ws.send(json.dumps(self.basic_hello()))
+        log.info(f'[Connection.run] v={self.options["v"]} encoding={self.options["encoding"]}')
+        await self.send_payload(self.basic_hello())
 
         try:
             while True:
-                received = await self.ws.recv()
-                if len(received) > 4096:
-                    await self.ws.close(4002)
-                    await self.cleanup()
-                    break
-
                 try:
-                    payload = json.loads(received)
-                except:
+                    payload = await self.recv_payload()
+                except (PayloadLengthExceeded, earl.DecodeError):
                     await self.ws.close(4002)
                     await self.cleanup()
                     break
@@ -865,7 +908,7 @@ async def gateway_server(app, flags, loop=None):
         except:
             gateway_version = 6
 
-        if encoding != 'json':
+        if encoding not in ['json', 'etf']:
             await websocket.close(4000, f'{encoding} not supported.')
             return
 

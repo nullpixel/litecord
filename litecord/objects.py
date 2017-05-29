@@ -538,7 +538,7 @@ class Guild(LitecordObject):
 
     def mark_watcher(self, user_id):
         """Mark a user ID as a viewer in that guild, meaning it will receive
-        events from that gulid using :py:ref:`Guild.dispatch`.
+        events from that gulid using :py:meth:`Guild.dispatch`.
         """
         user_id = int(user_id)
         try:
@@ -580,10 +580,10 @@ class Guild(LitecordObject):
     def viewers(self):
         """Yield all members that are viewers of this guild.
 
-        Keep in mind that :py:ref:`Guild.viewers` can be different from :py:ref:`Guild.online_members`.
+        Keep in mind that :py:meth:`Guild.viewers` can be different from :py:meth:`Guild.online_members`.
 
         Members can be viewers, but if they are Atomic-Discord clients,
-        they only *are* viewers if they send a OP 12 Guild Sync(:py:ref:`Connection.guild_sync_handler`)
+        they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
         to the gateway.
         """
         for member in self.members.values():
