@@ -44,7 +44,7 @@ class PresenceManager:
         }
 
     async def presence_count(self, guild_id):
-        """Count the approximate count of presence objects for a guild.
+        """Count the approximate amount of presence objects for a guild.
 
         Parameters
         ----------
@@ -54,7 +54,7 @@ class PresenceManager:
         Returns
         -------
         int:
-            Amount of presence objects in a guild.
+            Approximate amount of presence objects in a guild.
         """
 
         guild_id = int(guild_id)
