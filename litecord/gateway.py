@@ -922,9 +922,6 @@ async def gateway_server(app, flags, loop=None):
         })
 
         await conn.run()
-        log.info("Stopped connection", exc_info=True)
-
-        # do cleanup shit!!
         await conn.cleanup()
 
     # start WS

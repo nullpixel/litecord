@@ -20,6 +20,7 @@ class PresenceManager:
     def get_presence(self, guild_id, user_id):
         """Get a `Presence` object from a user's ID."""
         guild_id = int(guild_id)
+        user_id = int(user_id)
 
         try:
             guild_presences = self.presences[guild_id]
