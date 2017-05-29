@@ -191,6 +191,12 @@ class GuildsEndpoint:
         guild_id = request.match_info['guild_id']
         member_id = request.match_info['user_id']
 
+        try:
+            guild_id = int(guild_id)
+            member_id = int(member_id)
+        except:
+            return _err('malformed url')
+
         user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
