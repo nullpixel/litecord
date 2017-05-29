@@ -512,7 +512,7 @@ class Guild(LitecordObject):
                 log.warning(f"user {member_id} not found")
                 continue
 
-            raw_member = server.guild_man.get_raw_member(user.id)
+            raw_member = server.guild_man.get_raw_member(self.id, user.id)
 
             member = Member(server, self, user, raw_member)
             self.members[member.id] = member

@@ -106,13 +106,23 @@ class GuildManager:
         """Get an :class:`Invite` object."""
         return self.invites.get(invite_code)
 
-    def get_raw_member(self, member_id):
+    def get_raw_member(self, guild_id, user_id):
         """Get a raw member."""
         try:
-            member_id = int(member_id)
+            guild_id = int(guild_id)
+            user_id = int(user_id)
         except:
             return None
-        return self.raw_members.get(member_id)
+
+        try:
+            raw_guild_members = self.raw_members[guild_id]
+        except:
+            return None
+
+        try:
+            return raw_guild_members[user_id]
+        except:
+            return None
 
     def all_guilds(self):
         """Yield all available guilds."""
@@ -603,13 +613,20 @@ class GuildManager:
         guild_count = 0
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
-            for member_id in raw_guild['members']:
-                if int(member_id) in self.raw_members:
+            _guild_id = raw_guild['id']
+            guild_id = int(_guild_id)
+
+            raw_guild_members = self.raw_members.get(int(guild_id), {})
+
+            for _member_id in raw_guild['members']:
+                member_id = int(_member_id)
+
+                if member_id in raw_guild_members:
                     continue
 
                 raw_member = {
-                    'guild_id': raw_guild['id'],
-                    'user_id': member_id,
+                    'guild_id': _guild_id,
+                    'user_id': _member_id,
                     'nick': '',
                     'joined': datetime.datetime.now().isoformat(),
                     'deaf': False,
@@ -617,7 +634,7 @@ class GuildManager:
                 }
 
                 await self.member_db.insert_one(raw_member)
-                self.raw_members[int(member_id)] = raw_member
+                self.raw_members[guild_id][member_id] = raw_member
 
             guild = Guild(self.server, raw_guild)
             self.guilds[guild.id] = guild
