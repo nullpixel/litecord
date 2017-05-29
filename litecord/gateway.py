@@ -37,7 +37,11 @@ SERVERS = {
 class Connection:
     """Represents a websocket connection to Litecord.
 
+    .. _the documentation about it here: https://discordapp.com/developers/docs/topics/gateway
     .. _WebSocketServerProtocol: https://websockets.readthedocs.io/en/stable/api.html#websockets.server.WebSocketServerProtocol
+
+    This connection only handles Discord's gateway version 6,
+    you can find `the documentation about it here`_.
 
     Attributes
     ----------
