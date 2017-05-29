@@ -54,7 +54,7 @@ class UsersEndpoint:
         """`POST /users/add`.
 
         Creates a user.
-        Input: A JSON object:
+        Input: A JSON object::
             {
                 "email": "the new user's email",
                 "password": "the new user's password",
