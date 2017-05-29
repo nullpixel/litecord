@@ -161,23 +161,15 @@ class User(LitecordObject):
         return strip_user_data(self._data)
 
     @property
-    def connection(self):
-        """Return the user's :class:`Connection` object, if possible
-
-        Returns :py:const:`None` when there isn't any connection attached.
-        """
-        for session_id in self.server.sessions:
-            connection = self.server.sessions[session_id]
-            if connection.identified:
-                if connection.user.id == self.id:
-                    return connection
-        return None
-
-    @property
     def connections(self):
         """Yield all connections that are related to this user."""
         for conn in self.server.get_connections(self.id):
             yield conn
+
+    @property
+    def online(self):
+        """Returns boolean if the user has at least 1 connection attached to it"""
+        return len(list(self.server.get_connections(self.id))) > 1
 
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to all connections a user has.
@@ -366,9 +358,15 @@ class Channel(LitecordObject):
             yield member
 
     async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all watchers."""
-        for member in self.watchers:
-            await member.dispatch(evt_name, evt_data)
+        """Dispatch an event to all channel watchers."""
+        dispatched = 0
+        for member in self.guild.viewers:
+            if (await member.dispatch(evt_name, evt_data)):
+                dispatched += 1
+
+        log.debug(f'Dispatched {evt_name} to {dispatched} channel watchers')
+
+        return dispatched
 
     def get_message(self, message_id):
         """Get a single message from a channel."""
@@ -580,7 +578,7 @@ class Guild(LitecordObject):
     def viewers(self):
         """Yield all members that are viewers of this guild.
 
-        Keep in mind that :py:meth:`Guild.viewers` can be different from :py:meth:`Guild.online_members`.
+        Keep in mind that :py:meth:`Guild.viewers` is different from :py:meth:`Guild.online_members`.
 
         Members can be viewers, but if they are Atomic-Discord clients,
         they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
@@ -597,18 +595,24 @@ class Guild(LitecordObject):
     def online_members(self):
         """Yield all members that have an identified connection"""
         for member in self.members.values():
-            conn = member.user.connection
-            if conn is not None:
-                if conn.identified:
-                    yield member
+            if member.user.online:
+                yield member
 
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to all online members in the guild."""
+        dispatched = 0
+
         for member in self.viewers:
             success = await member.dispatch(evt_name, evt_data)
 
             if not success:
                 self.unmark_watcher(member.id)
+            else:
+                dispatched += 1
+
+        log.debug(f'Dispatched {evt_name} to {dispatched} gulid viewers')
+
+        return dispatched
 
     @property
     def presences(self):
