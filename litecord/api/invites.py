@@ -2,7 +2,9 @@ import json
 import logging
 
 from aiohttp import web
+
 from ..utils import _err, _json
+from ..decorators import auth_route
 
 log = logging.getLogger(__name__)
 
@@ -51,19 +53,14 @@ class InvitesEndpoint:
 
         return _json(invite.as_json)
 
-    async def h_accept_invite(self, request):
+    @auth_route
+    async def h_accept_invite(self, request, user):
         """`POST /invites/{invite_code}`.
 
         Accept an invite. Returns invite object.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         invite_code = request.match_info['invite_code']
-        user = self.server._user(_error_json['token'])
 
         invite = self.server.guild_man.get_invite(invite_code)
         if invite is None:
@@ -82,24 +79,18 @@ class InvitesEndpoint:
             log.error(exc_info=True)
             return _err('Error using the invite.')
 
-    async def h_create_invite(self, request):
+    @auth_route
+    async def h_create_invite(self, request, user):
         """`POST /channels/{channel_id}/invites`.
 
         Creates an invite to a channel.
         Returns invite object.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
         channel = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
-
-        user = self.server._user(_error_json['token'])
 
         try:
             payload = await request.json()
@@ -119,19 +110,14 @@ class InvitesEndpoint:
 
         return _json(invite.as_json)
 
-    async def h_delete_invite(self, request):
+    @auth_route
+    async def h_delete_invite(self, request, user):
         """`DELETE /invites/{invite_code}`.
 
         Delete an invite.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         invite_code = request.match_info['invite_code']
-        user = self.server._user(_error_json['token'])
 
         invite = self.server.guild_man.get_invite(invite_code)
         if invite is None:
