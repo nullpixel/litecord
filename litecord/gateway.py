@@ -7,6 +7,7 @@ import random
 import zlib
 import hashlib
 import time
+import urllib.parse as urlparse
 
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
@@ -56,9 +57,9 @@ class Connection:
     raw_user: dict
         Same as :attr:`user`
     """
-    def __init__(self, server, ws, path):
+    def __init__(self, server, ws, options):
         self.ws = ws
-        self.path = path
+        self.options = options
 
         # Last sequence sent by the client and last sequence received by the client
         # will be here
@@ -362,7 +363,7 @@ class Connection:
         log.info("New session %s, sending %d guilds", self.session_id, len(guild_list))
 
         await self.dispatch('READY', {
-            'v': GATEWAY_VERSION,
+            'v': self.options['v'],
             'user': stripped_user,
             'private_channels': [],
 
@@ -848,7 +849,31 @@ async def gateway_server(app, flags, loop=None):
 
     async def henlo(websocket, path):
         log.info("Opening connection")
-        conn = Connection(server, websocket, path)
+
+        parsed = urlparse.urlparse(path)
+        params = urlparse.parse_qs(parsed.query)
+
+        gateway_version = params.get('v', ['6'])[0]
+        encoding = params.get('encoding', ['json'])[0]
+
+        try:
+            gateway_version = int(gateway_version)
+        except:
+            gateway_version = 6
+
+        if encoding != 'json':
+            await websocket.close(4000, f'{encoding} not supported.')
+            return
+
+        if gateway_version != 6:
+            await websocket.close(4000, f'gateway v{gateway_version} not supported')
+            return
+
+        conn = Connection(server, websocket, {
+            'v': gateway_version,
+            'encoding': encoding,
+        })
+
         await conn.run()
         log.info("Stopped connection", exc_info=True)
 
