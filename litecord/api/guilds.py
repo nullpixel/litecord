@@ -3,6 +3,7 @@ import logging
 
 from aiohttp import web
 from ..utils import _err, _json
+from ..decorators import auth_route
 
 log = logging.getLogger(__name__)
 
@@ -25,15 +26,12 @@ class GuildsEndpoint:
         #self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
         self.server.add_patch('guilds/{guild_id}/members/@me/nick', self.h_change_nick)
 
-    async def h_guilds(self, request):
+    @auth_route
+    async def h_guilds(self, request, user):
         """`GET /guilds/{guild_id}`
 
         Returns a guild object
         """
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
 
         guild_id = request.match_info['guild_id']
 
@@ -43,16 +41,12 @@ class GuildsEndpoint:
 
         return _json(guild.as_json)
 
-    async def h_get_guild_channels(self, request):
+    @auth_route
+    async def h_get_guild_channels(self, request, user):
         """`GET /guilds/{guild_id}/channels`
 
         Returns a list of channels the guild has.
         """
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         guild_id = request.match_info['guild_id']
 
         guild = self.guild_man.get_guild(guild_id)
@@ -61,20 +55,14 @@ class GuildsEndpoint:
 
         return _json([channel.as_json for channel in guild.channels])
 
-    async def h_guild_one_member(self, request):
+    @auth_route
+    async def h_guild_one_member(self, request, user):
         """`GET /guilds/{guild_id}/members/{user_id}`
 
         Get a specific member in a guild.
         """
-
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         guild_id = request.match_info['guild_id']
         user_id = request.match_info['user_id']
-        user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -88,19 +76,14 @@ class GuildsEndpoint:
 
         return _json(guild.members[user_id].as_json)
 
-    async def h_guild_members(self, request):
+    @auth_route
+    async def h_guild_members(self, request, user):
         """`GET /guilds/{guild_id}/members`
 
         Returns a list of all the members in a guild.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         guild_id = request.match_info['guild_id']
-        user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -111,18 +94,12 @@ class GuildsEndpoint:
 
         return _json([member.as_json for member in guild.members])
 
-    async def h_post_guilds(self, request):
+    @auth_route
+    async def h_post_guilds(self, request, user):
         """`POST /guilds`.
 
         Create a guild.
         """
-
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
-        user = self.server._user(_error_json['token'])
 
         try:
             _payload = await request.json()
@@ -152,20 +129,15 @@ class GuildsEndpoint:
 
         return _json(new_guild.as_json)
 
-    async def h_leave_guild(self, request):
+    @auth_route
+    async def h_leave_guild(self, request, user):
         """`DELETE /users/@me/guilds/{guild_id}`.
 
         Leave a guild.
         Fires GUILD_DELETE event.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         guild_id = request.match_info['guild_id']
-        user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -177,16 +149,12 @@ class GuildsEndpoint:
         await self.guild_man.remove_member(guild, user)
         return web.Response(status=204)
 
-    async def h_kick_member(self, request):
+    @auth_route
+    async def h_kick_member(self, request, user):
         """`DELETE /gulids/{guild_id}/members/{user_id}`.
 
         Kick a member.
         """
-
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
 
         guild_id = request.match_info['guild_id']
         member_id = request.match_info['user_id']
@@ -196,8 +164,6 @@ class GuildsEndpoint:
             member_id = int(member_id)
         except:
             return _err('malformed url')
-
-        user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -219,7 +185,8 @@ class GuildsEndpoint:
             log.error("Error kicking member", exc_info=True)
             return _err('Error kicking member: {err!r}')
 
-    async def h_change_nick(self, request):
+    @auth_route
+    async def h_change_nick(self, request, user):
         """`PATCH /guilds/{guild_id}/members/@me/nick`.
 
         Modify your nickname.
@@ -227,13 +194,7 @@ class GuildsEndpoint:
         Dispatches GUILD_MEMBER_UPDATE to relevant clients.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         guild_id = request.match_info['guild_id']
-        user = self.server._user(_error_json['token'])
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
