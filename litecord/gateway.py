@@ -96,18 +96,18 @@ class Connection:
 
         # OP handlers
         self.op_handlers = {
-            OP['HEARTBEAT']: self.heartbeat_handler,
-            OP['IDENTIFY']: self.identify_handler,
-            OP['STATUS_UPDATE']: self.status_handler,
+            OP.HEARTBEAT: self.heartbeat_handler,
+            OP.IDENTIFY: self.identify_handler,
+            OP.STATUS_UPDATE: self.status_handler,
 
-            OP['VOICE_STATE_UPDATE']: self.v_state_update_handler,
-            OP['VOICE_SERVER_PING']: self.v_ping_handler,
+            OP.VOICE_STATE_UPDATE: self.v_state_update_handler,
+            OP.VOICE_SERVER_PING: self.v_ping_handler,
 
-            OP['RESUME']: self.resume_handler,
-            OP['REQUEST_GUILD_MEMBERS']: self.req_guild_handler,
+            OP.RESUME: self.resume_handler,
+            OP.REQUEST_GUILD_MEMBERS: self.req_guild_handler,
 
             # Undocumented.
-            OP['GUILD_SYNC']: self.guild_sync_handler,
+            OP.GUILD_SYNC: self.guild_sync_handler,
         }
 
         # Event handlers
@@ -126,7 +126,7 @@ class Connection:
     def basic_hello(self):
         """Returns a JSON serializable OP 10 Hello packet."""
         return {
-            'op': OP["HELLO"],
+            'op': OP.HELLO,
             'd': {
                 'heartbeat_interval': self.hb_interval,
                 '_trace': self.get_identifiers('hello'),
@@ -212,7 +212,7 @@ class Connection:
         sent_seq += 1
 
         payload = {
-            'op': OP["DISPATCH"],
+            'op': OP.DISPATCH,
 
             # always an int
             's': sent_seq,
@@ -269,7 +269,7 @@ class Connection:
         except:
             log.warning("Received OP 1 Heartbeat from unidentified connection")
 
-        await self.send_op(OP['HEARTBEAT_ACK'], {})
+        await self.send_op(OP.HEARTBEAT_ACK, {})
         self.wait_task = self.server.loop.create_task(self.hb_wait_task())
         return True
 
@@ -445,7 +445,7 @@ class Connection:
             ¯\_(ツ)_/¯
         """
         log.info(f"Invalidated, can resume: {flag}")
-        await self.send_op(OP['INVALID_SESSION'], flag)
+        await self.send_op(OP.INVALID_SESSION, flag)
         if not flag:
             try:
                 self.server.event_cache.pop(self.session_id or session_id)
@@ -677,7 +677,7 @@ class Connection:
         sequence_number = payload.get('s')
         event_name = payload.get('t')
 
-        if op == OP['DISPATCH']:
+        if op == OP.DISPATCH:
             # wooo, we got a DISPATCH
             if event_name in self.event_handlers:
                 evt_handler = self.event_handlers[op]
