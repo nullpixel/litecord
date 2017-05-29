@@ -179,7 +179,7 @@ class Connection:
         else:
             log.warning("NO ENCODING SET?????")
 
-        if compress and encoding == 'json':
+        if compress and self.properties['browser'] != 'discord.js':
             if isinstance(data, str):
                 data = data.encode()
             data = zlib.compress(data)
