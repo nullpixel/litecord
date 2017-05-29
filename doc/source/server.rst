@@ -1,7 +1,7 @@
 .. currentmodule:: litecord
 
-`LitecordServer` object
-========================
+``LitecordServer`` object
+==========================
 
 .. autoclass:: LitecordServer
    :members:

@@ -32,6 +32,7 @@ Limitations:
    :caption: Contents:
 
    connecting
+   api/index
    server
    guild
    presence
