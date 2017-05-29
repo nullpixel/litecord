@@ -276,6 +276,12 @@ class GuildManager:
 
         return guild
 
+    async def edit_guild(self, guild, guild_edit_payload):
+        pass
+
+    async def delete_guild(self, guild):
+        pass
+
     async def add_member(self, guild, user):
         """Adds a user to a guild.
 
@@ -333,7 +339,13 @@ class GuildManager:
             {'$set': new_data})
 
         member.update(new_data)
-        await guild.dispatch('GUILD_MEMBER_UPDATE', member.as_json)
+
+        await guild.dispatch('GUILD_MEMBER_UPDATE', {
+            'guild_id': str(member.guild.id),
+            'roles': member.iter_json(member.roles),
+            'user': member.user.as_json,
+            'nick': member.nick
+        })
 
     async def remove_member(self, guild, user):
         """Remove a user from a guild.
