@@ -347,6 +347,7 @@ class Channel(LitecordObject):
         self.position = _channel['position']
         self.is_private = False
         self.topic = _channel['topic']
+        self.is_default = self.id == self.guild_id
 
         self.last_message_id = 0
 
