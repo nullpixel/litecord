@@ -693,12 +693,12 @@ class Role(LitecordObject):
         else:
             self.name = _data['name']
 
-        self.color = 0
-        self.hoist = True
-        self.position = 0
-        self.permissions = 0
+        self.color = _data.get('color', 0)
+        self.hoist = _data.get('hoisted', False)
+        self.position = _data.get('position', 0)
+        self.permissions = _data.get('permissions', 0)
         self.managed = False
-        self.mentionable = True
+        self.mentionable = _data.get('mentionable')
 
     @property
     def as_db(self):
