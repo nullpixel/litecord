@@ -405,6 +405,10 @@ class Channel(LitecordObject):
 
         return res
 
+    async def voice_request(self, connection):
+        """Request a voice state from the voice manager."""
+        return await self.server.voice.link_connection(connection, self)
+
     @property
     def as_json(self):
         return {
@@ -559,6 +563,13 @@ class Guild(LitecordObject):
         """Yield all channels from a guild"""
         for channel in self.channels.values():
             yield channel
+
+    @property
+    def voice_channels(self):
+        """Yield all voice channels from a guild."""
+        for channel in self.all_channels():
+            if channel.str_type == 'voice':
+                yield channel
 
     def all_members(self):
         """Yield all members from a guild"""

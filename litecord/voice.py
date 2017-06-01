@@ -50,22 +50,29 @@ class VoiceState(LitecordObject):
 
 class VoiceServer(LitecordObject):
     """Represents a voice server."""
-    def __init__(self, server, guild_id):
+    def __init__(self, server, guild):
         LitecordObject.__init__(self, server)
 
-        self.guild_id = guild_id
-        self.guild = self.server.guild_man.get_guild(guild_id)
-        self.endpoint = 'ws://0.0.0.0:6969'
+        self.guild = guild
+
+        self.channels = {}
+        for v_channel in guild.voice_channels:
+            self.channels[v_channel.id] = v_channel
+
+        vws = server.flags['server']['voice_ws']
+        self.endpoint = f'{vws[0]}:{vws[1]}'
 
         self.token = sync_get_raw_token('litecord-vws_')
 
-        self.voice_clients = {}
+        self.voice_cli = {}
+
+    #async def connect(self, c)
 
     @property
-    def as_event(self):
+    def as_json(self):
         return {
             'token': self.token,
-            'guild_id': self.guild_id,
+            'guild_id': str(self.channel.guild.id),
             'endpoint': self.endpoint,
         }
 
@@ -263,17 +270,24 @@ class VoiceManager:
     """
     def __init__(self, server):
         self.server = server
+        self.guild_man = server.guild_man
 
-        self.only_server = VoiceServer(server, "150501171201")
+        self.voice_servers = {}
+
+        for guild in self.guild_man.all_guilds():
+            self.voice_servers[guild.id] = VoiceServer(server, guild)
 
     def get_voiceserver(self, guild_id):
-        return self.only_server
+        guild_id = int(guild_id)
+        return self.voice_servers.get(guild_id)
 
     async def link_connection(self, conn, channel):
         if channel.str_type != 'voice':
             raise VoiceError('Channel is not a voice channel')
 
-        v_server = self.get_voiceserver(channel.guild.id)
+        v_server = self.get_vserver(channel.guild.id)
+        #v_state = v_server.request_state(conn)
+
         v_state = VoiceState(conn.server, v_server, channel, conn)
         return v_state
 

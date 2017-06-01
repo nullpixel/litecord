@@ -249,10 +249,14 @@ class Connection:
             Follows the same pattern as Discord's event names
         evt_data: any
             Any JSON serializable object.
+            If this has an `as_json` attribute, it gets called.
         """
 
         if evt_data is None:
             evt_data = {}
+
+        if hasattr(evt_data, 'as_json'):
+            evt_data = evt_data.as_json
 
         try:
             sent_seq = self.events['sent_seq']
@@ -694,14 +698,16 @@ class Connection:
         # VoiceState contains voice info used for the client to have a connection
         # with the voice gateway at 0.0.0.0:6969
         try:
-            v_state = await self.server.voice.link_connection(self, channel)
+            channel_vstate = await channel.voice_request(self)
         except VoiceError:
-            log.error('error while trying voice', exc_info=True)
+            log.error('error while requesting VoiceState', exc_info=True)
             return True
 
-        log.info(f"{self.user!r} Requesting voice connection to {channel!r}")
-        await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
-        await self.dispatch('VOICE_SERVER_UPDATE', v_state.v_server.as_event)
+        log.info(f"{self.user!r} => voice => {channel!r} => {channel_vstate!r}")
+
+        await self.dispatch('VOICE_STATE_UPDATE', channel_vstate)
+        await self.dispatch('VOICE_SERVER_UPDATE', channel_vstate.v_server)
+
         return True
 
     async def v_ping_handler(self, data):
