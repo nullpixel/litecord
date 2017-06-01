@@ -367,6 +367,7 @@ class Connection:
         self.user = user
 
         self.session_id = self.gen_sessid()
+        self.request_counter = self.server.request_counter[self.session_id]
         self.token = token
 
         # lol properties
@@ -569,6 +570,7 @@ class Connection:
 
         self.token = token
         self.session_id = session_id
+        self.request_counter = self.server.request_counter[self.session_id]
 
         if self.session_id not in self.server.event_cache:
             self.server.event_cache[self.session_id] = {

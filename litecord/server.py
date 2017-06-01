@@ -122,6 +122,8 @@ class LitecordServer:
         self.session_dict = {}
         self.atomic_markers = {}
         self.sessions = {}
+
+        self.request_counter = collections.defaultdict(int)
         self.connections = collections.defaultdict(list)
 
         self.presence = None
