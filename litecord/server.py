@@ -521,20 +521,6 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
-    async def h_give_loadline(self, request):
-        """`GET /api/loadingline`.
-
-        Give a (list of) random loading lines.
-        """
-
-        try:
-            payload = await request.json()
-        except:
-            payload = {}
-
-        amount = payload.get('amount', 1)
-        return _json([random.choice(LOADING_LINES) for i in range(amount)])
-
     def add_get(self, route_path, route_handler):
         _r = self.app.router
 
@@ -620,7 +606,6 @@ class LitecordServer:
             self.add_post('auth/login', self.login)
             self.add_get('version', self.h_get_version)
             self.add_get('gateway', self.h_give_gateway)
-            self.add_get('loadingline', self.h_give_loadline)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)
