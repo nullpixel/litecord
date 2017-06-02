@@ -35,7 +35,6 @@ LOADING_LINES = [
 
 API_PREFIXES = [
     '/api',
-    '/api/v4',
     '/api/v5',
     '/api/v6',
     '/api/v7'
