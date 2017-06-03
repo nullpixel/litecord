@@ -44,5 +44,8 @@ def auth_route(handler):
             return _error
 
         user = server._user(_error_json['token'])
-        return (await handler(endpoint, request, user))
+        try:
+            return (await handler(endpoint, request, user))
+        except Exception as err:
+            return _err(f'Error: {err!r}')
     return inner_handler

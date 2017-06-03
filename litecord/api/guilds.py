@@ -26,11 +26,13 @@ class GuildsEndpoint:
         self.server.add_put('guilds/{guild_id}/bans/{user_id}', self.h_ban_member)
         self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
 
+        self.server.add_patch('guilds/{guild_id}', self.h_edit_guild)
+
     @auth_route
     async def h_guilds(self, request, user):
-        """`GET /guilds/{guild_id}`
+        """`GET /guilds/{guild_id}`.
 
-        Returns a guild object
+        Returns a guild object.
         """
 
         guild_id = request.match_info['guild_id']
@@ -43,7 +45,7 @@ class GuildsEndpoint:
 
     @auth_route
     async def h_get_guild_channels(self, request, user):
-        """`GET /guilds/{guild_id}/channels`
+        """`GET /guilds/{guild_id}/channels`.
 
         Returns a list of channels the guild has.
         """
@@ -57,7 +59,7 @@ class GuildsEndpoint:
 
     @auth_route
     async def h_guild_one_member(self, request, user):
-        """`GET /guilds/{guild_id}/members/{user_id}`
+        """`GET /guilds/{guild_id}/members/{user_id}`.
 
         Get a specific member in a guild.
         """
@@ -69,7 +71,7 @@ class GuildsEndpoint:
             return _err(errno=10004)
 
         if user.id not in guild.members:
-            return _err('401: Unauthorized')
+            return _err(errno=40001)
 
         if user_id not in guild.members:
             return _err(errno=10004)
@@ -78,7 +80,7 @@ class GuildsEndpoint:
 
     @auth_route
     async def h_guild_members(self, request, user):
-        """`GET /guilds/{guild_id}/members`
+        """`GET /guilds/{guild_id}/members`.
 
         Returns a list of all the members in a guild.
         """
@@ -90,7 +92,7 @@ class GuildsEndpoint:
             return _err(errno=10004)
 
         if user.id not in guild.members:
-            return _err('401: Unauthorized')
+            return _err(errno=40001)
 
         return _json([member.as_json for member in guild.members])
 
@@ -284,3 +286,44 @@ class GuildsEndpoint:
         except Exception as err:
             log.error("Error banning user", exc_info=True)
             return _err('Error banning user: {err!r}')
+
+    @auth_route
+    async def h_edit_guild(self, request, user):
+        """`PATCH /guilds/{guild_id}`.
+
+        Edit a guild.
+        Dispatches GUILD_UPDATE to relevant clients.
+        """
+
+        guild_id = request.match_info['guild_id']
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        try:
+            _payload = await request.json()
+        except:
+            return _err('error parsing payload')
+
+        if user.id != guild.owner_id:
+            return _err(errno=40001)
+
+        _pg = _payload.get
+
+        edit_payload = {
+            'name':                             str(_pg('name')),
+            'region':                           str(_pg('region')),
+            'verification_level':               int(_pg('verification_level')),
+            'default_message_notifications':    int(_pg('default_message_notifications')),
+            'afk_channel_id':                   str(_pg('afk_channel_id')),
+            'afk_timeout':                      int(_pg('afk_timeout')),
+            'icon':                             str(_pg('icon')),
+            'owner_id':                         str(_pg('owner_id')),
+        }
+
+        try:
+            new_guild = await guild.edit(edit_payload)
+            return _json(new_guild.as_json)
+        except Exception as err:
+            return _err(f'{err!r}')

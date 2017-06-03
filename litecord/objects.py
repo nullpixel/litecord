@@ -652,6 +652,15 @@ class Guild(LitecordObject):
         """
         await self.guild_man.unban_user(self, user)
 
+    async def edit(self, edit_payload):
+        """Edit a guild.
+
+        Returns
+        -------
+        :class:`Guild`, the edited guild as a object.
+        """
+        await self.guild_man.edit_guild(self, edit_payload)
+
     @property
     def as_json(self):
         return {

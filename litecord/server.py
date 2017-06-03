@@ -291,9 +291,11 @@ class LitecordServer:
 
     def get_user(self, user_id):
         """Get a `User` object using the user's ID."""
-        user_id = int(user_id)
-        users = self.cache['id->user']
-        return users.get(user_id)
+        try:
+            user_id = int(user_id)
+        except:
+            return None
+        return self.cache['id->user'].get(user_id)
 
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""

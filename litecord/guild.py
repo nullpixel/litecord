@@ -218,6 +218,10 @@ class GuildManager:
 
         Used normally after a updating the guild dataabse.
         Updates cache objects.
+
+        Returns
+        -------
+        :class:`Guild`, the new, updated guild object.
         """
 
         raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
@@ -227,6 +231,8 @@ class GuildManager:
 
         for channel in guild.all_channels():
             self.channels[channel.id] = channel
+
+        return guild
 
     async def new_guild(self, owner, payload):
         """Create a Guild.
@@ -287,7 +293,32 @@ class GuildManager:
         return guild
 
     async def edit_guild(self, guild, guild_edit_payload):
-        pass
+        """Edit a guild.
+
+        Parameters
+        ----------
+        guild: :class:`Guild`
+            Guild that is going to be updated with new data.
+        guild_edit_payload: dict
+            New guild data, has 9, all optional, fields. ``name, region, verification_level,
+            default_message_notifications, afk_channel_id, afk_timeout, icon, owner_id, splash``.
+
+        Returns
+        -------
+        The edited :class:`Guild`.
+
+        Dispatches GUILD_UPDATE events to relevant clients.
+        """
+
+        raw_guild = guild._data
+
+        await self.member_db.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
+            {'$set': guild_edit_payload})
+
+        guild = await self.reload_guild(guild.id)
+
+        await guild.dispatch('GUILD_UPDATE', guild.as_json)
+        return guild
 
     async def delete_guild(self, guild):
         pass
