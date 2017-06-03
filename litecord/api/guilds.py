@@ -19,12 +19,12 @@ class GuildsEndpoint:
         self.server.add_get('guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)
         self.server.add_get('guilds/{guild_id}/members', self.h_guild_members)
         self.server.add_post('guilds', self.h_post_guilds)
+        self.server.add_patch('guilds/{guild_id}/members/@me/nick', self.h_change_nick)
 
         self.server.add_delete('users/@me/guilds/{guild_id}', self.h_leave_guild)
         self.server.add_delete('guilds/{guild_id}/members/{user_id}', self.h_kick_member)
-        #self.server.add_put('guilds/{guild_id}/bans/{user_id}', self.h_ban_member)
-        #self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
-        self.server.add_patch('guilds/{guild_id}/members/@me/nick', self.h_change_nick)
+        self.server.add_put('guilds/{guild_id}/bans/{user_id}', self.h_ban_member)
+        self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
 
     @auth_route
     async def h_guilds(self, request, user):
@@ -220,3 +220,67 @@ class GuildsEndpoint:
         })
 
         return web.Response(status=200, text=nickname)
+
+    @auth_route
+    async def h_ban_member(self, request, user):
+        """`PUT /guilds/{guild_id}/bans/{user_id}`.
+
+        Ban a member from a guild.
+        Dispatches GUILD_BAN_ADD event to relevant clients.
+        """
+
+        guild_id = request.match_info['guild_id']
+        target_id = request.match_info['user_id']
+
+        try:
+            guild_id = int(guild_id)
+            target_id = int(target_id)
+        except:
+            return _err('malformed url')
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        target = self.server.get_user(target_id)
+        if target is None:
+            return _err(errno=10013)
+
+        try:
+            await guild.ban(target)
+            return web.Response(status=204)
+        except Exception as err:
+            log.error("Error banning user", exc_info=True)
+            return _err('Error banning user: {err!r}')
+
+    @auth_route
+    async def h_unban_member(self, request, user):
+        """`DELETE /guilds/{guild_id}/bans/{user_id}`.
+
+        Unban a member from a guild.
+        Dispatches GUILD_BAN_REMOVE event to relevant clients.
+        """
+
+        guild_id = request.match_info['guild_id']
+        target_id = request.match_info['user_id']
+
+        try:
+            guild_id = int(guild_id)
+            target_id = int(target_id)
+        except:
+            return _err('malformed url')
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        target = self.server.get_user(target_id)
+        if target is None:
+            return _err(errno=10013)
+
+        try:
+            await guild.unban(target)
+            return web.Response(status=204)
+        except Exception as err:
+            log.error("Error banning user", exc_info=True)
+            return _err('Error banning user: {err!r}')

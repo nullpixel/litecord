@@ -207,7 +207,7 @@ class GuildManager:
         new_content = payload['content']
         message.edit(new_content)
 
-        result = await self.message_db.replace_one({'message_id': message.id}, message.as_db)
+        result = await self.message_db.update_one({'message_id': str(message.id)}, {'$set': message.as_db})
         log.info(f"Updated {result.modified_count} messages")
 
         await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
@@ -376,7 +376,7 @@ class GuildManager:
         raw_guild = guild._data
         raw_guild['members'].remove(user_id)
 
-        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        result = await self.guild_db.update_one({'id': str(guild.id)}, {'$set': raw_guild})
         log.info(f"Updated {result.modified_count} guilds")
 
         await self.reload_guild(guild.id)
@@ -385,23 +385,52 @@ class GuildManager:
             'user': user.as_json,
         })
 
-        await user.dispatch("GUILD_DELETE", {
+        await user.dispatch('GUILD_DELETE', {
             'id': str(guild.id),
             'unavailable': False,
         })
 
-    async def ban_member(self, member):
-        """Ban a member from a guild.
+    async def ban_user(self, guild, user):
+        """Ban a user from a guild.
 
         Dispatches GUILD_BAN_ADD and GUILD_MEMBER_REMOVE to relevant clients.
         """
-        pass
 
-    async def unban_member(self, user):
-        """Unban a member from a guild.
+        if user.id in guild.members:
+            await self.remove_member(guild, user)
+
+        bans = guild.banned_ids
+
+        try:
+            bans.index(str(user.id))
+            raise Exception("User already banned")
+        except:
+            bans.append(str(user.id))
+
+        await self.guild_db.update_one({'id': str(guild.id)},
+                                        {'$set': {'bans': bans}})
+
+        await guild.dispatch('GUILD_BAN_ADD',
+                            {**user.as_json, **{'guild_id': str(guild.id)}})
+
+    async def unban_user(self, guild, user):
+        """Unban a user from a guild.
 
         Dispatches GUILD_BAN_REMOVE to relevant clients.
         """
+
+        bans = guild.banned_ids
+
+        try:
+            bans.remove(str(user.id))
+        except:
+            raise Exception("User not banned")
+
+        await self.guild_db.update_one({'id': str(guild.id)},
+                                        {'$set': {'bans': bans}})
+
+        await guild.dispatch('GUILD_BAN_REMOVE',
+                            {**user.as_json, **{'guild_id': str(guild.id)}})
 
     async def kick_member(self, member):
         """Kick a member from a guild.

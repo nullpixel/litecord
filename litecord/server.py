@@ -535,6 +535,13 @@ class LitecordServer:
         for route in routes:
             _r.add_post(route, route_handler)
 
+    def add_put(self, route_path, route_handler):
+        _r = self.app.router
+
+        routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
+        for route in routes:
+            _r.add_put(route, route_handler)
+
     def add_patch(self, route_path, route_handler):
         _r = self.app.router
 

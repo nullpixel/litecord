@@ -532,6 +532,8 @@ class Guild(LitecordObject):
             role = Role(server, self, raw_role)
             self.roles[role.id] = role
 
+        self.banned_ids = _guild_data.get('bans', [])
+
         self.member_count = len(self.members)
         self.valid_invite_codes = _guild_data.get('valid_invites', [])
         self._viewers = []
@@ -576,16 +578,6 @@ class Guild(LitecordObject):
         for member in self.members.values():
             yield member
 
-    async def add_member(self, user):
-        """Add a :class:`User` to a guild.
-
-        Returns
-        -------
-        :class:`Member`.
-        """
-
-        return (await self.guild_man.add_member(self, user))
-
     @property
     def viewers(self):
         """Yield all members that are viewers of this guild.
@@ -610,6 +602,12 @@ class Guild(LitecordObject):
             if member.user.online:
                 yield member
 
+    @property
+    def presences(self):
+        """Returns a list of :class:`Presence` objects for all online members."""
+        return [self.server.presence.get_presence(self.id, member.id).as_json \
+            for member in self.online_members]
+
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to all online members in the guild."""
         dispatched = 0
@@ -626,11 +624,33 @@ class Guild(LitecordObject):
 
         return dispatched
 
-    @property
-    def presences(self):
-        """Returns a list of :class:`Presence` objects for all online members."""
-        return [self.server.presence.get_presence(self.id, member.id).as_json \
-            for member in self.online_members]
+    async def add_member(self, user):
+        """Add a :class:`User` to a guild.
+
+        Returns
+        -------
+        :class:`Member`.
+        """
+
+        return (await self.guild_man.add_member(self, user))
+
+    async def ban(self, user):
+        """Ban a user from the guild.
+
+        Raises
+        ------
+        Exception on failure.
+        """
+        await self.guild_man.ban_user(self, user)
+
+    async def unban(self, user):
+        """Unban a user from the guild.
+
+        Raises
+        ------
+        Exception on failure.
+        """
+        await self.guild_man.unban_user(self, user)
 
     @property
     def as_json(self):
