@@ -47,5 +47,6 @@ def auth_route(handler):
         try:
             return (await handler(endpoint, request, user))
         except Exception as err:
-            return _err(f'Error: {err!r}')
+            log.error('errored in auth_route', exc_info=True)
+            return _err(f'Error: {err!s}')
     return inner_handler

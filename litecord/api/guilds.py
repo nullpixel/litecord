@@ -1,6 +1,7 @@
 import json
 import logging
 
+from voluptuous import Schema, Any, Optional, REMOVE_EXTRA
 from aiohttp import web
 from ..utils import _err, _json
 from ..decorators import auth_route
@@ -12,6 +13,26 @@ class GuildsEndpoint:
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
+
+        _o = Optional
+        self.guild_edit_schema = Schema({
+            _o('name'): str,
+            _o('region'): str,
+            _o('verification_level'): int,
+            _o('default_message_notifications'): int,
+            _o('afk_channel_id'): str,
+            _o('afk_timeout'): int,
+            _o('icon'): str,
+            _o('owner_id'): str,
+        }, required=True, extra=REMOVE_EXTRA)
+
+        self.guild_create_schema = Schema({
+            'name': str,
+            'region': str,
+            'icon': Any(None, str),
+            'verification_level': int,
+            'default_message_notifications': int,
+        }, extra=REMOVE_EXTRA)
 
     def register(self, app):
         self.server.add_get('guilds/{guild_id}', self.h_guilds)
@@ -27,6 +48,8 @@ class GuildsEndpoint:
         self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
 
         self.server.add_patch('guilds/{guild_id}', self.h_edit_guild)
+
+        self.server.add_post('guilds/{guild_id}/channels', self.h_create_channel)
 
     @auth_route
     async def h_guilds(self, request, user):
@@ -109,27 +132,16 @@ class GuildsEndpoint:
             return _err('error parsing')
 
         # we ignore anything else client sends.
-        try:
-            payload = {
-                'name': _payload['name'],
-                'region': _payload['region'],
-                'icon': _payload['icon'],
-                'verification_level': _payload.get('verification_level', -1),
-                'default_message_notifications': _payload.get('default_message_notifications', -1),
-                'roles': [],
-                'channels': [],
-                'members': [str(user.id)],
-            }
-        except KeyError:
-            return _err('incomplete payload')
+        payload = self.guild_create_schema(_payload)
+        payload['region'] = 'local'
+        payload['members'] = [str(user.id)]
 
         try:
             new_guild = await self.guild_man.new_guild(user, payload)
+            return _json(new_guild.as_json)
         except:
-            log.error(exc_info=True)
+            log.error('error creating guild', exc_info=True)
             return _err('error creating guild')
-
-        return _json(new_guild.as_json)
 
     @auth_route
     async def h_leave_guild(self, request, user):
@@ -309,21 +321,44 @@ class GuildsEndpoint:
         if user.id != guild.owner_id:
             return _err(errno=40001)
 
-        _pg = _payload.get
-
-        edit_payload = {
-            'name':                             str(_pg('name')),
-            'region':                           str(_pg('region')),
-            'verification_level':               int(_pg('verification_level')),
-            'default_message_notifications':    int(_pg('default_message_notifications')),
-            'afk_channel_id':                   str(_pg('afk_channel_id')),
-            'afk_timeout':                      int(_pg('afk_timeout')),
-            'icon':                             str(_pg('icon')),
-            'owner_id':                         str(_pg('owner_id')),
-        }
+        edit_payload = self.guild_edit_schema(_payload)
 
         try:
             new_guild = await guild.edit(edit_payload)
             return _json(new_guild.as_json)
         except Exception as err:
             return _err(f'{err!r}')
+
+    @auth_route
+    async def h_create_channel(self, request, user):
+        """`POST /guilds/{guild_id}/channels`.
+
+        Create a channel in a guild.
+        Dispatches CHANNEL_CREATE to respective clients.
+        """
+
+        guild_id = request.match_info['guild_id']
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        try:
+            _payload = await request.json()
+        except:
+            return _err('error parsing payload')
+
+        '''
+            DISABLED CODE
+        channel_payload = {
+            'name'
+            'type'
+            'bitrate'
+            'user_limit'
+            'permission_overwrites'
+        }
+
+        channel = await guild.create_channel(channel_payload)
+        return _json(channel.as_json)
+        '''
+        return _json({})

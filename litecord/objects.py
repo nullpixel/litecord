@@ -169,7 +169,7 @@ class User(LitecordObject):
     @property
     def online(self):
         """Returns boolean if the user has at least 1 connection attached to it"""
-        return len(list(self.server.get_connections(self.id))) > 1
+        return len(list(self.server.get_connections(self.id))) > 0
 
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to all connections a user has.

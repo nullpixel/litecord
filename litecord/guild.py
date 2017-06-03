@@ -250,8 +250,6 @@ class GuildManager:
                 "region": "guild voice region, ignored",
                 "verification_level": TODO,
                 "default_message_notifications": TODO,
-                "roles": [List of role payloads],
-                "channels": [List of channel payloads],
                 "icon": "base64 128x128 jpeg image for the guild icon",
                 }
 
@@ -260,25 +258,38 @@ class GuildManager:
         :class:`Guild`
         """
 
-        conn = owner.connection
-        if not conn:
+        if not owner.online:
             log.warning("User not connected through WS to do this action.")
             return None
 
         payload['owner_id'] = str(owner.id)
         payload['id'] = str(get_snowflake())
         payload['features'] = []
-        payload['channels'].append({
+        payload['roles'] = []
+        payload['channels'] = [{
             'id': str(payload['id']),
             'guild_id': str(payload['id']),
             'name': 'general',
             'type': 'text',
             'position': 0,
             'topic': '',
-        })
+        }]
 
         for raw_channel in payload['channels']:
             raw_channel['guild_id'] = payload['id']
+
+        # A GIANT HACK
+        raw_member_owner = {
+            'guild_id': payload['id'],
+            'user_id': str(owner.id),
+            'nick': '',
+            'joined': datetime.datetime.now().isoformat(),
+            'deaf': False,
+            'mute': False,
+        }
+
+        await self.member_db.insert_one(raw_member_owner)
+        self.raw_members[int(payload['id'])][owner.id] = raw_member_owner
 
         guild = Guild(self.server, payload)
         await self.guild_db.insert_one(payload)
@@ -288,7 +299,7 @@ class GuildManager:
             self.channels[channel.id] = channel
 
         await self.server.presence.status_update(guild, owner)
-        await conn.dispatch('GUILD_CREATE', guild.as_json)
+        await guild.dispatch('GUILD_CREATE', guild.as_json)
 
         return guild
 
