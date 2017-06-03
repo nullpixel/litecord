@@ -325,6 +325,7 @@ class GuildManager:
 
     async def add_member(self, guild, user):
         """Adds a user to a guild.
+        Doesn't add if the user is banned from the guild.
 
         Dispatches GUILD_MEMBER_ADD to relevant clients.
 
@@ -341,6 +342,10 @@ class GuildManager:
         """
 
         raw_guild = guild._data
+
+        if str(user.id) in guild.bans:
+            return None
+
         raw_guild['members'].append(str(user.id))
 
         result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
