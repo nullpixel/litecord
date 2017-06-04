@@ -55,6 +55,31 @@ async def decode_dict(data):
         return data
 
 
+async def json_encoder(obj):
+    return json.dumps(obj)
+
+async def json_decoder(raw_data):
+    return json.loads(raw_data)
+
+async def etf_encoder(obj):
+    return earl.pack(obj)
+
+async def etf_decoder(raw_data):
+    data = earl.unpack(raw_data)
+
+    # Earl makes all keys and values bytes object.
+    # We convert them into UTF-8
+    if isinstance(data, dict):
+        data = await decode_dict(data)
+
+    return data
+
+ENCODING_FUNCS = {
+    'json': (json_encoder, json_decoder),
+    'etf': (etf_encoder, etf_decoder),
+}
+
+
 class Connection:
     """Represents a websocket connection to Litecord.
 
@@ -86,6 +111,9 @@ class Connection:
     def __init__(self, server, ws, options):
         self.ws = ws
         self.options = options
+
+        self.encoder = json_encoder
+        self.decoder = json_decoder
 
         # Last sequence sent by the client and last sequence received by the client
         # will be here
@@ -173,17 +201,8 @@ class Connection:
         return new_id
 
     async def send_payload(self, payload, compress=False):
-        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending."""
-
-        encoding = self.options['encoding']
-        data = None
-
-        if encoding == 'json':
-            data = json.dumps(payload)
-        elif encoding == 'etf':
-            data = earl.pack(payload)
-        else:
-            log.warning("NO ENCODING SET?????")
+        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON)."""
+        data = await self.encoder(payload)
 
         if compress and self.properties['browser'] != 'discord.js':
             if isinstance(data, str):
@@ -200,23 +219,7 @@ class Connection:
         if len(raw_data) > 4096:
             raise PayloadLengthExceeded()
 
-        data = None
-
-        encoding = self.options['encoding']
-        if encoding == 'json':
-            data = json.loads(raw_data)
-        elif encoding == 'etf':
-            data = earl.unpack(raw_data)
-
-            # Earl makes all keys and values bytes object.
-            # We convert them into UTF-8
-            if isinstance(data, dict):
-                data = await decode_dict(data)
-        else:
-            log.warning("NO ENCODING SET?????")
-            return None
-
-        return data
+        return await self.decoder(raw_data)
 
     async def send_op(self, op, data=None):
         """Send a packet through the websocket.
@@ -934,6 +937,8 @@ async def gateway_server(app, flags, loop=None):
             'v': gateway_version,
             'encoding': encoding,
         })
+
+        conn.encoder, conn.decoder = ENCODING_FUNCS[encoding]
 
         await conn.run()
         await conn.cleanup()
