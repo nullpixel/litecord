@@ -1,5 +1,10 @@
+"""
+gateway.py - Manages a websocket connection
+
+    This file is considered one of the most important, since it loads
+    LitecordServer and tells it to initialize the databases.
+"""
 import json
-import websockets
 import logging
 import asyncio
 import uuid
@@ -9,6 +14,7 @@ import hashlib
 import time
 import urllib.parse as urlparse
 
+import websockets
 import earl
 
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
