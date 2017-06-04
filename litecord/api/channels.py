@@ -124,7 +124,7 @@ class ChannelsEndpoint:
             return _err("error parsing")
 
         try:
-            content = payload['content']
+            content = str(payload['content'])
             if len(content) < 1:
                 return _err(errno=50006)
 
@@ -132,8 +132,6 @@ class ChannelsEndpoint:
                 return web.response(status=400)
         except:
             return _err('no useful content provided')
-
-        #tts = payload.get('tts', False)
 
         _data = {
             'id': get_snowflake(),
@@ -287,7 +285,7 @@ class ChannelsEndpoint:
             return _err("error parsing")
 
         _data = {
-            'content': payload.get('content', None)
+            'content': str(payload.get('content', None)),
         }
 
         if _data['content'] is None:
