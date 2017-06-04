@@ -1,6 +1,7 @@
 import json
 import logging
 
+from voluptuous import Schema, Required, All, Range, REMOVE_EXTRA
 from aiohttp import web
 
 from ..utils import _err, _json
@@ -12,6 +13,13 @@ class InvitesEndpoint:
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
+
+        self.invite_create_schema = Schema({
+            Required('max_age', default=86400): All(int, Range(min=10, max=86400)),
+            Required('max_uses', default=0): All(int, Range(min=0, max=50)),
+            Required('temporary', default=False): bool,
+            Required('unique', default=True): bool,
+        }, extra=REMOVE_EXTRA)
 
     def register(self, app):
         self.server.add_get('invites/{invite_code}', self.h_get_invite)
@@ -97,12 +105,7 @@ class InvitesEndpoint:
         except:
             return _err('error parsing JSON')
 
-        invite_payload = {
-            'max_age': payload.get('max_age', 86400),
-            'max_uses': payload.get('max_uses', 0),
-            'temporary': payload.get('temporary', False),
-            'unique': payload.get('unique', False)
-        }
+        invite_payload = self.invite_create_schema(payload)
 
         invite = await self.guild_man.create_invite(channel, user, invite_payload)
         if invite is None:
