@@ -46,6 +46,7 @@ class LitecordObject:
 
 
 class Presence:
+    __slots__ = ('game', 'user', 'guild')
     """A presence object.
 
     Presence objects are used to signal clients that someone is playing a game,
@@ -104,6 +105,8 @@ class Presence:
 
 
 class User(LitecordObject):
+    __slots__ = ('_data', 'id', 'username', 'discriminator', 'avatar_hash',
+        'email', 'admin')
     """A general user object.
 
     Parameters
@@ -202,6 +205,8 @@ class User(LitecordObject):
 
 
 class Member(LitecordObject):
+    __slots__ = ('_data', 'user', 'guild', 'id', 'owner', 'nick', 'joined_at',
+        'roles', 'voice_deaf', 'voice_mute')
     """A general member object.
 
     A member is linked to a guild.
@@ -227,10 +232,18 @@ class Member(LitecordObject):
         The guild this member is from.
     id: int
         The member's snowflake ID. This is the same as :py:meth:`User.id`.
+    owner: bool
+        If the member is the guild owner.
     nick: str
         Member's nickname, becomes :py:const:`None` if no nickname is set.
     joined_at: datetime.datetime
         The date where this member was created in the guild
+    roles: List[:class:`Role`]
+        List of roles this member has.
+    voice_deaf: bool
+        If the member is deafened on the guild.
+    voice_mute: bool
+        If the member is muted on the guild.
     """
     def __init__(self, server, guild, user, raw_member):
         super().__init__(server)
@@ -293,6 +306,9 @@ class Member(LitecordObject):
 
 
 class Channel(LitecordObject):
+    __slots__ = ('_data', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
+        'position', 'is_private', 'is_default', 'topic', 'last_message_id')
+
     """A general channel object.
 
     Parameters
@@ -316,12 +332,16 @@ class Channel(LitecordObject):
         The guild that this channel refers to, can be :py:const:`None`.
     name: str
         Channel's name.
-    type: str
-        Channel's type, usually it is ``"text"``.
+    type: int
+        Channel's type.
+    str_type: str
+        Channel's type as a strin. Usually it is ``"text"``.
     position: int
         Channel's position on the guild, channel position starts from 0.
     is_private: bool
         Should be False.
+    is_default: bool
+        If this channel is the default for the guild.
     topic: str
         Channel topic/description.
     last_message_id: int
@@ -437,6 +457,10 @@ class Channel(LitecordObject):
 
 
 class Guild(LitecordObject):
+    __slots__ = ('_data', 'channel_data', '_role_data', 'id', 'name', 'icons',
+        'created_at', 'owner_id', 'features', 'channels', 'member_ids',
+        'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
+
     """A general guild.
 
     Parameters
@@ -452,6 +476,8 @@ class Guild(LitecordObject):
         Raw guild data.
     _channel_data: list(raw channel)
         Raw channel data for the guild.
+    _role_data: list(role)
+        Raw role data for the guild.
 
     id: int
         The guild's snowflake ID.
@@ -463,6 +489,8 @@ class Guild(LitecordObject):
         Guild's creation date.
     owner_id: int
         Guild owner's ID.
+    region: str
+        Guild's voice region.
     features: list(str)
         Features this guild has.
     channels: dict
@@ -473,6 +501,11 @@ class Guild(LitecordObject):
         Members this guild has.
     member_count: int
         Amount of members in this guild.
+    banned_ids: list(str)
+        User IDs that are banned in this guild.
+    _viewers: list(int)
+        List of user IDs that are viewers of this guild and will have specific
+        guild events dispatched to them.
 
     TODO:
         roles: A list of `Role` objects.
@@ -535,7 +568,6 @@ class Guild(LitecordObject):
         self.banned_ids = _guild_data.get('bans', [])
 
         self.member_count = len(self.members)
-        self.valid_invite_codes = _guild_data.get('valid_invites', [])
         self._viewers = []
 
     def __repr__(self):
@@ -712,14 +744,42 @@ class Guild(LitecordObject):
         }
 
 class Role(LitecordObject):
+    __slots__ = ('_data', 'id', 'guild', 'name', 'color', 'hoist', 'position',
+        'position', 'permissions', 'managed', 'mentionable')
     """A role object.
 
     Parameters
     ----------
     server: :class:`LitecordServer`
         Server instance.
+    guild: :class:`Guild`
+        Guild that this role is from.
     _data: dict
         Raw role data.
+
+    Attributes
+    ----------
+    _data: dict
+        Raw role data.
+    id: int
+        Role ID
+    guild: :class:`Guild`
+        Guild that this role comes from.
+    name: str
+        Name of the role.
+    color: int
+        Role's color.
+    hoist: bool
+        If the role is hoisted. Hoisted roles means they'll appear seperately
+        in the member list.
+    position: int
+        Role's position.
+    permissions: int
+        Role's permission number.
+    managed: bool
+        If this role is managed by a bot application, should be ``False``.
+    mentionable: bool
+        If this role can be mentioned by another users.
     """
     def __init__(self, server, guild, _data):
         super().__init__(server)
@@ -767,6 +827,8 @@ class Role(LitecordObject):
         }
 
 class Invite(LitecordObject):
+    __slots__ = ('_data', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
+        'temporary', 'uses', 'iso_timestamp', 'infinite', 'expiry_timestamp')
     """An invite object.
 
     Parameters
@@ -908,6 +970,9 @@ class Invite(LitecordObject):
 
 
 class Message(LitecordObject):
+    __slots__ = ('_data', 'id', 'author_id', 'channel_id', 'timestamp', 'channel',
+        'author', 'member', 'content', 'edited_at')
+
     """A general message object.
 
     Parameters
