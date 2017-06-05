@@ -106,7 +106,7 @@ class Connection:
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
     raw_user: dict
-        Same as :attr:`user`
+        Same as :attr:`user`, but it is a raw user object.
     """
     def __init__(self, server, ws, options):
         self.ws = ws
@@ -160,13 +160,6 @@ class Connection:
             OP.GUILD_SYNC: self.guild_sync_handler,
         }
 
-        # Event handlers
-        #  Fired when a client sends an OP 0 DISPATCH
-        #  NOTE: This is unlikely to happen.
-        #   However we should be ready when it might happen
-        #   (in something called gateway v7), right?
-        self.event_handlers = {}
-
     def __repr__(self):
         return f'Connection(sid={self.session_id} u={self.user!r})'
 
@@ -201,7 +194,13 @@ class Connection:
         return new_id
 
     async def send_payload(self, payload, compress=False):
-        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON)."""
+        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON).
+
+        Returns
+        -------
+        int
+            The amount of bytes transmitted.
+        """
         data = await self.encoder(payload)
 
         if compress and self.properties['browser'] != 'discord.js':
@@ -213,7 +212,12 @@ class Connection:
         return len(data)
 
     async def recv_payload(self):
-        """Receive a payload from the websocket. Will be decoded using JSON or ETF to a Python object."""
+        """Receive a payload from the websocket. Will be decoded using JSON or ETF to a Python object.
+
+        Returns
+        -------
+        any
+        """
 
         raw_data = await self.ws.recv()
         if len(raw_data) > 4096:
@@ -303,6 +307,7 @@ class Connection:
         return self.server.atomic_markers.get(self.session_id, False)
 
     async def hb_wait_task(self):
+        """This task automatically closes clients that didn't heartbeat in time."""
         try:
             await asyncio.sleep((self.hb_interval) / 1000)
             await asyncio.sleep(3)
@@ -406,7 +411,6 @@ class Connection:
         # to get presence stuff for a member that is still connecting
         await self.presence.global_update(self.user)
 
-        # set identified to true so we know this connection is 👌 good 👌
         self.identified = True
 
         all_guild_list = self.server.guild_man.get_guilds(self.user.id)
@@ -420,6 +424,7 @@ class Connection:
 
             guild_json = guild.as_json
 
+            # Only send online members if the guild is large
             if guild.member_count > large:
                 guild_json['members'] = [m.as_json for m in guild.online_members]
 
@@ -448,7 +453,7 @@ class Connection:
     async def req_guild_handler(self, data):
         """Handle OP 8 Request Guild Members.
 
-        Sends a Guild Members Chunk event(https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
+        Dispatches GUILD_MEMBERS_CHUNK (https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
         """
         if not self.identified:
             log.warning("Client not identified to do OP 8, closing with 4003")
@@ -506,7 +511,7 @@ class Connection:
         flag: bool
             Flags the session as resumable/not resumable.
         session_id: str, optional
-            ¯\_(ツ)_/¯
+            Session ID.
         """
         log.info(f"Invalidated, can resume: {flag}")
         await self.send_op(OP.INVALID_SESSION, flag)
@@ -563,7 +568,7 @@ class Connection:
             return True
 
         # if the session lost more than RESUME_MAX_EVENTS
-        # events while its offline invalidate it.
+        # events while it was offline, invalidate it.
         if abs(replay_seq - sent_seq) > RESUME_MAX_EVENTS:
             log.warning("[resume] invalidated from seq delta")
             await self.invalidate(False, session_id=session_id)
@@ -740,18 +745,6 @@ class Connection:
             log.info("opcode not found, closing with 4001")
             await self.ws.close(4001)
             return False
-
-        sequence_number = payload.get('s')
-        event_name = payload.get('t')
-
-        if op == OP.DISPATCH:
-            # wooo, we got a DISPATCH
-            if event_name in self.event_handlers:
-                evt_handler = self.event_handlers[op]
-                return (await evt_handler(data, sequence_number, event_name))
-            else:
-                # don't even try to check in op_handlers.
-                return True
 
         handler = self.op_handlers[op]
         return (await handler(data))
