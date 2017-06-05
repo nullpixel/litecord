@@ -8,7 +8,7 @@ from .snowflake import snowflake_time
 log = logging.getLogger(__name__)
 
 class LitecordObject:
-    """A general Litecord object
+    """A general Litecord object.
 
     Attributes
     ----------
@@ -46,7 +46,6 @@ class LitecordObject:
 
 
 class Presence:
-    __slots__ = ('game', 'user', 'guild')
     """A presence object.
 
     Presence objects are used to signal clients that someone is playing a game,
@@ -67,7 +66,12 @@ class Presence:
         The currently playing game/status.
     user: :class:`User`
         The user that this presence object is linked to.
+    guild: :class:`Guild`
+        Guild that this presence object relates to.
     """
+
+    __slots__ = ('game', 'user', 'guild')
+
     def __init__(self, guild, user, status=None):
         _default = {
             'status': 'online',
@@ -105,8 +109,6 @@ class Presence:
 
 
 class User(LitecordObject):
-    __slots__ = ('_data', 'id', 'username', 'discriminator', 'avatar_hash',
-        'email', 'admin')
     """A general user object.
 
     Parameters
@@ -133,6 +135,10 @@ class User(LitecordObject):
     admin: bool
         Flag that shows if the user is an admin user.
     """
+
+    __slots__ = ('_data', 'id', 'username', 'discriminator', 'avatar_hash',
+        'email', 'admin')
+
     def __init__(self, server, _data):
         super().__init__(server)
         self._data = _data
@@ -205,8 +211,6 @@ class User(LitecordObject):
 
 
 class Member(LitecordObject):
-    __slots__ = ('_data', 'user', 'guild', 'id', 'owner', 'nick', 'joined_at',
-        'roles', 'voice_deaf', 'voice_mute')
     """A general member object.
 
     A member is linked to a guild.
@@ -245,6 +249,10 @@ class Member(LitecordObject):
     voice_mute: bool
         If the member is muted on the guild.
     """
+
+    __slots__ = ('_data', 'user', 'guild', 'id', 'owner', 'nick', 'joined_at',
+        'roles', 'voice_deaf', 'voice_mute')
+
     def __init__(self, server, guild, user, raw_member):
         super().__init__(server)
         self._data = raw_member
@@ -306,9 +314,6 @@ class Member(LitecordObject):
 
 
 class Channel(LitecordObject):
-    __slots__ = ('_data', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
-        'position', 'is_private', 'is_default', 'topic', 'last_message_id')
-
     """A general channel object.
 
     Parameters
@@ -347,6 +352,10 @@ class Channel(LitecordObject):
     last_message_id: int
         The last message created in the channel.
     """
+
+    __slots__ = ('_data', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
+        'position', 'is_private', 'is_default', 'topic', 'last_message_id')
+
     def __init__(self, server, _channel, guild=None):
         super().__init__(server)
         self._data = _channel
@@ -457,10 +466,6 @@ class Channel(LitecordObject):
 
 
 class Guild(LitecordObject):
-    __slots__ = ('_data', 'channel_data', '_role_data', 'id', 'name', 'icons',
-        'created_at', 'owner_id', 'features', 'channels', 'member_ids',
-        'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
-
     """A general guild.
 
     Parameters
@@ -511,6 +516,11 @@ class Guild(LitecordObject):
         roles: A list of `Role` objects.
         emojis: A list of `Emoji` objects.
     """
+
+    __slots__ = ('_data', 'channel_data', '_role_data', 'id', 'name', 'icons',
+        'created_at', 'owner_id', 'features', 'channels', 'member_ids',
+        'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
+
     def __init__(self, server, _guild_data):
         super().__init__(server)
         self._data = _guild_data
@@ -744,8 +754,6 @@ class Guild(LitecordObject):
         }
 
 class Role(LitecordObject):
-    __slots__ = ('_data', 'id', 'guild', 'name', 'color', 'hoist', 'position',
-        'position', 'permissions', 'managed', 'mentionable')
     """A role object.
 
     Parameters
@@ -781,6 +789,10 @@ class Role(LitecordObject):
     mentionable: bool
         If this role can be mentioned by another users.
     """
+
+    __slots__ = ('_data', 'id', 'guild', 'name', 'color', 'hoist', 'position',
+        'position', 'permissions', 'managed', 'mentionable')
+
     def __init__(self, server, guild, _data):
         super().__init__(server)
         self._data = _data
@@ -827,8 +839,6 @@ class Role(LitecordObject):
         }
 
 class Invite(LitecordObject):
-    __slots__ = ('_data', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
-        'temporary', 'uses', 'iso_timestamp', 'infinite', 'expiry_timestamp')
     """An invite object.
 
     Parameters
@@ -838,7 +848,8 @@ class Invite(LitecordObject):
     _data: dict
         Raw invite data.
 
-    Attributes:
+    Attributes
+    ----------
     _data: dict
         Raw invite object.
     code: str
@@ -864,6 +875,10 @@ class Invite(LitecordObject):
         expire and be invalid.
         If not, this becomes :py:const:`None`.
     """
+
+    __slots__ = ('_data', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
+        'temporary', 'uses', 'iso_timestamp', 'infinite', 'expiry_timestamp')
+
     def __init__(self, server, _data):
         super().__init__(server)
         self.server = server
@@ -970,9 +985,6 @@ class Invite(LitecordObject):
 
 
 class Message(LitecordObject):
-    __slots__ = ('_data', 'id', 'author_id', 'channel_id', 'timestamp', 'channel',
-        'author', 'member', 'content', 'edited_at')
-
     """A general message object.
 
     Parameters
@@ -984,7 +996,8 @@ class Message(LitecordObject):
     _message_data: dict
         Raw message data.
 
-    Attributes:
+    Attributes
+    ----------
     _data: dict
         Raw message data.
     id: int
@@ -993,7 +1006,6 @@ class Message(LitecordObject):
         Message author's snowflake ID.
     channel_id: int
         Message channel's snowflake ID.
-
     timestamp: `datetime.datetime`
         Message's creation time.
     channel: :class:`Channel`
@@ -1008,6 +1020,10 @@ class Message(LitecordObject):
         Default is :py:const:`None`.
         If the message was edited, this is set to the time at which this message was edited.
     """
+
+    __slots__ = ('_data', 'id', 'author_id', 'channel_id', 'timestamp', 'channel',
+        'author', 'member', 'content', 'edited_at')
+
     def __init__(self, server, channel, _message_data):
         super().__init__(server)
         self._data = _message_data

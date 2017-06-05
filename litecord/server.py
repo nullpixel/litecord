@@ -52,9 +52,6 @@ class LitecordServer:
     """Main class for the Litecord server.
 
     .. _AsyncIOMotorClient: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_client.html
-    .. _Connection: connecting.html
-    .. _GuildManager: guild.html
-    .. _PresenceManager: presence.html
 
     Arguments
     ---------
@@ -80,11 +77,11 @@ class LitecordServer:
         A valid token is a token that was used in a connection and it is still,
         being used in that connection.
     sessions : dict
-        Relates session IDs to their respective `Connection`_ object.
-    guild_man : `GuildManager`_
-        meme.
-    presence : `PresenceManager`_
-        meme.
+        Relates session IDs to their respective :class:`Connection` object.
+    guild_man : :class:`GuildManager`
+        Guild manager instance.
+    presence : :class:`PresenceManager`
+        Presence manager instance.
     """
     def __init__(self, flags=None, loop=None):
         if flags is None:
