@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 class GuildsEndpoint:
     """Manager for guild-related endpoints."""
-    def __init__(self, server):
+    def __init__(self, server, app):
         self.server = server
         self.guild_man = server.guild_man
 
@@ -33,6 +33,8 @@ class GuildsEndpoint:
             'verification_level': int,
             'default_message_notifications': int,
         }, extra=REMOVE_EXTRA)
+
+        self.register(app)
 
     def register(self, app):
         self.server.add_get('guilds/{guild_id}', self.h_guilds)

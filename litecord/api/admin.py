@@ -13,10 +13,11 @@ from ..decorators import admin_endpoint, auth_route
 log = logging.getLogger(__name__)
 
 class AdminEndpoints:
-    def __init__(self, server):
+    def __init__(self, server, app):
         self.server = server
         self.guild_man = server.guild_man
         self._last_result = None
+        self.register(app)
 
     def register(self, app):
         self.server.add_get('count', self.h_get_counts)

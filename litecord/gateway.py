@@ -794,10 +794,10 @@ class Connection:
         await self.ws.close(1000)
 
     async def cleanup(self):
-        """Remove the connection from being found.
+        """Remove the connection from being found by :class:`LitecordServer` functions.
 
         The cleanup only happens if the connection is open and identified.
-        This method can only be called once in a connection.
+        This method only works in the 1st time it is called.
         """
 
         self.identified = False
@@ -861,7 +861,7 @@ async def server_sentry(server):
 async def http_server(app, flags):
     """Main function to start the HTTP server.
 
-    This function waits for `gateway_server` to finish(using locks).
+    This function waits for `gateway_server` to finish(using asyncio locks).
 
     That is needed since `gateway_server` initializes server state and registers
     all API routes, and in aiohttp, you need to register

@@ -7,9 +7,11 @@ from ..utils import _err, _json, strip_user_data
 log = logging.getLogger(__name__)
 
 class ImageEndpoint:
-    def __init__(self, server):
+    def __init__(self, server, app):
         self.server = server
         self.images = server.images
+
+        self.register(app)
 
     def register(self, app):
         _r = app.router

@@ -12,8 +12,9 @@ log = logging.getLogger(__name__)
 
 class ChannelsEndpoint:
     """Handle channel/message related endpoints"""
-    def __init__(self, server):
+    def __init__(self, server, app):
         self.server = server
+        self.register(app)
 
     def register(self, app):
 

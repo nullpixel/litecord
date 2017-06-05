@@ -11,8 +11,9 @@ from ..decorators import auth_route
 log = logging.getLogger(__name__)
 
 class UsersEndpoint:
-    def __init__(self, server):
+    def __init__(self, server, app):
         self.server = server
+        self.register(app)
 
     def register(self, app):
         self.server.add_get('users/{user_id}', self.h_users)

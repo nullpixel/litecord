@@ -168,10 +168,12 @@ class LitecordServer:
                 break
 
     def get_connections(self, user_id):
+        """Yield all connections that are connected to a user."""
         for conn in self.connections[user_id]:
             yield conn
 
     def count_connections(self, user_id):
+        """Return the amount of connections connected to a user."""
         return len(self.connections[user_id])
 
     async def boilerplate_init(self):
@@ -189,7 +191,6 @@ class LitecordServer:
 
             tot = 0
 
-
             for element in data:
                 existing = await db_to_update.find_one({'id': element['id']})
                 if (existing is not None) and not (b_flags.get(key)):
@@ -203,7 +204,7 @@ class LitecordServer:
     async def load_users(self):
         """Load users database using MongoDB.
 
-        Creates the `id->raw_user` and `id->user` dictionaries in `LitecordServer.cache`.
+        Creates the ``id->raw_user`` and ``id->user`` caches in :meth:`LitecordServer.cache`.
         """
 
         # create cache objects
@@ -287,7 +288,7 @@ class LitecordServer:
         return users.get(user_id)
 
     def get_user(self, user_id):
-        """Get a `User` object using the user's ID."""
+        """Get a :class:`User` object using the user's ID."""
         try:
             user_id = int(user_id)
         except:
@@ -445,7 +446,7 @@ class LitecordServer:
     async def check_request(self, request):
         """Checks a request to the API.
 
-        This function checks if the request has the required methods
+        This function checks if a request has the required headers
         to do any authenticated request to Litecord's API.
 
         More information at:
@@ -590,23 +591,12 @@ class LitecordServer:
             self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
 
             log.debug('[init] endpoint objects')
-            self.users_endpoint = users.UsersEndpoint(self)
-            self.users_endpoint.register(app)
-
-            self.guilds_endpoint = guilds.GuildsEndpoint(self)
-            self.guilds_endpoint.register(app)
-
-            self.channels_endpoint = channels.ChannelsEndpoint(self)
-            self.channels_endpoint.register(app)
-
-            self.invites_endpoint = invites.InvitesEndpoint(self)
-            self.invites_endpoint.register(app)
-
-            self.images_endpoint = imgs.ImageEndpoint(self)
-            self.images_endpoint.register(app)
-
-            self.admins_endpoint = admin.AdminEndpoints(self)
-            self.admins_endpoint.register(app)
+            self.users_endpoint =       users.UsersEndpoint(self, app)
+            self.guilds_endpoint =      guilds.GuildsEndpoint(self, app)
+            self.channels_endpoint =    channels.ChannelsEndpoint(self, app)
+            self.invites_endpoint =     invites.InvitesEndpoint(self, app)
+            self.images_endpoint =      imgs.ImageEndpoint(self, app)
+            self.admins_endpoint =      admin.AdminEndpoints(self, app)
 
             # setup internal stuff
             self.add_post('auth/login', self.login)
