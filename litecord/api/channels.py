@@ -11,7 +11,7 @@ from ..decorators import auth_route
 log = logging.getLogger(__name__)
 
 class ChannelsEndpoint:
-    """Handle channel/message related endpoints"""
+    """Handle channel/message related endpoints."""
     def __init__(self, server, app):
         self.server = server
         self.register(app)
@@ -64,20 +64,15 @@ class ChannelsEndpoint:
 
         return _json(channel.as_json)
 
-    async def h_post_typing(self, request):
+    @auth_route
+    async def h_post_typing(self, request, user):
         """`POST /channels/{channel_id}/typing`.
 
         Dispatches TYPING_START events to relevant clients.
         Returns a HTTP empty response with status code 204.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
-        user = self.server._user(_error_json['token'])
 
         channel = self.server.guild_man.get_channel(channel_id)
         if channel is None:

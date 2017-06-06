@@ -49,4 +49,8 @@ def auth_route(handler):
         except Exception as err:
             log.error('errored in auth_route', exc_info=True)
             return _err(f'Error: {err!s}')
+
+    # Fixes the docs
+    inner_handler.__doc__ = handler.__doc__
+
     return inner_handler

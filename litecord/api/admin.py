@@ -13,6 +13,12 @@ from ..decorators import admin_endpoint, auth_route
 log = logging.getLogger(__name__)
 
 class AdminEndpoints:
+    """Administration endpoints for the API.
+
+    Those endpoints can only be accesed using a token from a user that is marked
+    as an admin user.
+    """
+
     def __init__(self, server, app):
         self.server = server
         self.guild_man = server.guild_man
@@ -48,7 +54,7 @@ class AdminEndpoints:
 
     @admin_endpoint
     async def h_eval(self, request, user):
-        """`POST /admin_eval`
+        """`POST /admin_eval`.
 
         Evaluate code.
         Most part of this code is modified from https://github.com/Rapptz/RoboDanny/blob/master/cogs/repl.py

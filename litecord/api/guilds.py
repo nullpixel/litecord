@@ -9,7 +9,16 @@ from ..decorators import auth_route
 log = logging.getLogger(__name__)
 
 class GuildsEndpoint:
-    """Manager for guild-related endpoints."""
+    """Manager for guild-related endpoints.
+
+    Attributes
+    ----------
+    guild_edit_schema: :py:meth:`voluptuous.Schema`
+        Schema for guild editing payloads.
+    guild_create_schema: :py:meth:`voluptuous.Schema`
+        Schema for guild create payloads.
+
+    """
     def __init__(self, server, app):
         self.server = server
         self.guild_man = server.guild_man
