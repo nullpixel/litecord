@@ -165,6 +165,12 @@ class User(LitecordObject):
                 yield guild
 
     @property
+    def members(self):
+        """Yield all members a user has attached."""
+        for guild in self.guilds:
+            yield guild.members[self.id]
+
+    @property
     def as_json(self):
         """Remove sensitive data from `User._data` and make it JSON serializable"""
         return strip_user_data(self._data)
@@ -310,6 +316,16 @@ class Member(LitecordObject):
             'discriminator': str(self.user.discriminator),
             'id': str(self.user.id),
             'avatar': self.user.avatar_hash,
+        }
+
+    @property
+    def user_guild(self):
+        return {
+            'id': str(self.guild.id),
+            'name': self.guild.name,
+            'icon': self.guiild.icons['icon'],
+            'owner': self.owner,
+            'permissions': 0,
         }
 
 

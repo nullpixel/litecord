@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 class UsersEndpoint:
     def __init__(self, server, app):
         self.server = server
+        self.guild_man = server.guild_man
+
         self.register(app)
 
     def register(self, app):
@@ -23,8 +25,8 @@ class UsersEndpoint:
 
         self.server.add_get('users/@me/settings', self.h_get_me_settings)
 
-        #_r.add_get('/api/users/@me/guilds', server.h_users_me_guild)
-        #_r.add_delete('/api/users/@me/guilds/{guild_id}', server.h_users_guild_delete)
+        self.server.add_get('users/@me/guilds', self.h_users_me_guild)
+        self.server.add_delete('api/users/@me/guilds/{guild_id}', self.h_leave_guild)
 
     @auth_route
     async def h_users(self, request, user):
@@ -145,3 +147,32 @@ class UsersEndpoint:
         Dummy handler.
         """
         return _json({})
+
+    @auth_route
+    async def h_users_me_guild(self, request, user):
+        """`GET /users/@me/guilds`.
+
+        Returns a list of user guild objects.
+
+        TODO: before, after, limit parameters
+        """
+
+        user_guilds = [m.user_guild for m in user.members]
+        return _json(user_guilds)
+
+    @auth_route
+    async def h_leave_guild(self, request, user):
+        """`DELETE /users/@me/guilds/{guild_id}`.
+
+        Leave guild.
+        Returns empty 204 response.
+        """
+
+        guild_id = request.match_info['guild_id']
+
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        await self.guild_man.remove_member(guild, user)
+        return web.Response(status=204)
