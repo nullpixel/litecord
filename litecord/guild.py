@@ -362,8 +362,7 @@ class GuildManager:
         result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
-        await self.reload_guild(guild.id)
-        guild = self.server.get_guild(guild.id)
+        guild = await self.reload_guild(guild.id)
 
         new_member = guild.members.get(user.id)
         if new_member is None:
@@ -426,7 +425,7 @@ class GuildManager:
         result = await self.guild_db.update_one({'id': str(guild.id)}, {'$set': raw_guild})
         log.info(f"Updated {result.modified_count} guilds")
 
-        await self.reload_guild(guild.id)
+        guild = await self.reload_guild(guild.id)
         await guild.dispatch('GUILD_MEMBER_REMOVE', {
             'guild_id': str(guild.id),
             'user': user.as_json,
@@ -498,11 +497,42 @@ class GuildManager:
             log.error("Error kicking member.", exc_info=True)
             return False
 
-    async def create_channel(self, guild, channel_payload):
+    async def create_channel(self, guild, payload):
         """Create a channel in a guild.
 
         Dispatches CHANNEL_CREATE to relevant clients.
+
+        Parameters
+        ----------
+        guild: :class:`Guild`
+            The guild that is going to have a new channel
+        payload: dict
+            Channel create payload.
+
+        Returns
+        -------
+        :class:`Channel`
         """
+
+        if payload['type'] not in ['text', 'voice']:
+            raise Exception("Invalid channel type")
+
+        raw_guild = guild._data
+
+        payload['id'] = str(get_snowflake())
+        payload['topic'] = ""
+        payload['position'] = len(guild.channels) + 1
+
+        raw_guild['channels'].append(payload)
+
+        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        log.info(f"Updated {result.modified_count} guilds")
+
+        guild = await self.reload_guild(guild.id)
+        new_channel = guild.channels.get(int(payload['id']))
+
+        await guild.dispatch('CHANNEL_CREATE', new_channel.as_json)
+        return new_channel
 
     async def edit_channel(self, guild, new_payload):
         """Edits a channel in a guild.

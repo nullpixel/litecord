@@ -1,7 +1,7 @@
 import json
 import logging
 
-from voluptuous import Schema, Any, Optional, REMOVE_EXTRA
+from voluptuous import Schema, All, Any, Length, Optional, REMOVE_EXTRA
 from aiohttp import web
 from ..utils import _err, _json
 from ..decorators import auth_route
@@ -42,6 +42,14 @@ class GuildsEndpoint:
             'verification_level': int,
             'default_message_notifications': int,
         }, extra=REMOVE_EXTRA)
+
+        self.channel_create_schema = Schema({
+            'name': All(str, Length(min=2, max=100)),
+            'type': str,
+            _o('bitrate'): int,
+            _o('user_limit'): int,
+            'permission_overwrites': list,
+        }, required=True, extra=REMOVE_EXTRA)
 
         self.register(app)
 
@@ -184,12 +192,6 @@ class GuildsEndpoint:
         guild_id = request.match_info['guild_id']
         member_id = request.match_info['user_id']
 
-        try:
-            guild_id = int(guild_id)
-            member_id = int(member_id)
-        except:
-            return _err('malformed url')
-
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
@@ -256,12 +258,6 @@ class GuildsEndpoint:
 
         guild_id = request.match_info['guild_id']
         target_id = request.match_info['user_id']
-
-        try:
-            guild_id = int(guild_id)
-            target_id = int(target_id)
-        except:
-            return _err('malformed url')
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -359,17 +355,7 @@ class GuildsEndpoint:
         except:
             return _err('error parsing payload')
 
-        '''
-            DISABLED CODE
-        channel_payload = {
-            'name'
-            'type'
-            'bitrate'
-            'user_limit'
-            'permission_overwrites'
-        }
+        channel_payload = self.channel_create_schema(_payload)
 
         channel = await guild.create_channel(channel_payload)
         return _json(channel.as_json)
-        '''
-        return _json({})
