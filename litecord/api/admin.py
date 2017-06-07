@@ -10,6 +10,20 @@ from ..decorators import admin_endpoint, auth_route
 
 log = logging.getLogger(__name__)
 
+def cleanup_code(content):
+    """Automatically removes code blocks from the code."""
+    # remove ```py\n```
+    if content.startswith('```') and content.endswith('```'):
+        return '\n'.join(content.split('\n')[1:-1])
+
+    # remove `foo`
+    return content.strip('` \n')
+
+def get_syntax_error(e):
+    if e.text is None:
+        return '```py\n{0.__class__.__name__}: {0}\n```'.format(e)
+    return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
+
 class AdminEndpoints:
     """Administration endpoints for the API.
 
@@ -35,20 +49,6 @@ class AdminEndpoints:
         Return some statistics.
         """
         return _json(await self.server.make_counts())
-
-    def cleanup_code(self, content):
-        """Automatically removes code blocks from the code."""
-        # remove ```py\n```
-        if content.startswith('```') and content.endswith('```'):
-            return '\n'.join(content.split('\n')[1:-1])
-
-        # remove `foo`
-        return content.strip('` \n')
-
-    def get_syntax_error(self, e):
-        if e.text is None:
-            return '```py\n{0.__class__.__name__}: {0}\n```'.format(e)
-        return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
 
     @admin_endpoint
     async def h_eval(self, request, user):
@@ -80,7 +80,7 @@ class AdminEndpoints:
 
         env.update(globals())
 
-        body = self.cleanup_code(body)
+        body = cleanup_code(body)
         stdout = io.StringIO()
 
         to_compile = 'async def func():\n%s' % textwrap.indent(body, '  ')
@@ -94,7 +94,7 @@ class AdminEndpoints:
             exec(to_compile, env)
         except SyntaxError as e:
             out['error'] = True
-            out['stdout'] = self.get_syntax_error(e)
+            out['stdout'] = get_syntax_error(e)
 
             return _json(out)
 
