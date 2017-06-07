@@ -169,7 +169,7 @@ class VoiceConnection:
                 'port': proto_data['port'],
                 'mode': proto_data['mode'],
             }
-        except:
+        except KeyError:
             return False
 
         await self.send_op(VOICE_OP.SESSION_DESCRIPTION, {})

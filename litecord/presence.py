@@ -30,7 +30,7 @@ class PresenceManager:
 
         try:
             return guild_presences[user_id]
-        except:
+        except KeyError:
             log.warning(f"Presence not found for {user_id}")
             return None
 

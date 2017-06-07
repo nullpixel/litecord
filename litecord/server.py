@@ -150,12 +150,13 @@ class LitecordServer:
 
         try:
             conn = self.sessions.pop(session_id)
-        except:
+        except KeyError:
             return
 
         try:
+            # not identified
             user_id = conn.user.id
-        except:
+        except AttributeError:
             return
 
         log.debug(f"Removing sid={session_id} from uid={user_id}")
