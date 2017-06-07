@@ -715,9 +715,20 @@ class Guild(LitecordObject):
 
         Returns
         -------
-        :class:`Guild`, the edited guild as a object.
+        :class:`Guild`
+            The edited guild as a object.
         """
-        await self.guild_man.edit_guild(self, edit_payload)
+        return await self.guild_man.edit_guild(self, edit_payload)
+
+    async def create_channel(self, chan_create_payload):
+        """Create a channel in a guild.
+
+        Returns
+        -------
+        :class:`Channel`
+            New channel.
+        """
+        return await self.guild_man.create_channel(self, chan_create_payload)
 
     @property
     def as_json(self):

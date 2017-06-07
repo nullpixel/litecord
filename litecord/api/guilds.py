@@ -44,10 +44,10 @@ class GuildsEndpoint:
 
         self.channel_create_schema = Schema({
             'name': All(str, Length(min=2, max=100)),
-            'type': str,
+            _o('type'): str,
             _o('bitrate'): int,
             _o('user_limit'): int,
-            'permission_overwrites': list,
+            _o('permission_overwrites'): list,
         }, required=True, extra=REMOVE_EXTRA)
 
         self.register(app)
@@ -355,6 +355,8 @@ class GuildsEndpoint:
             return _err('error parsing payload')
 
         channel_payload = self.channel_create_schema(_payload)
+
+        channel_payload['type'] = channel_payload.get('type', 'text')
 
         channel = await guild.create_channel(channel_payload)
         return _json(channel.as_json)
