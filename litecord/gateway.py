@@ -316,7 +316,6 @@ class Connection:
             await self.ws.close(4000)
         except asyncio.CancelledError:
             log.debug("[hb_wait_task] Cancelled")
-            pass
 
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.

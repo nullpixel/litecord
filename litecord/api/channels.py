@@ -85,12 +85,6 @@ class ChannelsEndpoint:
         Dispatches MESSAGE_CREATE events to relevant clients.
         """
 
-        try:
-            print('ctype', request.content_type)
-        except Exception as err:
-            print(f'rip {err!r}')
-            pass
-
         _error = await self.server.check_request(request)
         _error_json = json.loads(_error.text)
         if _error_json['code'] == 0:

@@ -29,7 +29,7 @@ class LitecordObject:
     @property
     def as_db(self):
         """Get a version of the object to be inserted into the database."""
-        raise NotImplemented
+        raise NotImplementedError('This instance didn\'t implement as_db')
 
     @property
     def as_json(self):
@@ -38,7 +38,7 @@ class LitecordObject:
         NOTE: it is recommended to not give sensitive information through `as_json`
             as it is usually used to send the object to a client.
         """
-        raise NotImplemented
+        raise NotImplementedError('This instance didn\'t implement as_json')
 
     def iter_json(self, indexable):
         """Get all objects from an indexable, in JSON serializable form"""
