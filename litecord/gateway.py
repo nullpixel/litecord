@@ -11,7 +11,6 @@ import uuid
 import random
 import zlib
 import hashlib
-import time
 import urllib.parse as urlparse
 
 import websockets

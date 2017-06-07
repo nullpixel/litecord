@@ -2,9 +2,11 @@
 users.py - All handlers under /users/*
 '''
 
-import json
 import logging
-from ..utils import _err, _json, strip_user_data, get_random_salt, pwd_hash
+
+from aiohttp import web
+
+from ..utils import _err, _json, get_random_salt, pwd_hash
 from ..snowflake import get_snowflake
 from ..decorators import auth_route
 

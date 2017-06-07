@@ -5,8 +5,6 @@ import textwrap
 import contextlib
 import io
 
-from aiohttp import web
-
 from ..utils import _err, _json
 from ..decorators import admin_endpoint, auth_route
 

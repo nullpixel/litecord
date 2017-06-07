@@ -1,4 +1,3 @@
-import json
 import logging
 
 from voluptuous import Schema, All, Any, Length, Optional, REMOVE_EXTRA

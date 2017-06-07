@@ -1,8 +1,6 @@
-import json
 import logging
 
 from voluptuous import Schema, Required, All, Range, REMOVE_EXTRA
-from aiohttp import web
 
 from ..utils import _err, _json
 from ..decorators import auth_route

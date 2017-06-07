@@ -296,7 +296,7 @@ class VoiceManager:
 
         async def voice_henlo(websocket, path):
             log.info("Starting websocket connection")
-            v_conn = VoiceConnection(server, websocket, path)
+            v_conn = VoiceConnection(self, websocket, path)
             await v_conn.run()
             log.info("Stopped connection", exc_info=True)
 

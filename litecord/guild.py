@@ -321,9 +321,7 @@ class GuildManager:
         Dispatches GUILD_UPDATE events to relevant clients.
         """
 
-        raw_guild = guild._data
-
-        await self.member_db.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
+        await self.guild_db.update_one({'guild_id': str(guild.id)},
             {'$set': guild_edit_payload})
 
         guild = await self.reload_guild(guild.id)
