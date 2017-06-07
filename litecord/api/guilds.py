@@ -209,7 +209,7 @@ class GuildsEndpoint:
             return web.Response(status=204)
         except Exception as err:
             log.error("Error kicking member", exc_info=True)
-            return _err('Error kicking member: {err!r}')
+            return _err(f'Error kicking member: {err!r}')
 
     @auth_route
     async def h_change_nick(self, request, user):
