@@ -42,6 +42,11 @@ SERVERS = {
 }
 
 
+def random_sid(self):
+    """Generate a new random Session ID."""
+    return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()
+
+
 async def decode_dict(data):
     if isinstance(data, bytes):
         return str(data, 'utf-8')
@@ -174,9 +179,6 @@ class Connection:
                 '_trace': self.get_identifiers('hello'),
             }
         }
-
-    def random_sid(self):
-        return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()
 
     def gen_sessid(self):
         """Generate a new Session ID."""

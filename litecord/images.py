@@ -11,6 +11,20 @@ AVATAR_MIMETYPES = [
     #'image/gif'
 ]
 
+
+def extract_uri(data):
+    """Extract image data."""
+    try:
+        sp = data.split(',')
+        data_string = sp[0]
+        encoded_data = sp[1]
+        mimetype = data_string.split(';')[0].split(':')[1]
+    except:
+        raise ImageError('error decoding image data')
+
+    return encoded_data, mimetype
+
+
 class Images:
     """Images - image manager.
 
@@ -23,17 +37,6 @@ class Images:
         self.image_db = server.litecord_db['images']
         self.attach_db = server.litecord_db['attachments']
 
-    def extract_uri(self, data):
-        try:
-            sp = data.split(',')
-            data_string = sp[0]
-            encoded_data = sp[1]
-            mimetype = data_string.split(';')[0].split(':')[1]
-        except:
-            raise ImageError('error decoding image data')
-
-        return encoded_data, mimetype
-
     async def raw_add_image(self, data, img_type='avatar'):
         """Add an image.
 
@@ -43,7 +46,7 @@ class Images:
         """
 
         try:
-            encoded_data, mimetype = self.extract_uri(data)
+            encoded_data, mimetype = extract_uri(data)
         except ImageError as err:
             raise err
 
