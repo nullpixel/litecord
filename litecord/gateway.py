@@ -42,7 +42,7 @@ SERVERS = {
 }
 
 
-def random_sid(self):
+def random_sid():
     """Generate a new random Session ID."""
     return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()
 
@@ -184,12 +184,12 @@ class Connection:
         """Generate a new Session ID."""
         tries = 0
 
-        new_id = self.random_sid()
+        new_id = random_sid()
         while new_id in self.server.sessions:
             if tries >= MAX_TRIES:
                 return None
 
-            new_id = self.random_sid()
+            new_id = random_sid()
             tries += 1
 
         return new_id
