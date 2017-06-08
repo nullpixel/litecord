@@ -281,6 +281,9 @@ class Member(LitecordObject):
         self.voice_deaf = False
         self.voice_mute = False
 
+    def __repr__(self):
+        return f'Member({self.user!r}, {self.guild!r})'
+
     def update(self, new_data):
         """Update a member object based on new data."""
         self.nick = new_data.get('nick') or self.nick
@@ -606,9 +609,11 @@ class Guild(LitecordObject):
         user_id = int(user_id)
         try:
             self._viewers.index(user_id)
+            log.debug(f'Already marked {user_id} as watcher of {self!r}')
         except:
             self._viewers.append(user_id)
             log.debug(f'Marked {user_id} as watcher of {self!r}')
+            print('_viewers after add', self._viewers)
 
     def unmark_watcher(self, user_id):
         """Unmark user from being a viewer in this guild."""
@@ -646,11 +651,13 @@ class Guild(LitecordObject):
         they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
         to the gateway.
         """
+        print('_viewers', self._viewers)
         for member in self.members.values():
             try:
                 self._viewers.index(member.id)
                 yield member
             except:
+                log.debug(f'{member!r} not found in viewers to dispatch')
                 pass
 
     @property
@@ -667,18 +674,20 @@ class Guild(LitecordObject):
             for member in self.online_members]
 
     async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all online members in the guild."""
-        dispatched = 0
+        """Dispatch an event to all guild viewers."""
+        total, dispatched = 0, 0
 
         for member in self.viewers:
+            print(f'Dispatching to {member!r}')
             success = await member.dispatch(evt_name, evt_data)
 
             if not success:
                 self.unmark_watcher(member.id)
             else:
                 dispatched += 1
+            total += 1
 
-        log.debug(f'Dispatched {evt_name} to {dispatched} gulid viewers')
+        log.debug(f'Dispatched {evt_name} to {dispatched}/{total} gulid viewers')
 
         return dispatched
 

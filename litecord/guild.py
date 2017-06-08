@@ -213,20 +213,32 @@ class GuildManager:
         await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
         return True
 
-    async def reload_guild(self, guild_id):
+    async def reload_guild(self, old_guild):
         """Reload one guild.
 
         Used normally after a updating the guild dataabse.
         Updates cache objects.
 
+        Parameters
+        ----------
+        old_guild: :class:`Guild`
+            Guild to be reloaded.
+
         Returns
         -------
         :class:`Guild`, the new, updated guild object.
         """
+        guild_id = old_guild.id
 
         raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
 
         guild = Guild(self.server, raw_guild)
+
+        try:
+            guild._viewers = old_guild._viewers
+        except:
+            pass
+
         self.guilds[guild.id] = guild
 
         for channel in guild.all_channels():
@@ -324,7 +336,7 @@ class GuildManager:
         await self.guild_db.update_one({'guild_id': str(guild.id)},
             {'$set': guild_edit_payload})
 
-        guild = await self.reload_guild(guild.id)
+        guild = await self.reload_guild(guild)
 
         await guild.dispatch('GUILD_UPDATE', guild.as_json)
         return guild
@@ -360,7 +372,7 @@ class GuildManager:
         result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
-        guild = await self.reload_guild(guild.id)
+        guild = await self.reload_guild(guild)
 
         new_member = guild.members.get(user.id)
         if new_member is None:
@@ -423,7 +435,7 @@ class GuildManager:
         result = await self.guild_db.update_one({'id': str(guild.id)}, {'$set': raw_guild})
         log.info(f"Updated {result.modified_count} guilds")
 
-        guild = await self.reload_guild(guild.id)
+        guild = await self.reload_guild(guild)
         await guild.dispatch('GUILD_MEMBER_REMOVE', {
             'guild_id': str(guild.id),
             'user': user.as_json,
@@ -526,7 +538,7 @@ class GuildManager:
         result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
-        guild = await self.reload_guild(guild.id)
+        guild = await self.reload_guild(guild)
         new_channel = guild.channels.get(int(payload['id']))
 
         await guild.dispatch('CHANNEL_CREATE', new_channel.as_json)
