@@ -609,7 +609,6 @@ class Guild(LitecordObject):
         user_id = int(user_id)
         try:
             self._viewers.index(user_id)
-            log.debug(f'Already marked {user_id} as watcher of {self!r}')
         except:
             self._viewers.append(user_id)
             log.debug(f'Marked {user_id} as watcher of {self!r}')
@@ -651,7 +650,6 @@ class Guild(LitecordObject):
         they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
         to the gateway.
         """
-        print('_viewers', self._viewers)
         for member in self.members.values():
             try:
                 self._viewers.index(member.id)
@@ -678,7 +676,6 @@ class Guild(LitecordObject):
         total, dispatched = 0, 0
 
         for member in self.viewers:
-            print(f'Dispatching to {member!r}')
             success = await member.dispatch(evt_name, evt_data)
 
             if not success:
