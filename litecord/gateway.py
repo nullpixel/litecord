@@ -894,15 +894,18 @@ async def gateway_server(app, flags, loop=None):
 
     try:
         server = LitecordServer(flags, loop)
-    except:
-        log.error("We had an error loading the litecord server")
+    except Exception as err:
+        log.error(f'We had an error loading the litecord server. {err!r}')
         _stop(loop)
         return
 
     if not (await server.init(app)):
-        log.error("We had an error initializing the Litecord Server.")
+        log.error('We had an error initializing the Litecord Server.')
         _stop(loop)
         return
+
+    # server initialized, release HTTP to load pls
+    _load_lock.release()
 
     async def henlo(websocket, path):
         log.info("Opening connection")
@@ -937,12 +940,12 @@ async def gateway_server(app, flags, loop=None):
         await conn.cleanup()
 
     # start WS
-    _load_lock.release()
     ws = flags['server']['ws']
     log.info(f'[ws] running at {ws[0]}:{ws[1]}')
 
     ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
     await ws_server
 
-    ws_watcher_task = loop.create_task(server_sentry(server))
+    # we don't really care about the sentry task lul
+    loop.create_task(server_sentry(server))
     return True
