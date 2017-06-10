@@ -68,6 +68,10 @@ class VoiceServer(LitecordObject):
 
     #async def connect(self, c)
 
+    async def request_state(self, channel, user):
+        """Requests a VoiceState for a user"""
+        return channel.connect(user)
+
     @property
     def as_json(self):
         return {

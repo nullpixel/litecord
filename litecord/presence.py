@@ -4,6 +4,7 @@ presence.py - presence management
 Sends PRESENCE_UPDATE to clients when needed
 '''
 
+import collections
 import logging
 import time
 
@@ -15,18 +16,14 @@ class PresenceManager:
     """Manage presence objects/updates."""
     def __init__(self, server):
         self.server = server
-        self.presences = {}
+        self.presences = collections.defaultdict(dict)
 
     def get_presence(self, guild_id, user_id):
-        """Get a `Presence` object from a user's ID."""
+        """Get a `Presence` object from a guild + user ID pair."""
         guild_id = int(guild_id)
         user_id = int(user_id)
 
-        try:
-            guild_presences = self.presences[guild_id]
-        except KeyError:
-            self.presences[guild_id] = {}
-            guild_presences = self.presences[guild_id]
+        guild_presences = self.presences[guild_id]
 
         try:
             return guild_presences[user_id]
@@ -93,9 +90,6 @@ class PresenceManager:
         user_id = user.id
         guild_id = guild.id
 
-        if guild_id not in self.presences:
-            self.presences[guild_id] = {}
-
         guild_presences = self.presences[guild_id]
 
         if user_id not in guild_presences:
@@ -112,27 +106,26 @@ class PresenceManager:
             await guild.dispatch('PRESENCE_UPDATE', user_presence.as_json)
 
     async def global_update(self, user, new_status=None):
-        """Updates an user's status, globally.
+        """Updates a user's status, globally.
 
-        Dispatches PRESENCE_UPDATE events to relevant clients.
+        Dispatches PRESENCE_UPDATE to all guilds the user is in.
 
         Parameters
         ----------
         user: :class:`User`
             The user we are updating.
         new_status: dict, optional
-            Raw presence object
+            Raw presence object.
         """
 
         if user is None:
-            log.error("Can't update presence for no one.")
-            return False
+            return
 
         for guild in user.guilds:
             await self.status_update(guild, user, new_status)
 
     async def typing_start(self, user_id, channel_id):
-        """Sends a TYPING_START to relevant clients in the channel.
+        """Dispatches a TYPING_START to relevant clients in the channel.
 
         Parameters
         ----------
@@ -144,8 +137,6 @@ class PresenceManager:
         typing_timestamp = int(time.time())
         channel = self.server.guild_man.get_channel(channel_id)
 
-        # TODO: don't send events to people who can't read the channel
-        #  Requires permission stuff
         await channel.dispatch('TYPING_START', {
             'channel_id': channel_id,
             'user_id': user_id,
