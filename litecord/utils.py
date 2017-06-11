@@ -83,9 +83,9 @@ def get_random_salt(size=32):
 def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
-
-def _err(msg='', errno=None):
-    status_code = ERRNO_TO_HTTPERR.get(errno, 500)
+def _err(msg='', errno=None, status_code=500):
+    """Error object."""
+    status_code = ERRNO_TO_HTTPERR.get(errno, status_code)
     err_msg = ERR_TRANSLATOR.get(errno, None)
 
     log.debug(f"Erroring msg={msg!r} errno={errno!r} status={status_code!r} err_msg={err_msg!r}")

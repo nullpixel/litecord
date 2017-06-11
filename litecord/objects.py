@@ -5,7 +5,9 @@ from .basics import CHANNEL_TO_INTEGER
 from .utils import strip_user_data, dt_to_json
 from .snowflake import snowflake_time
 
+
 log = logging.getLogger(__name__)
+
 
 class LitecordObject:
     """A general Litecord object.
@@ -14,7 +16,6 @@ class LitecordObject:
     ----------
     server: :class:`LitecordServer`
         Server instance
-
     """
     def __init__(self, server):
         self.server = server
@@ -646,7 +647,7 @@ class Guild(LitecordObject):
 
         Keep in mind that :py:meth:`Guild.viewers` is different from :py:meth:`Guild.online_members`.
 
-        Members can be viewers, but if they are Atomic-Discord clients,
+        Members are viewers automatically, but if they are Atomic-Discord clients,
         they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
         to the gateway.
         """
@@ -655,7 +656,6 @@ class Guild(LitecordObject):
                 self._viewers.index(member.id)
                 yield member
             except:
-                log.debug(f'{member!r} not found in viewers to dispatch')
                 pass
 
     @property

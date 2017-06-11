@@ -10,3 +10,6 @@ class VoiceError(Exception):
 
 class PayloadLengthExceeded(Exception):
     pass
+
+class RequestCheckError(Exception):
+    pass

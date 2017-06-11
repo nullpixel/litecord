@@ -16,7 +16,7 @@ from .api import users, guilds, channels, imgs, invites, admin
 from .objects import User
 from .images import Images
 from .embedder import EmbedManager
-from .err import ConfigError
+from .err import ConfigError, RequestCheckError
 
 log = logging.getLogger(__name__)
 
@@ -457,9 +457,10 @@ class LitecordServer:
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
             return _err('401: Unauthorized, no token provided')
+            raise RequestCheckError(_err('No token provided', status_code=401))
 
         if len(auth_header) < 1:
-            return _err('401: Unauthorized, Malformed request')
+            raise RequestCheckError(_err('malformed header', status_code=401))
 
         try:
             token_type, token_value = auth_header.split()
@@ -469,24 +470,21 @@ class LitecordServer:
                 token_value = auth_header
             else:
                 log.info(f"Received weird auth header: {auth_header!r}")
-                return _err('error parsing Authorization header')
+                raise RequestCheckError(_err('error parsing auth header', status_code=401))
 
         if token_type != 'Bot':
-            return _err('401: Unauthorized, Invalid token type')
+            raise RequestCheckError(_err('Invalid token type', status_code=401))
 
         # check if token is valid
         raw_token_object = await self.token_db.find_one({'token': token_value})
         if raw_token_object is None:
-            return _err(f'401: Unauthorized, Invalid token {token_value!r}')
+            raise RequestCheckError(_err(f'Invalid token {token_value!r}', status_code=401))
 
         # NOTE: this doesn't remove any token from cache, we need to check that
         # this is a quickfix.
         self.cache['token->userid'][token_value] = raw_token_object['user_id']
 
-        return _json({
-            'code': 1,
-            'token': token_value,
-        })
+        return token_value
 
     async def get_discrim(self, username):
         """Generate a discriminator from a username."""

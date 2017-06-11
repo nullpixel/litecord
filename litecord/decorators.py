@@ -3,6 +3,7 @@ import json
 import asyncio
 
 from .utils import _err, _json
+from .err import RequestCheckError
 
 log = logging.getLogger(__name__)
 
@@ -18,12 +19,12 @@ def admin_endpoint(handler):
     async def inner_handler(endpoint, request):
         server = endpoint.server
 
-        _error = await server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
+        try:
+            token = await server.check_request(request)
+        except RequestCheckError as err:
+            return err.args[0]
 
-        user = server._user(_error_json['token'])
+        user = server._user(token)
 
         # pretty easy actually
         if not user.admin:
@@ -31,6 +32,10 @@ def admin_endpoint(handler):
             return _err(errno=40001)
 
         return (await handler(endpoint, request, user))
+
+    # Fixes the docs
+    inner_handler.__doc__ = handler.__doc__
+
     return inner_handler
 
 def auth_route(handler):
@@ -38,12 +43,13 @@ def auth_route(handler):
     async def inner_handler(endpoint, request):
         server = endpoint.server
 
-        _error = await server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
+        try:
+            token = await server.check_request(request)
+        except RequestCheckError as err:
+            return err.args[0]
 
-        user = server._user(_error_json['token'])
+        user = server._user(token)
+
         try:
             return (await handler(endpoint, request, user))
         except Exception as err:
