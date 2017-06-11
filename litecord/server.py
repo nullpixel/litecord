@@ -373,8 +373,8 @@ class LitecordServer:
         mongo_ping_msec = round((t2 - t1) * 1000, 4)
         report['mongo_ping'] = mongo_ping_msec
 
-        # dude the mongodb is local 5ms would be alarming
-        if mongo_ping_msec > 3:
+        # dude the mongodb is local 7ms would be alarming
+        if mongo_ping_msec > 7:
             report['good'] = False
 
         return report

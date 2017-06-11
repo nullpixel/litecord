@@ -761,11 +761,9 @@ class Connection:
                     await self.cleanup()
                     break
 
-                continue_flag = await self.process_recv(payload)
-
                 # if process_recv tells us to stop, we clean everything
                 # process_recv will very probably close the websocket already
-                if not continue_flag:
+                if not (await self.process_recv(payload)):
                     log.info("Stopped processing")
                     await self.cleanup()
                     break
@@ -774,6 +772,7 @@ class Connection:
             log.info(f"[ws] Cancelled, cleaning {self!r}")
             await self.ws.close(1006)
             await self.cleanup()
+            return
         except websockets.ConnectionClosed as err:
             log.info(f"[ws] closed, code {err.code!r}")
             await self.cleanup()
