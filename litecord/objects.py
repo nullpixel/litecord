@@ -360,7 +360,7 @@ class Channel(LitecordObject):
     type: int
         Channel's type.
     str_type: str
-        Channel's type as a strin. Usually it is ``"text"``.
+        Channel's type as a string. Usually it is ``"text"``.
     position: int
         Channel's position on the guild, channel position starts from 0.
     is_private: bool
@@ -554,7 +554,7 @@ class Guild(LitecordObject):
         creation_timestamp = snowflake_time(self.id)
         self.created_at = datetime.datetime.fromtimestamp(creation_timestamp)
 
-        self.owner_id = _guild_data['owner_id']
+        self.owner_id = int(_guild_data['owner_id'])
         self.region = _guild_data['region']
         self.emojis = []
         self.features = _guild_data['features']
@@ -584,7 +584,7 @@ class Guild(LitecordObject):
             member = Member(server, self, user, raw_member)
             self.members[member.id] = member
 
-        self.owner = self.members.get(int(self.owner_id))
+        self.owner = self.members.get(self.owner_id)
         if self.owner is None:
             log.error("Guild without owner!")
 
