@@ -36,9 +36,9 @@ RESUME_MAX_EVENTS = 50
 log = logging.getLogger(__name__)
 
 SERVERS = {
-    'hello': ['litecord-hello-1'],
-    'ready': ['litecord-session-0'],
-    'resume': ['litecord-resumer-0'],
+    'hello': [f'litecord-hello-{random.randint(1, 99)}'],
+    'ready': [f'litecord-session-{random.randint(1, 99)}'],
+    'resume': [f'litecord-resumer{random.randint(1, 99)}'],
 }
 
 
