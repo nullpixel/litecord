@@ -25,6 +25,10 @@ def main():
             data=json.dumps(payload))
 
         result = r.json()
+        if r.status_code in [500, 401]:
+            print(f'fuck? {result!r}')
+            continue
+
         if result['error']:
             print(f"ERR {result['stdout']}")
         else:
