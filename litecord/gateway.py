@@ -756,7 +756,7 @@ class Connection:
         The server sends an OP 10 Hello packet to the client, and after that
         it relays payloads sent by the client to `Connection.process_recv`
         """
-        log.info(f'[Connection.run] v={self.options["v"]} encoding={self.options["encoding"]}')
+        log.info(f'[conn.run] v={self.options["v"]} encoding={self.options["encoding"]}')
         await self.send_payload(self.basic_hello())
 
         try:
@@ -908,7 +908,7 @@ async def gateway_server(app, flags, loop=None):
     _load_lock.release()
 
     async def henlo(websocket, path):
-        log.info("Opening connection")
+        log.info(f'[ws] opening')
 
         parsed = urlparse.urlparse(path)
         params = urlparse.parse_qs(parsed.query)

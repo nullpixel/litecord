@@ -538,7 +538,7 @@ class LitecordServer:
             self.voice = VoiceManager(self)
             self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
 
-            log.debug('[init] endpoint objects')
+            log.debug('[init] declaring routes')
             self.users_endpoint =       users.UsersEndpoint(self, app)
             self.guilds_endpoint =      guilds.GuildsEndpoint(self, app)
             self.channels_endpoint =    channels.ChannelsEndpoint(self, app)

@@ -6,7 +6,7 @@ import logging
 
 from aiohttp import web
 
-from ..utils import _err, _json, get_random_salt, pwd_hash
+from ..utils import _err, _json
 from ..snowflake import get_snowflake
 from ..decorators import auth_route
 
@@ -22,7 +22,6 @@ class UsersEndpoint:
     def register(self, app):
         self.server.add_get('users/{user_id}', self.h_users)
 
-        self.server.add_post('users/add', self.h_add_user)
         self.server.add_patch('users/@me', self.h_patch_me)
 
         self.server.add_get('users/@me/settings', self.h_get_me_settings)
@@ -54,64 +53,6 @@ class UsersEndpoint:
                 return _err(errno=10013)
 
             return _json(user_to_find.as_json)
-
-    async def h_add_user(self, request):
-        """`POST /users/add`.
-
-        Creates a user.
-        Input: A JSON object::
-            {
-                "email": "the new user's email",
-                "password": "the new user's password",
-                "username": "the new user's username",
-            }
-
-        NOTE: This endpoint doesn't require authentication
-        TODO: Add better error codes
-        """
-
-        try:
-            payload = await request.json()
-        except:
-            return _err("error parsing")
-
-        email =     payload.get('email')
-        password =  payload.get('password')
-        username =  payload.get('username')
-        if email is None or password is None or username is None:
-            return _err("malformed payload")
-
-        user_db = self.server.user_db
-        res = await user_db.find_one({'email': email})
-
-        if res is not None:
-            return _err("email already used")
-
-        discrim = await self.server.get_discrim(username)
-        _salt = get_random_salt()
-
-        new_user = {
-            "id": get_snowflake(),
-            "email": email,
-            "username": username,
-            "discriminator": discrim,
-            "password": {
-                "plain": None,
-                "hash": pwd_hash(password, _salt),
-                "salt": _salt
-            },
-            "avatar": "",
-            "bot": False,
-            "verified": True
-        }
-
-        log.info(f"New user {new_user['username']}#{new_user['discriminator']}")
-        await user_db.insert_one(new_user)
-
-        return _json({
-            "code": 1,
-            "message": "success"
-        })
 
     @auth_route
     async def h_patch_me(self, request, user):

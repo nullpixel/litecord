@@ -613,7 +613,6 @@ class Guild(LitecordObject):
         except:
             self._viewers.append(user_id)
             log.debug(f'Marked {user_id} as watcher of {self!r}')
-            print('_viewers after add', self._viewers)
 
     def unmark_watcher(self, user_id):
         """Unmark user from being a viewer in this guild."""
