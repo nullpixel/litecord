@@ -397,13 +397,6 @@ class Connection:
 
         self.server.add_connection(self.user.id, self)
 
-        if self.session_id not in self.server.event_cache:
-            self.server.event_cache[self.session_id] = {
-                'sent_seq': 0,
-                'recv_seq': 0,
-                'events': {},
-            }
-
         self.events = self.server.event_cache[self.session_id]
 
         # set user status before even calculating guild data to be sent

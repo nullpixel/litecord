@@ -46,6 +46,15 @@ def check_configuration(flags):
             raise ConfigError(f"Field {field!r} not found in configuration")
 
 
+def empty_ev_cache():
+    """Return an empty event cache."""
+    return {
+        'sent_seq': 0,
+        'recv_seq': 0,
+        'events': {},
+    }
+
+
 class LitecordServer:
     """Main class for the Litecord server.
 
@@ -108,7 +117,7 @@ class LitecordServer:
         self.member_db =    self.litecord_db['members']
 
         # cache for events
-        self.event_cache = {}
+        self.event_cache = collections.defaultdict(empty_ev_cache)
 
         # cache for objects
         self.cache = {}
