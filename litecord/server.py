@@ -7,12 +7,11 @@ import collections
 
 import motor.motor_asyncio
 
-from .snowflake import get_raw_token
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
 from .voice import VoiceManager
-from .api import users, guilds, channels, imgs, invites, admin
+from .api import users, guilds, channels, imgs, invites, admin, auth
 from .objects import User
 from .images import Images
 from .embedder import EmbedManager
@@ -394,55 +393,6 @@ class LitecordServer:
         elif len(ws) == 3:
             return _json({"url": f"ws://{ws[2]}:{ws[1]}"})
 
-    async def login(self, request):
-        """Login a user through the `POST /auth/login` endpoint.
-
-        With the provided token you can connect to the
-        gateway and send an IDENTIFY payload.
-
-        Parameters
-        ----------
-        request: dict
-            Two keys, `email` and `password`, password is in plaintext.
-
-        Returns
-        -------
-        dict:
-            With a `token` field.
-        """
-        try:
-            payload = await request.json()
-        except Exception as err:
-            # error parsing json
-            return _err("error parsing")
-
-        email = payload.get('email')
-        password = payload.get('password')
-        if email is None or password is None:
-            return _err("malformed packet")
-
-        raw_user = await self.get_raw_user_email(email)
-        if raw_user is None:
-            return _err("fail on login [email]")
-
-        pwd = raw_user['password']
-        if pwd_hash(password, pwd['salt']) != pwd['hash']:
-            return _err("fail on login [password]")
-
-        user_id = raw_user['id']
-        old_token = await self.token_userid(user_id)
-
-        new_token = await get_raw_token()
-        while (await self.token_used(new_token)):
-            new_token = await get_raw_token()
-
-        await self.token_unregister(old_token)
-
-        log.info(f"[login] Generated new token for {user_id}")
-        await self.token_register(new_token, user_id)
-
-        return _json({"token": new_token})
-
     async def check_request(self, request):
         """Checks a request to the API.
 
@@ -595,9 +545,9 @@ class LitecordServer:
             self.invites_endpoint =     invites.InvitesEndpoint(self, app)
             self.images_endpoint =      imgs.ImageEndpoint(self, app)
             self.admins_endpoint =      admin.AdminEndpoints(self, app)
+            self.auth_endpoint =        auth.AuthEndpoints(self, app)
 
-            # setup internal stuff
-            self.add_post('auth/login', self.login)
+            # setup internal handlers
             self.add_get('version', self.h_get_version)
             self.add_get('gateway', self.h_give_gateway)
 
