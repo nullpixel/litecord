@@ -561,7 +561,7 @@ class GuildManager:
     async def invite_janitor(self):
         """Janitor task for invites.
 
-        This checks every 30 minutes for invalid invites and removes them from
+        This checks every 30 minutes for expired invites and removes them from
         the database.
         """
 
@@ -654,7 +654,7 @@ class GuildManager:
             'unique': True,
         }
 
-        self.invite_db.insert_one(raw_invite)
+        await self.invite_db.insert_one(raw_invite)
 
         invite = Invite(self.server, raw_invite)
         if invite.valid:

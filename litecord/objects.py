@@ -501,7 +501,7 @@ class Guild(LitecordObject):
         Raw guild data.
     _channel_data: list(raw channel)
         Raw channel data for the guild.
-    _role_data: list(role)
+    _role_data: list(:class:`Role`)
         Raw role data for the guild.
 
     id: int
