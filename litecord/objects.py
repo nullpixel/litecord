@@ -86,7 +86,7 @@ class Presence:
         self.user = user
         self.guild = guild
 
-        if self.game['status'] not in ('online', 'offline', 'idle'):
+        if self.game['status'] not in ('online', 'offline', 'idle', 'dnd'):
             log.warning(f'Presence for {self.user!r} with unknown status')
 
     def __repr__(self):

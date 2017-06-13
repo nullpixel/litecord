@@ -608,27 +608,28 @@ class Connection:
     async def status_handler(self, data):
         """Handle OP 3 Status Update packets
 
-        Checks the payload format and if it is OK, calls `PresenceManager.status_update`
+        Checks the payload format and if it is OK, calls `PresenceManager.global_update`
         """
 
         if not self.identified:
-            log.error("Client not identified to do OP 3, closing with 4003")
-            await self.ws.close(4003)
+            log.error('Not identified to do operation, closing: 4003')
+            await self.ws.close(4003, 'Not identified')
             return False
 
-        # TODO: what do we do with this?
-        idle_since = data.get('idle_since', 'nothing')
+        idle_since = data.get('idle_since')
 
         game = data.get('game')
-        if game is not None:
-            game_name = game.get('name')
-            if game_name is not None:
-                await self.presence.global_update(self.user, {
-                    'name': game_name,
-                })
+        if game is None:
             return True
 
-        return False
+        game_name = game.get('name')
+        if game_name is None:
+            return True
+
+        await self.presence.global_update(self.user, {
+            'name': game_name,
+            'status': 'idle' if idle_since is not None else None
+        })
 
     async def guild_sync_handler(self, data):
         """Handle OP 12 Guild Sync packets
