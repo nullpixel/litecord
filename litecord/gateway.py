@@ -365,6 +365,10 @@ class Connection:
         data: dict
             https://discordapp.com/developers/docs/topics/gateway#gateway-identify
         """
+        if self.identified:
+            await self.ws.close(4005, 'Already authenticated')
+            return
+
         token = data.get('token')
         prop = data.get('properties')
         large = data.get('large_threshold')
@@ -373,7 +377,7 @@ class Connection:
         # check if the client isn't trying to fuck us over
         if (token is None) or (prop is None) or (large is None):
             log.warning('Erroneous IDENTIFY')
-            await self.ws.close(4001)
+            await self.ws.close(4001, 'Erroneous IDENTIFY')
             return
 
         valid, user_object, user = await self.check_token(token)
@@ -406,7 +410,7 @@ class Connection:
 
         self.identified = True
 
-        all_guild_list = self.server.guild_man.get_guilds(self.user.id)
+        all_guild_list = self.guild_man.get_guilds(self.user.id)
 
         # the actual list of guilds to be sent to the client
         guild_list = []
