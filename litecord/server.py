@@ -16,6 +16,7 @@ from .objects import User
 from .images import Images
 from .embedder import EmbedManager
 from .err import ConfigError, RequestCheckError
+from .ratelimits import WSBucket, GatewayRatelimitModes
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ class LitecordServer:
         self.atomic_markers = {}
         self.sessions = {}
 
-        self.request_counter = collections.defaultdict(int)
+        self.request_counter = collections.defaultdict(dict)
         self.connections = collections.defaultdict(list)
 
         self.presence = None
@@ -135,6 +136,20 @@ class LitecordServer:
 
         self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
             shell=True).decode('utf-8').strip()
+
+        default = [120, 60]
+        rtl_config = flags['ratelimits']
+
+        global_req, global_sec = rtl_config.get('global_ws', default)
+
+        close = GatewayRatelimitModes.CLOSE
+        ignore = GatewayRatelimitModes.IGNORE_PACKET
+
+        self.buckets = {
+            'all': WSBucket('all', requests=global_req, seconds=global_sec, mode=close),
+            'presence_updates': WSBucket('presence_updates', requests=5, seconds=60, mode=ignore),
+            'identify': WSBucket('identify', requests=1, seconds=5, mode=close)
+        }
 
     def add_connection(self, user_id, conn):
         """Add a connection and tie it to a user.
@@ -155,6 +170,11 @@ class LitecordServer:
     def remove_connection(self, session_id):
         """Remove a connection from the connection table."""
         session_id = str(session_id)
+
+        try:
+            self.request_counter.pop(session_id)
+        except KeyError:
+            pass
 
         try:
             conn = self.sessions.pop(session_id)

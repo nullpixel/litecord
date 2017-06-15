@@ -11,6 +11,7 @@ import uuid
 import random
 import zlib
 import hashlib
+import collections
 import urllib.parse as urlparse
 
 import websockets
@@ -131,8 +132,9 @@ class Connection:
         self.compress_flag = False
         self.properties = {}
 
+        # ratelimiting tasks that clean the request counter
         self.ratelimit_tasks = {}
-        self.request_counter = 0
+        self.request_counter = {} 
 
         # flags
         self.identified = False
@@ -616,6 +618,7 @@ class Connection:
 
         return True
 
+    @ws_ratelimit('presence_updates')
     async def status_handler(self, data):
         """Handle OP 3 Status Update packets
 
@@ -641,6 +644,7 @@ class Connection:
             'name': game_name,
             'status': 'idle' if idle_since is not None else None
         })
+        return True
 
     async def guild_sync_handler(self, data):
         """Handle OP 12 Guild Sync packets
@@ -738,7 +742,7 @@ class Connection:
         log.info("Received OP5 VOICE_SERVER_PING what do i do")
         return True
 
-    @ws_ratelimit()
+    @ws_ratelimit('all')
     async def process_recv(self, payload):
         """Process a payload sent by the client.
 
