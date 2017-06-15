@@ -356,6 +356,7 @@ class Connection:
         user = self.server.get_user(raw_user['id'])
         return True, raw_user, user
 
+    @ws_ratelimit('identify')
     async def identify_handler(self, data):
         """Handle an OP 2 Identify sent by the client.
 
