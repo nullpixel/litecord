@@ -78,8 +78,7 @@ class WSBucket:
 
     async def request_task(self, conn):
         try:
-            while True:
-                log.debug(f'[bucket:{self.name}] zeroing to {conn!r}')
+            while True: 
                 conn.request_counter[self.name] = 0
                 await asyncio.sleep(self.seconds)
         except asyncio.CancelledError:
@@ -117,8 +116,7 @@ def ws_ratelimit(bucket_name='all'):
             if bucket_name not in conn.request_counter:
                 conn.request_counter[bucket_name] = 0
 
-            if conn.request_counter[bucket_name] > bucket.requests:
-                log.info(f'Bucket {bucket_name}, doing ratelimit')
+            if conn.request_counter[bucket_name] > bucket.requests: 
                 return await bucket.ratelimit(conn)
 
             result = await handler(conn, payload)
@@ -128,7 +126,7 @@ def ws_ratelimit(bucket_name='all'):
             if bucket_name not in conn.request_counter:
                 conn.request_counter[bucket_name] = 0
 
-            log.debug(f'[bucket:{bucket_name}] Add 1 to counter, {result}')
+            #log.debug(f'[bucket:{bucket_name}] Add 1 to counter, {result}')
             conn.request_counter[bucket_name] += 1
 
             return result
