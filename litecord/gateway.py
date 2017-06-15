@@ -429,9 +429,9 @@ class Connection:
 
         stripped_user = strip_user_data(self.raw_user)
 
-        log.info("New session %s, sending %d guilds", self.session_id, len(guild_list))
+        log.info("New session %s, sending %d guilds", self.session_id, len(guild_list)) 
 
-        await self.dispatch('READY', {
+        ready_packet = {
             'v': self.options['v'],
             'user': stripped_user,
             'private_channels': [],
@@ -443,7 +443,18 @@ class Connection:
             'guilds': guild_list,
             'session_id': self.session_id,
             '_trace': self.get_identifiers('ready')
-        })
+        }
+
+        # If its a bot, we send unavailable guilds on READY
+        # and then dispatch GUILD_CREATE events for every guild
+        if self.raw_user['bot']:
+            ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list],
+
+            await self.dispatch('READY', ready_packet)
+            for raw_guild in guild_list:
+                await self.dispatch('GUILD_CREATE', raw_guild)
+        else:
+            await self.dispatch('READY', ready_packet)
 
         return True
 
