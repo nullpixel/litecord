@@ -245,7 +245,6 @@ class LitecordServer:
         # create cache objects
         self.cache['id->raw_user'] = {}
         self.cache['id->user'] = {}
-        self.cache['token->userid'] = {}
 
         # reference them
         id_to_raw_user = self.cache['id->raw_user']
