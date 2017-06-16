@@ -332,9 +332,8 @@ class Member(LitecordObject):
             'permissions': 0,
         }
 
-
-class Channel(LitecordObject):
-    """A general channel object.
+class BaseChannel(LitecordObject):
+    """A general base channel object.
 
     Parameters
     ----------
@@ -367,14 +366,10 @@ class Channel(LitecordObject):
         Should be False.
     is_default: bool
         If this channel is the default for the guild.
-    topic: str
-        Channel topic/description.
-    last_message_id: int
-        The last message created in the channel.
     """
 
     __slots__ = ('_data', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
-        'position', 'is_private', 'is_default', 'topic', 'last_message_id')
+        'position', 'is_private', 'is_default')
 
     def __init__(self, server, _channel, guild=None):
         super().__init__(server)
@@ -395,10 +390,7 @@ class Channel(LitecordObject):
         self.type = CHANNEL_TO_INTEGER[_channel['type']]
         self.position = _channel['position']
         self.is_private = False
-        self.topic = _channel['topic']
         self.is_default = self.id == self.guild_id
-
-        self.last_message_id = 0
 
     @property
     def watchers(self):
@@ -418,6 +410,32 @@ class Channel(LitecordObject):
 
         return dispatched
 
+    @property
+    def as_invite(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'type': self.type,
+        }
+
+
+class TextChannel(BaseChannel):
+    """Represents a text channel.
+
+    Attributes
+    ----------
+    topic: str
+        Channel topic/description.
+    last_message_id: int
+        The last message created in the channel.
+
+    """
+    def __init__(self, server, raw_channel, guild=None):
+        super().__init__(server, raw_channel, guild)
+
+        self.topic = raw_channel['topic']
+        self.last_message_id = 0
+
     def get_message(self, message_id):
         """Get a single message from a channel."""
         try:
@@ -429,7 +447,7 @@ class Channel(LitecordObject):
         return None
 
     async def last_messages(self, limit=50):
-        """Get the last messages from a channel.
+        """Get the last messages from a text channel.
 
         Returns
         -------
@@ -454,6 +472,40 @@ class Channel(LitecordObject):
 
         return res
 
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'guild_id': str(self.guild_id),
+            'name': self.name,
+            'type': self.type,
+            'position': self.position,
+            'is_private': self.is_private,
+            'permission_overwrites': [],
+            'topic': self.topic,
+            'last_message_id': str(self.last_message_id),
+        }
+
+
+class VoiceChannel(BaseChannel):
+    """Represents a voice channel.
+
+    Attributes
+    ----------
+    bitrate: int
+        Voice channel's bitrate.
+    user_limit: int
+        Maximum number of users that can enter the channel.
+    """
+
+    __slots__ = ('base', 'bitrate', 'user_limit')
+
+    def __init__(self, server, raw_channel, guild=None):
+        super().__init__(server, raw_channel, guild)
+
+        self.bitrate = raw_channel.get('birtate', 69)
+        self.user_limit = raw_channel.get('user_limit', 0)
+
     async def voice_request(self, connection):
         """Request a voice state from the voice manager."""
         return await self.server.voice.link_connection(connection, self)
@@ -468,20 +520,9 @@ class Channel(LitecordObject):
             'position': self.position,
             'is_private': self.is_private,
             'permission_overwrites': [],
-            'topic': self.topic,
-            'last_message_id': str(self.last_message_id),
 
-            # NOTE: THIS IS VOICE, WON'T BE USED.
-            #'bitrate': self.bitrate,
-            #'user_limit': self.user_limit,
-        }
-
-    @property
-    def as_invite(self):
-        return {
-            'id': str(self.id),
-            'name': self.name,
-            'type': self.type,
+            'bitrate': self.bitrate,
+            'user_limit': self.user_limit,
         }
 
 
@@ -564,7 +605,16 @@ class Guild(LitecordObject):
 
         for raw_channel in self._channel_data:
             raw_channel['guild_id'] = self.id
-            channel = Channel(server, raw_channel, self)
+            channel_type = raw_channel['type']
+            channel = None
+
+            if channel_type == 'text':
+                channel = TextChannel(server, raw_channel, self)
+            elif channel_type == 'voice':
+                channel = VoiceChannel(server, raw_channel, self)
+            else:
+                raise Exception(f'Invalid type for channel: {channel_type}')
+
             self.channels[channel.id] = channel
 
         # list of snowflakes
@@ -672,7 +722,7 @@ class Guild(LitecordObject):
 
     async def dispatch(self, evt_name, evt_data):
         """Dispatch an event to all guild viewers.
-        
+
         Parameters
         ----------
         evt_name: str

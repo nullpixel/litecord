@@ -7,7 +7,7 @@ import json
 import readline
 
 API_BASE = 'http://0.0.0.0:8000'
-TOKEN = 'litecord_RLoWjnc45pDX2shufGjijfyPbh2kV0sYGz2EwARhIAs='
+TOKEN = 'litecord_PuMsoEBrWuw6Kfat2rEVkup0nif9KeYtskUvRdZdQ4A5gPl3K1WAUekaUQZs0XMHCGKQP3ZPsUVhIVEo8TmUQQ'
 
 HEADERS = {
     'Authorization': f'Bot {TOKEN}',

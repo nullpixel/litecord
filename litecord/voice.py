@@ -8,76 +8,10 @@ from .basics import VOICE_OP
 from .objects import LitecordObject
 from .err import VoiceError
 from .snowflake import get_raw_token
-from .objects import Channel, User
-from .gateway import Connection
+from .objects import VoiceChannel, User
+from .voice_objects import VoiceChannelState, VoiceState
 
 log = logging.getLogger(__name__)
-
-class VoiceState(LitecordObject):
-    """Represents a voice state."""
-    def __init__(self, server, v_server, channel, conn):
-        LitecordObject.__init__(self, server)
-        #self._data = data
-
-        self.v_man = server.voice
-        self.v_server = v_server
-
-        self.channel = channel
-        self.guild = channel.guild
-        self.user = conn.user
-
-        # i don't even care anymore
-        self.session_id = 'lul session id who cares about it'
-
-        self.deaf = False
-        self.mute = False
-        self.self_deaf = False
-        self.self_mute = False
-        self.supress = False
-
-    @property
-    def as_json(self):
-        return {
-            'guild_id': str(self.guild.id),
-            'channel_id': str(self.channel.id),
-            'user_id': str(self.user.id),
-            'session_id': str(self.session_id),
-            'deaf': self.deaf,
-            'mute': self.mute,
-            'self_deaf': self.self_deaf,
-            'self_mute': self.self_mute,
-            'supress': self.supress,
-        }
-
-
-class VoiceChannelState(LitecordObject):
-    """Represents a voice channel's state.
-    
-    With instances of this class, it is possible to instantiate
-    :class:`VoiceState` objects, and make a successful connection to VWS(Voice Websocket).
-    
-    Attributes
-    ----------
-    v_channel: :class:`VoiceChannel`
-        Voice channel this state is referring to.
-    states: dict
-        Relates User IDs to :class:`VoiceState` objects.
-    """
-    def __init__(self, server, v_channel):
-        super().__init__(server)
-        self.v_channel = v_channel
-
-        self.states = {}
-
-    async def create_state(self, user: User, **kwargs) -> VoiceState:
-        """Create a new :class:`VoiceState` to this user.
-
-        Returns
-        -------
-        The new VoiceState.
-        """
-        VoiceState(self.server, self.v_channel.v_server, user)
-
 
 class VoiceServer(LitecordObject):
     """Represents a voice server.
@@ -96,6 +30,8 @@ class VoiceServer(LitecordObject):
         Address of the Voice Websocket.
     tokens: dict
         Relates tokens(str) to User ID.
+    global_staet: dict
+        Relates User IDs to :class:`VoiceState`, if they're connected to the Voice server.
     """
     def __init__(self, server, guild):
         LitecordObject.__init__(self, server)
@@ -104,26 +40,26 @@ class VoiceServer(LitecordObject):
 
         self.states = {}
         for v_channel in guild.voice_channels:
-            self.states[v_channel.id] = VoiceChannelState(v_channel)
+            self.states[v_channel.id] = VoiceChannelState(self.server, v_channel)
 
         vws = server.flags['server']['voice_ws']
         self.endpoint = f'{vws[0]}:{vws[1]}'
 
         self.tokens = {}
+        self.global_state = {}
 
     async def make_token(self, user_id: int) -> str:
         token = await get_raw_token('litecord_vws-')
         self.tokens[token] = user_id
         return token
 
-    async def connect(self, channel: Channel, conn: Connection) -> VoiceState:
+    async def connect(self, channel: VoiceChannel, conn) -> VoiceState:
         """Create a :class:`VoiceState`"""
         vc_state = self.states[channel.id]
         if vc_state is None:
             return None
 
-        vc_state.create_state(conn.user.id)
-        v_state = vc_state.get_state(conn.user.id)
+        v_state = vc_state.create_state(conn.user.id)
         if v_state is None:
             return None
 
@@ -142,8 +78,14 @@ class VoiceServer(LitecordObject):
         return {
             'token': token,
             'guild_id': str(vc_state.channel.guild.id),
+
+            # That is the endpoint for VWS.
             'endpoint': self.endpoint,
         }
+
+    async def handle_udp(self, client):
+        """Handler for UDP voice data."""
+        pass
 
 class VoiceConnection:
     """Represents a voice websocket connection.
@@ -355,9 +297,10 @@ class VoiceManager:
             raise VoiceError('Channel is not a voice channel')
 
         v_server = self.get_vserver(channel.guild.id)
-        #v_state = v_server.request_state(conn)
+        if v_server is None:
+            raise VoiceError('No voice server found')
 
-        v_state = VoiceState(conn.server, v_server, channel, conn)
+        v_state = await v_server.connect(channel, conn)
         return v_state
 
     async def init_task(self, flags):

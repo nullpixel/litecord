@@ -122,6 +122,7 @@ class LitecordServer:
         self.token_db =     self.litecord_db['tokens']
         self.invite_db =    self.litecord_db['invites']
         self.member_db =    self.litecord_db['members']
+        self.presence_db =  self.litecord_db['presences']
 
         # cache for events
         self.event_cache = collections.defaultdict(empty_ev_cache)

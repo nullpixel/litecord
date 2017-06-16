@@ -16,6 +16,7 @@ class PresenceManager:
     """Manage presence objects/updates."""
     def __init__(self, server):
         self.server = server
+        self.presence_db = server.presence_db
         self.presences = collections.defaultdict(dict)
 
     def get_presence(self, guild_id, user_id):
