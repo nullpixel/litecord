@@ -338,17 +338,13 @@ class LitecordServer:
 
         return raw_user
 
-    def _user(self, token):
+    async def _user(self, token):
         """Get a user object from its token.
 
         This is a helper function to save lines of code in endpoint objects.
         """
-        try:
-            userid = self.cache['token->userid'][token]
-        except:
-            return None
-
-        return self.get_user(userid)
+        user_id = await self.token_find(token)
+        return self.get_user(user_id)
 
     # token helper functions
     async def token_userid(self, user_id):
@@ -462,10 +458,6 @@ class LitecordServer:
         raw_token_object = await self.token_db.find_one({'token': token_value})
         if raw_token_object is None:
             raise RequestCheckError(_err(f'Invalid token {token_value!r}', status_code=401))
-
-        # NOTE: this doesn't remove any token from cache, we need to check that
-        # this is a quickfix.
-        self.cache['token->userid'][token_value] = raw_token_object['user_id']
 
         return token_value
 

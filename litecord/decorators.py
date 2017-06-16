@@ -7,6 +7,21 @@ from .err import RequestCheckError
 
 log = logging.getLogger(__name__)
 
+async def user_from_request(server, request):
+    try:
+        token = await server.check_request(request)
+    except RequestCheckError as err:
+        return err.args[0]
+
+    return await server._user(token)
+
+async def do(handler, *args):
+    try:
+        return await handler(*args)
+    except Exception as err:
+        log.error('Errored in a handler', exc_info=True)
+        return _err(f'Error: {err!r}')
+
 def admin_endpoint(handler):
     """Declare an Admin Endpoint.
 
@@ -18,22 +33,15 @@ def admin_endpoint(handler):
     """
     async def inner_handler(endpoint, request):
         server = endpoint.server
+        user = await user_from_request(server, request)
 
-        try:
-            token = await server.check_request(request)
-        except RequestCheckError as err:
-            return err.args[0]
-
-        user = server._user(token)
-
-        # pretty easy actually
+        # pretty easy lol
         if not user.admin:
             log.warning(f"{user!s} tried to use an admin endpoint")
             return _err(errno=40001)
 
-        return (await handler(endpoint, request, user))
+        return await do(handler, endpoint, request, user)
 
-    # Fixes the docs
     inner_handler.__doc__ = handler.__doc__
 
     return inner_handler
@@ -42,21 +50,9 @@ def auth_route(handler):
     """Declare a route that needs authentication to be used."""
     async def inner_handler(endpoint, request):
         server = endpoint.server
+        user = await user_from_request(server, request)
+        return do(handler, endpoint, request, user)
 
-        try:
-            token = await server.check_request(request)
-        except RequestCheckError as err:
-            return err.args[0]
-
-        user = server._user(token)
-
-        try:
-            return (await handler(endpoint, request, user))
-        except Exception as err:
-            log.error('errored in auth_route', exc_info=True)
-            return _err(f'Error: {err!s}')
-
-    # Fixes the docs
     inner_handler.__doc__ = handler.__doc__
 
     return inner_handler
