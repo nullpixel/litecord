@@ -6,7 +6,7 @@ Litecord API
    :maxdepth: 2
    :caption: Contents:
 
-   ayth
+   auth
    admin
    users
    guilds
