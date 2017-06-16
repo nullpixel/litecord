@@ -7,7 +7,9 @@ import websockets
 from .basics import VOICE_OP
 from .objects import LitecordObject
 from .err import VoiceError
-from .snowflake import sync_get_raw_token
+from .snowflake import get_raw_token
+from .objects import Channel, User
+from .gateway import Connection
 
 log = logging.getLogger(__name__)
 
@@ -48,35 +50,98 @@ class VoiceState(LitecordObject):
         }
 
 
+class VoiceChannelState(LitecordObject):
+    """Represents a voice channel's state.
+    
+    With instances of this class, it is possible to instantiate
+    :class:`VoiceState` objects, and make a successful connection to VWS(Voice Websocket).
+    
+    Attributes
+    ----------
+    v_channel: :class:`VoiceChannel`
+        Voice channel this state is referring to.
+    states: dict
+        Relates User IDs to :class:`VoiceState` objects.
+    """
+    def __init__(self, server, v_channel):
+        super().__init__(server)
+        self.v_channel = v_channel
+
+        self.states = {}
+
+    async def create_state(self, user: User, **kwargs) -> VoiceState:
+        """Create a new :class:`VoiceState` to this user.
+
+        Returns
+        -------
+        The new VoiceState.
+        """
+        VoiceState(self.server, self.v_channel.v_server, user)
+
+
 class VoiceServer(LitecordObject):
-    """Represents a voice server."""
+    """Represents a voice server.
+
+    Each guld gets a VoiceServer instance.
+    Each voice channel gets a VoiceChannelState instance.
+    Each connection to the voice channel gets a VoiceState instance.
+
+    Attributes
+    ----------
+    guild: :class:`Guild`
+        The guild this server is referring to.
+    channels: dict
+        Relates Channel IDs to :class:`VoiceChannelState` objects.
+    endpoint: str
+        Address of the Voice Websocket.
+    tokens: dict
+        Relates tokens(str) to User ID.
+    """
     def __init__(self, server, guild):
         LitecordObject.__init__(self, server)
 
         self.guild = guild
 
-        self.channels = {}
+        self.states = {}
         for v_channel in guild.voice_channels:
-            self.channels[v_channel.id] = v_channel
+            self.states[v_channel.id] = VoiceChannelState(v_channel)
 
         vws = server.flags['server']['voice_ws']
         self.endpoint = f'{vws[0]}:{vws[1]}'
 
-        self.token = sync_get_raw_token('litecord-vws_')
+        self.tokens = {}
 
-        self.voice_cli = {}
+    async def make_token(self, user_id: int) -> str:
+        token = await get_raw_token('litecord_vws-')
+        self.tokens[token] = user_id
+        return token
 
-    #async def connect(self, c)
+    async def connect(self, channel: Channel, conn: Connection) -> VoiceState:
+        """Create a :class:`VoiceState`"""
+        vc_state = self.states[channel.id]
+        if vc_state is None:
+            return None
 
-    async def request_state(self, channel, user):
-        """Requests a VoiceState for a user"""
-        return channel.connect(user)
+        vc_state.create_state(conn.user.id)
+        v_state = vc_state.get_state(conn.user.id)
+        if v_state is None:
+            return None
 
-    @property
-    def as_json(self):
+        self.global_state[user_id] = vc_state
+        return v_state
+
+    async def disconnect(self, v_state: VoiceState):
+        """Disconnect a user from the channel."""
+        vc_state.remove_state(v_state)
+        self.global_state.pop(v_state.user.id)
+
+    def get_json(self, token: str) -> dict:
+        """Get a JSON serializable dict to send in a VOICE_SERVER_UDPATE event."""
+        user_id = self.tokens[token]
+        vc_state = self.global_state[user_id]
         return {
-            'token': self.token,
-            'guild_id': str(self.channel.guild.id),
+            'token': token,
+            'guild_id': str(vc_state.channel.guild.id),
             'endpoint': self.endpoint,
         }
 

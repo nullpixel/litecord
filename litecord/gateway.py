@@ -676,7 +676,8 @@ class Connection:
     async def v_state_update_handler(self, data):
         """Handle OP 4 Voice State Update.
 
-        This starts a VoiceConnection attached to the client.
+        Requests VoiceServer to generate a VoiceState for the connection.
+        Dispatches VOICE_STATE_UPDATE and VOICE_SERVER_UPDATE events to the connection.
         """
 
         guild_id = data.get('guild_id')
@@ -686,13 +687,6 @@ class Connection:
 
         if guild_id is None or channel_id is None:
             log.warning("[vsu] missing params")
-            return True
-
-        try:
-            guild_id = int(guild_id)
-            channel_id = int(channel_id)
-        except:
-            log.warning("[vsu] not ints")
             return True
 
         guild = self.server.guild_man.get_guild(guild_id)
@@ -710,18 +704,16 @@ class Connection:
             return True
 
         # We request a VoiceState from the voice manager
-        # VoiceState contains voice info used for the client to have a connection
-        # with the voice gateway at 0.0.0.0:6969
         try:
-            channel_vstate = await channel.voice_request(self)
+            v_state = await channel.voice_request(self)
         except VoiceError:
             log.error('error while requesting VoiceState', exc_info=True)
             return True
 
         log.info(f"{self.user!r} => voice => {channel!r} => {channel_vstate!r}")
 
-        await self.dispatch('VOICE_STATE_UPDATE', channel_vstate)
-        await self.dispatch('VOICE_SERVER_UPDATE', channel_vstate.v_server)
+        await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
+        await self.dispatch('VOICE_SERVER_UPDATE', v_state.server_as_json)
 
         return True
 
