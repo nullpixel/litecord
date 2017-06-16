@@ -671,7 +671,20 @@ class Guild(LitecordObject):
             for member in self.online_members]
 
     async def dispatch(self, evt_name, evt_data):
-        """Dispatch an event to all guild viewers."""
+        """Dispatch an event to all guild viewers.
+        
+        Parameters
+        ----------
+        evt_name: str
+            Event name.
+        evt_data: dict
+            Event data.
+
+        Returns
+        -------
+        int:
+            Total number of members that this event was dispatched to.
+        """
         total, dispatched = 0, 0
 
         for member in self.viewers:

@@ -80,16 +80,22 @@ class LitecordServer:
         Relates user IDs to the last events they received. Used for resuming.
     cache : dict
         Relates IDs to objects/raw objects.
-    valid_tokens : list
+    valid_tokens: list
         List of valid tokens(strings).
         A valid token is a token that was used in a connection and it is still,
         being used in that connection.
-    sessions : dict
+    sessions: dict
         Relates session IDs to their respective :class:`Connection` object.
-    guild_man : :class:`GuildManager`
+    guild_man: :class:`GuildManager`
         Guild manager instance.
-    presence : :class:`PresenceManager`
+    presence: :class:`PresenceManager`
         Presence manager instance.
+    request_counter: `collections.defaultdict(dict)`
+        Manages request counts for all identified connections.
+    connections: `collections.defaultdict(list)`
+        List of all connections that are linked to a User ID.
+    buckets: dict
+        Ratelimit bucket objects.
     """
     def __init__(self, flags=None, loop=None):
         if flags is None:
@@ -120,7 +126,7 @@ class LitecordServer:
         # cache for events
         self.event_cache = collections.defaultdict(empty_ev_cache)
 
-        # cache for objects
+        # cache for all kinds of objects
         self.cache = {}
 
         self.session_dict = {}
@@ -295,10 +301,7 @@ class LitecordServer:
 
                 # dispatch USER_UPDATE to all online clients
                 for guild in user.guilds:
-                    for member in guild.online_members:
-                        conn = member.connection
-                        await conn.dispatch('USER_UPDATE', user.as_json)
-                        events += 1
+                    events += await guild.dispatch('USER_UPDATE', user.as_json)
 
                 # update the references in internal cache
                 cached_raw_user = raw_user

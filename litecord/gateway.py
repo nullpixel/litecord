@@ -32,7 +32,7 @@ HB_MIN_MSEC = 40000
 HB_MAX_MSEC = 42000
 
 # The maximum amount of events you can lose before your session gets invalidated.
-RESUME_MAX_EVENTS = 50
+RESUME_MAX_EVENTS = 60
 
 log = logging.getLogger(__name__)
 
@@ -539,16 +539,8 @@ class Connection:
         This replays events to the connection.
         """
 
-        log.info("[resume] Resuming a connection...")
+        log.info('[resume] Resuming a connection')
 
-        self.resume_count += 1
-        # We shouldn't continue with clients that already did 10 resumes
-        if self.resume_count > 10:
-            await self.invalidate()
-            await self.ws.close(4001)
-            return
-
-        # get shit client sends
         token = data.get('token')
         session_id = data.get('session_id')
         replay_seq = data.get('seq')
@@ -600,18 +592,13 @@ class Connection:
         self.token = token
         self.session_id = session_id
         self.request_counter = self.server.request_counter[self.session_id]
-
-        if self.session_id not in self.server.event_cache:
-            self.server.event_cache[self.session_id] = {
-                'sent_seq': 0,
-                'recv_seq': 0,
-                'events': {},
-            }
-
+ 
         self.events = self.server.event_cache[self.session_id]
         self.server.add_connection(self.user.id, self)
 
         self.identified = True
+
+        await self.presence.global_update(self.user)
 
         await self.dispatch('RESUMED', {
             '_trace': self.get_identifiers('resume')
