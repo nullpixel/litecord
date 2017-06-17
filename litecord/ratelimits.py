@@ -15,7 +15,6 @@ class GatewayRatelimitModes:
 
 
 """
-
 Handy ratelimit table:
 
 
@@ -33,10 +32,47 @@ WS:
  |All Sent Messages| | 120/60s  | per-session
 """
 
+class RestBucket:
+    __slots__ = ('name', 'requests', 'seconds', 'global_rl', 'users')
+    def __init__(self, name, requests, seconds, global_rl=False):
+        self.name = name
+        self.requests = requests
+        self.seconds = seconds
+        self.global_rl = global_rl
+
+        self.users = {}
+
+    def ratelimit_headers(self. user_id: int):
+        return {
+            'X-Ratelimit-Limit': self.requests,
+            'X-Ratelimit-Remaining': self.remaining,
+            'X-Ratelimit-Reset': self.users.get(user_id).reset,
+        }
+
+    async def ratelimit_response(self, user_id):
+        """Returns a HTTP 429 Response.
+        
+        Parameters
+        ----------
+        user_id: int
+
+        """
+        headers = {
+            'X-Ratelimit-Global': self.global_rl,
+        }
+
+        headers.update(self.ratelimit_headers(user_id))
+
+        ratelimit_data = {
+            'message': 'You are being ratelimited.',
+            'retry_after': msec_wait,
+            'global': self.global_rl,
+        }
+
+        return _json(ratelimit_data, status=429, headers=headers)
+
 def ratelimit(requests=50, seconds=1, special_bucket=False):
     """Declare a ratelimited REST route.
-
-    TODO: actual ratelimits.
     """
 
     # NOTE: ratelimits here are the same as discord's
@@ -44,24 +80,29 @@ def ratelimit(requests=50, seconds=1, special_bucket=False):
     #  However I don't know how do we do per-user, do we do per-IP?
     #  Needs more thinking.
 
-    def decorator(func):
-        async def inner_func(endpoint, request):
-            server = endpoint.server
-            if not server.flags.get('rest_ratelimits', False):
-                return (await func(endpoint, request))
-
-            ratelimits = endpoint.server.rest_ratelimits
-            peername = request.transport.get_extra_info('peername')
-            if peername is not None:
-                host, port = peername
-            else:
-                log.warning("Request without client IP")
-
-            return (await func(endpoint, request))
-        return inner_func
+    def decorator(handler):
+        async def wrapped(endpoint, request):
+            return await handler(endpoint, request)
 
     return decorator
 
+def ratelimit(bucket_name='all'):
+    """Declare a ratelimited REST route/endpoint.
+    
+    Parameters
+    ----------
+    bucket_name: str
+        Ratelimit bucket name.
+    """
+
+    def decorator(handler):
+        async def wrapped(endpoint, request):
+            pass
+
+        wrapped.__doc__ = handler.__doc__
+        return wrapped
+
+    return decorator
 
 class WSBucket:
     """Websocket ratelimiting Bucket.
@@ -130,6 +171,9 @@ def ws_ratelimit(bucket_name='all'):
             conn.request_counter[bucket_name] += 1
 
             return result
+
+        inner_handler.__doc__ = handler.__doc__
+
         return inner_handler
     return decorator
 

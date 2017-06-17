@@ -83,6 +83,7 @@ def get_random_salt(size=32):
 def pwd_hash(plain, salt):
     return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
 
+
 def _err(msg='', errno=None, status_code=500):
     """Error object."""
     status_code = ERRNO_TO_HTTPERR.get(errno, status_code)
@@ -110,11 +111,19 @@ def dt_to_json(dt):
         return None
 
 
-def _json(obj):
+def _json(obj, **kwargs):
+    """Return a JSON response"""
+    headers = {aiohttp.hdrs.CONTENT_TYPE: 'application/json'},
+
+    if kwargs.get('headers'):
+        headers.update(kwargs.get('headers'))
+        kwargs.pop('headers')
+
     return web.Response(body=json.dumps(obj).encode(),
         text=None,
         charset=None,
-        headers={aiohttp.hdrs.CONTENT_TYPE: 'application/json'}
+        headers=headers,
+        **kwargs
     )
 
 
