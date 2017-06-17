@@ -42,7 +42,7 @@ class RestBucket:
 
         self.users = {}
 
-    def ratelimit_headers(self. user_id: int):
+    def ratelimit_headers(self, user_id: int):
         return {
             'X-Ratelimit-Limit': self.requests,
             'X-Ratelimit-Remaining': self.remaining,
