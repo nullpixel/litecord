@@ -430,6 +430,9 @@ class TextChannel(BaseChannel):
         The last message created in the channel.
 
     """
+
+    __slots__ = ('topic', 'last_message_id')
+
     def __init__(self, server, raw_channel, guild=None):
         super().__init__(server, raw_channel, guild)
 
@@ -498,7 +501,7 @@ class VoiceChannel(BaseChannel):
         Maximum number of users that can enter the channel.
     """
 
-    __slots__ = ('base', 'bitrate', 'user_limit')
+    __slots__ = ('bitrate', 'user_limit')
 
     def __init__(self, server, raw_channel, guild=None):
         super().__init__(server, raw_channel, guild)
