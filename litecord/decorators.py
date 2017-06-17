@@ -51,7 +51,7 @@ def auth_route(handler):
     async def inner_handler(endpoint, request):
         server = endpoint.server
         user = await user_from_request(server, request)
-        return do(handler, endpoint, request, user)
+        return await do(handler, endpoint, request, user)
 
     inner_handler.__doc__ = handler.__doc__
 

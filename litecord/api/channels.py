@@ -77,22 +77,15 @@ class ChannelsEndpoint:
         await self.server.presence.typing_start(user.id, channel_id)
         return web.Response(status=204)
 
-    @ratelimit(5, 5)
-    async def h_post_message(self, request):
+    @auth_route
+    async def h_post_message(self, request, user):
         """`POST /channels/{channel_id}/messages/`.
 
         Send a message.
         Dispatches MESSAGE_CREATE events to relevant clients.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
         channel_id = request.match_info['channel_id']
-        user = self.server._user(_error_json['token'])
-
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:
@@ -149,20 +142,14 @@ class ChannelsEndpoint:
 
         return _json(message.as_json)
 
-    @ratelimit(5, 5)
-    async def h_get_messages(self, request):
+    @auth_route
+    async def h_get_messages(self, request, user):
         """`GET /channels/{channel_id}/messages`.
 
         Returns a list of messages.
         """
 
-        _error = await self.server.check_request(request)
-        _error_json = json.loads(_error.text)
-        if _error_json['code'] == 0:
-            return _error
-
-        channel_id = request.match_info['channel_id']
-        user = self.server._user(_error_json['token'])
+        channel_id = request.match_info['channel_id'] 
         channel = self.server.guild_man.get_channel(channel_id)
 
         if channel is None:

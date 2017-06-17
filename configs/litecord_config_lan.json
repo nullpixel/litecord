@@ -1,0 +1,21 @@
+{
+    "server": {
+        "http": ["192.168.1.9", 8000],
+        "ws": ["192.168.1.9", 12000],
+        "voice_ws": ["192.168.1.9", 6969]
+    },
+    "ratelimits": {
+        "rest": true,
+        "ws": true,
+
+        "global_ws": [120, 60],
+        "global_rest": [50, 1]
+    },
+    "images": {
+        "local": true
+    },
+    "boilerplate.update": {
+        "user": false,
+        "guild": false
+    }
+}

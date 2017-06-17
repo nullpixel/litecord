@@ -2,6 +2,7 @@
 import logging
 import asyncio
 import json
+import sys
 
 import uvloop
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -29,9 +30,12 @@ app = web.Application()
 async def index(request):
     return web.Response(text='meme')
 
-def main():
-
-    flags = json.load(open('litecord_config.json', 'r'))
+def main():    
+    try:
+        config_path = sys.argv[1]
+    except IndexError:
+        config_path = 'litecord_config.json'
+    flags = json.load(open(config_path, 'r'))
 
     app.router.add_get('/', index)
 
