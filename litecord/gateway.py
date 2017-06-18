@@ -99,34 +99,54 @@ class Connection:
     ----------
     ws: `WebSocketServerProtocol`_
         The actual websocket connection.
+    options: dict
+        Websocket options, encoding, gateway version.
+    encoder: function
+        Encoder function that convers objects to the provided encoding over :attr:`Connection.options`
+    decoder: function
+        Decoder function that converts messages from the websocket to objects.
     events: dict
         If the connection is identified, this becomes a reference to
         `LitecordServer.event_cache[connection.user.id]`.
-    token: str
+    hb_interval: int
+        Amount, in milliseconds, of the client's heartbeat period.
+    wait_task: `asyncio.Task`
+        :meth:`Connection.hb_wait_task`.
+    token: str or None
         The token this connection is using.
+    session_id: str or None
+        The session ID this connection is using.
     identified: bool
         Connection had a successful `IDENTIFY` or not.
     properties: dict
         Connection properties like OS, browser and the large_threshold.
+    ratelimit_tasks: dict
+        Tasks that clean the specified ratelimit bucket in a period of time.
+    request_counter: dict
+        A request counter for ratelimit buckets.
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
     raw_user: dict
         Same as :attr:`user`, but it is a raw user object.
+    op_handlers: dict
+        OP handlers, they get called from :meth:`Connection.process_recv`
     """
     def __init__(self, server, ws, options):
         self.ws = ws
         self.options = options
 
+        # Encoder and decoder for JSON/ETF, JSON by default
         self.encoder = json_encoder
         self.decoder = json_decoder
 
-        # Last sequence sent by the client and last sequence received by the client
-        # will be here
+        # Last sequence sent by the client, last sequence received by it, and a registry of dispatched events are here
         self.events = None
+
+        # Client's heartbeat interval, chose at random between 40 and 42sec
         self.hb_interval = random.randint(HB_MIN_MSEC, HB_MAX_MSEC)
         self.wait_task = None
 
-        # some stuff
+        # Things that properly identify the client
         self.token = None
         self.session_id = None
         self.compress_flag = False
@@ -136,12 +156,11 @@ class Connection:
         self.ratelimit_tasks = {}
         self.request_counter = {} 
 
-        # flags
+        # some flags for the client etc
         self.identified = False
-        self.resume_count = 0
         # TODO: self.replay_lock = asyncio.Lock()
 
-        # user objects
+        # user objects, filled oncce the client is identified
         self.user = None
         self.raw_user = None
 
