@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3.6
 """
 eval.py - Evaluate code in a litecord server.
 """
