@@ -37,7 +37,7 @@ Limitations:
    guild
    presence
    objects
-
+   config
 
 
 Indices and tables
