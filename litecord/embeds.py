@@ -123,7 +123,7 @@ class Embed(LitecordObject):
         self.description = raw_embed.get('description')
         self.url = raw_embed.get('url')
         self.timestamp = datetime.datetime.now()
-        self.color = raw_embed.get('color')
+        self.color = raw_embed.get('color', 0)
 
         _get = lambda field: raw_embed.get(field, {})
 

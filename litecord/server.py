@@ -555,8 +555,7 @@ class LitecordServer:
             self.presence = PresenceManager(self)
 
             log.debug('[init] EmbedManager')
-            self.embed = EmbedManager(self)
-            self.embed.init(app)
+            self.embed = EmbedManager(self) 
 
             log.debug('[init] VoiceManager')
             self.voice = VoiceManager(self)

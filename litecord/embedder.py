@@ -19,10 +19,7 @@ class EmbedManager:
             'xkcd.com': self.xkcd_parser,
         }
 
-    def init(self, app):
-        _r = app.router
-
-        _r.add_get('/embed', self.h_get_embed)
+        self.server.add_get('embed', self.h_get_embed)
 
     async def h_get_embed(self, request):
         """Convert a page to an embed object."""
@@ -37,8 +34,9 @@ class EmbedManager:
 
             try:
                 return _json(em.as_json)
-            except:
-                return _err(f"Error converting to embed({em!r}).")
+            except Exception as err:
+                log.error('Error generating embed', exc_info=True)
+                return _err(f"Error converting to embed({em!r}, {err!r}).")
 
         return _json(self.cache[url].as_json)
 

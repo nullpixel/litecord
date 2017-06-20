@@ -113,9 +113,9 @@ def dt_to_json(dt):
 
 def _json(obj, **kwargs):
     """Return a JSON response"""
-    headers = {aiohttp.hdrs.CONTENT_TYPE: 'application/json'},
+    headers = {aiohttp.hdrs.CONTENT_TYPE: 'application/json'}
 
-    if kwargs.get('headers'):
+    if kwargs.get('headers') is not None:
         headers.update(kwargs.get('headers'))
         kwargs.pop('headers')
 
