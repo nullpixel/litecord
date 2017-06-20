@@ -38,7 +38,7 @@ Limitations:
    presence
    objects
    config
-
+   embeds
 
 Indices and tables
 ==================

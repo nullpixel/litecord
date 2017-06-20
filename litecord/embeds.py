@@ -120,7 +120,8 @@ class EmbedProvider(LitecordObject):
 class EmbedAuthor(LitecordObject):
     """Embed author.
     
-    Attributes:
+    Attributes
+    ----------
     name: str
         Author's name.
     url: str
@@ -205,9 +206,9 @@ class Embed(LitecordObject):
     fields: List[:class:`EmbedField`]
         Embed fields.
     """
-    
-    __slots__ = ('_data', 'title', 'embed_type', 'description', 'url', 'timestamp',
-        'color', 'footer', 'image', 'thumbnail', 'video', 'provider', 'author', 'fields')
+
+    #__slots__ = ('_data', 'title', 'embed_type', 'description', 'url', 'timestamp',
+    #    'color', 'footer', 'image', 'thumbnail', 'video', 'provider', 'author', 'fields')
 
     def __init__(self, server, raw_embed):
         LitecordObject.__init__(self, server)
