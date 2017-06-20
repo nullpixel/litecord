@@ -7,6 +7,15 @@ from .utils import dt_to_json
 log = logging.getLogger(__name__)
 
 class EmbedFooter(LitecordObject):
+    """Embed footer.
+    
+    Attributes
+    ----------
+    url: str
+        Footer URL.
+    text: str
+        Footer text.
+    """
     def __init__(self, _data):
         self.url = _data.get('icon_url')
         self.text = _data.get('text')
@@ -19,6 +28,21 @@ class EmbedFooter(LitecordObject):
         }
 
 class EmbedImage(LitecordObject):
+    """Embed image.
+    
+    Attributes
+    ----------
+    _data: dict
+        Raw embed image object.
+    url: str
+        Image URL.
+    proxy_url: str
+        Proxied Image URL(through litecord image server).
+    height: int
+        Image height.
+    width: int
+        Image width.
+    """
     def __init__(self, _data):
         self._data = _data
         self.url = _data.get('url')
@@ -36,6 +60,21 @@ class EmbedImage(LitecordObject):
         }
 
 class EmbedThumbnail(LitecordObject):
+    """Embed thumbnail.
+    
+    Attributes
+    ----------
+    _data: dict
+        Raw embed thumbnail.
+    url: str
+        Thumbnail URL.
+    proxy_url: str
+        Thumbnail URL (proxied through image system).
+    height: int
+        Thumbnail height.
+    width: int
+        Thumbnail width.
+    """
     def __init__(self, _data):
         self._data = _data
         self.url = _data.get('url')
@@ -79,6 +118,18 @@ class EmbedProvider(LitecordObject):
         }
 
 class EmbedAuthor(LitecordObject):
+    """Embed author.
+    
+    Attributes:
+    name: str
+        Author's name.
+    url: str
+        Author's URL.
+    icon_url: str
+        Author icon's URL.
+    proxy_icon_url: str
+        Author icon's URL(proxied through image system).
+    """
     def __init__(self, _data):
         self.name = _data.get('name')
         self.url = _data.get('url')
@@ -95,6 +146,18 @@ class EmbedAuthor(LitecordObject):
         }
 
 class EmbedField(LitecordObject):
+    """Simple embed field
+    
+    Attributes
+    ----------
+    name: str
+        Field name.
+    value: str
+        Field value.
+    inline: bool
+        If the field is inline or not.
+
+    """
     def __init__(self, _data):
         self.name = _data.get('name')
         self.value = _data.get('value')
@@ -111,9 +174,40 @@ class EmbedField(LitecordObject):
 class Embed(LitecordObject):
     """A general embed object.
 
-    Attributes:
-        _data: Raw embed object.
+    Attributes
+    ----------
+    _data: dict
+        Raw embed object.
+    title: str
+        Embed title.
+    embed_type: str
+        Should be ``"rich"``.
+    description: str
+        Embed description.
+    url: str
+        Embed URL.
+    timestamp: `datetime.datetime`
+        Embed timestamp.
+    color: int
+        Embed color.
+    footer: :class:`EmbedFooter`
+        Embed footer.
+    image: :class:`EmbedImage`
+        Embed image.
+    thumbnail: :class:`EmbedThumbnail`
+        Embed thumbnail.
+    video: :class:`EmbedVideo`
+        Embed video.
+    provider: :class:`EmbedProvider`
+        Embed provider.
+    author: :class:`EmbedAuthor`
+        Embed author.
+    fields: List[:class:`EmbedField`]
+        Embed fields.
     """
+    
+    __slots__ = ('_data', 'title', 'embed_type', 'description', 'url', 'timestamp',
+        'color', 'footer', 'image', 'thumbnail', 'video', 'provider', 'author', 'fields')
 
     def __init__(self, server, raw_embed):
         LitecordObject.__init__(self, server)

@@ -11,6 +11,20 @@ from .utils import _json, _err
 log = logging.getLogger(__name__)
 
 class EmbedManager:
+    """The embed manager.
+    
+    This class manages embed endpoints, used by clients
+    to draw an embed from an unknown website.
+
+    Attributes
+    ----------
+    server: :class:`LitecordServer`
+        Server instance.
+    cache: dict
+        Embed cache.
+    parsers: dict
+        URL-to-Embed conerters.
+    """
     def __init__(self, server):
         self.server = server
         self.cache = {}
@@ -41,16 +55,19 @@ class EmbedManager:
         return _json(self.cache[url].as_json)
 
     async def soupify(self, url):
+        """Get a BeautifulSoup object from a url."""
         async with aiohttp.ClientSession() as sess:
             async with sess.get(url) as resp:
                 return BeautifulSoup(await resp.text())
 
     async def get(self, url):
+        """Get stuff."""
         async with aiohttp.ClientSession() as sess:
             async with sess.get(url) as resp:
                 return resp
 
-    async def xkcd_parser(self, urlobj):
+    async def xkcd_parser(self, urlobj) -> Embed:
+        """Parse XKCD urls into XKCD embeds."""
         full_url = urlobj.geturl()
         xkcd_number = urlobj.path[1:]
 
@@ -80,7 +97,19 @@ class EmbedManager:
 
         return em
 
-    async def url_to_embed(self, url):
+    async def url_to_embed(self, url: str) -> Embed:
+        """Convert a URL to an Embed object
+        
+        Parameters
+        ---------
+        url: str
+            The URL that is going to be converted into an :class:`Embed` object.
+
+        Returns
+        -------
+        Embed
+            The embed object from the URL.
+        """
         if url in self.cache:
             return self.cache[url]
 
