@@ -4,7 +4,7 @@ from .snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
-class RelationManager:
+class RelationsManager:
     """Relationship manager.
 
     Manages relationships between users.
@@ -19,7 +19,7 @@ class RelationManager:
 
         self.relationships = {}
 
-    async def get_relationships(self, user_id):
+    async def get_relationships(self, user_id: int):
         return []
 
     async def add_relation(self, user, other, raw_relation):

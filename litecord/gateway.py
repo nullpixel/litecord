@@ -15,7 +15,6 @@ import collections
 import urllib.parse as urlparse
 
 import websockets
-import earl
 
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
@@ -35,6 +34,11 @@ HB_MAX_MSEC = 42000
 RESUME_MAX_EVENTS = 60
 
 log = logging.getLogger(__name__)
+
+try:
+    import earl
+except ImportError:
+    log.warning(f"Earl-ETF not found, ETF support won't work")
 
 SERVERS = {
     'hello': [f'litecord-hello-{random.randint(1, 99)}'],
@@ -239,6 +243,7 @@ class Connection:
         Returns
         -------
         any
+            The payload received.
         """
 
         raw_data = await self.ws.recv()
@@ -270,18 +275,19 @@ class Connection:
         return (await self.send_payload(payload))
 
     def _register(self, sent_seq, payload):
+        """Register a sent payload."""
         self.events['events'][sent_seq] = payload
         self.events['sent_seq'] = sent_seq
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
 
-        Saves the packet in the `LitecordServer`'s event cache.
+        Saves the packet in the `LitecordServer`'s event cache(:meth:`LitecordServer.events`).
 
         Parameters
         ----------
         evt_name: str
-            Follows the same pattern as Discord's event names
+            Follows the same pattern as Discord's event names.
         evt_data: any
             Any JSON serializable object.
             If this has an `as_json` attribute, it gets called.
@@ -314,12 +320,15 @@ class Connection:
 
         amount = None
 
+        # dude fuck discord.js (2)
+        # This compress_flag is required to be used only on READY
+        # because d.js is weird with its compression and ETF at the same time.
         if evt_name == 'READY':
             amount = await self.send_payload(payload, self.compress_flag)
-            log.info(f"READY: Sent {amount} bytes, compress={self.compress_flag}")
         else:
             amount = await self.send_payload(payload)
 
+        log.info(f'[dispatch] {evt_name}: {amount} bytes, compress={self.compress_flag}')
         self._register(sent_seq, payload)
         return amount
 
@@ -362,6 +371,16 @@ class Connection:
         return True
 
     async def check_token(self, token):
+        """Check if a token is valid and can be used for proper authentication.
+        
+        Returns
+        -------
+        tuple
+            with 3 items:
+            - A boolean describing the success of the operation,
+            - A raw user object(:py:meth:`None` if operation failed),
+            - A :class:`User` object(:py:meth:`None` if operation failed).
+        """
         token_user_id = await self.server.token_find(token)
         if token_user_id is None:
             log.warning("Token not found")
@@ -382,10 +401,8 @@ class Connection:
         Checks if the token given in the packet is valid, and if it is,
         dispatched a READY event.
 
-        Parameters
-        ----------
-        data: dict
-            https://discordapp.com/developers/docs/topics/gateway#gateway-identify
+        Information on the input payload is at:
+        https://discordapp.com/developers/docs/topics/gateway#gateway-identify
         """
         if self.identified:
             await self.ws.close(4005, 'Already authenticated')
@@ -459,8 +476,8 @@ class Connection:
             'private_channels': [],
 
             # discord.js why u use undocumented shit
-            'relationships': [],
-            'user_settings': {},
+            'relationships': await self.relations.get_relationships(self.user.id),
+            'user_settings': await self.settings.get_settings(self.user.id),
 
             'guilds': guild_list,
             'session_id': self.session_id,

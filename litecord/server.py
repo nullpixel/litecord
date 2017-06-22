@@ -17,6 +17,8 @@ from .images import Images
 from .embedder import EmbedManager
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
+from .user_settings import SettingsManager
+from .relations import RelationsManager
 
 log = logging.getLogger(__name__)
 
@@ -116,13 +118,15 @@ class LitecordServer:
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client['litecord']
 
-        self.message_db =   self.litecord_db['messages']
-        self.user_db =      self.litecord_db['users']
-        self.guild_db =     self.litecord_db['gulids']
-        self.token_db =     self.litecord_db['tokens']
-        self.invite_db =    self.litecord_db['invites']
-        self.member_db =    self.litecord_db['members']
-        self.presence_db =  self.litecord_db['presences']
+        self.message_db = self.litecord_db['messages']
+        self.user_db = self.litecord_db['users']
+        self.guild_db = self.litecord_db['gulids']
+        self.token_db = self.litecord_db['tokens']
+        self.invite_db = self.litecord_db['invites']
+        self.member_db = self.litecord_db['members']
+        self.presence_db = self.litecord_db['presences']
+    
+        self.settings_coll = self.litecord_db['settings']
 
         # cache for events
         self.event_cache = collections.defaultdict(empty_ev_cache)
@@ -581,14 +585,20 @@ class LitecordServer:
             self.voice = VoiceManager(self)
             self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
 
-            log.debug('[init] declaring routes')
-            self.users_endpoint =       users.UsersEndpoint(self, app)
-            self.guilds_endpoint =      guilds.GuildsEndpoint(self, app)
-            self.channels_endpoint =    channels.ChannelsEndpoint(self, app)
-            self.invites_endpoint =     invites.InvitesEndpoint(self, app)
-            self.images_endpoint =      imgs.ImageEndpoint(self, app)
-            self.admins_endpoint =      admin.AdminEndpoints(self, app)
-            self.auth_endpoint =        auth.AuthEndpoints(self, app)
+            log.debug('[init] SettingsManager')
+            self.settings = SettingsManager(self)
+
+            log.debug('[init] RelationsManager')
+            self.relations = RelationsManager(self)
+
+            log.debug('[init] endpoints')
+            self.users_endpoint = api.users.UsersEndpoint(self)
+            self.guilds_endpoint = api.guilds.GuildsEndpoint(selfp)
+            self.channels_endpoint = api.channels.ChannelsEndpoint(self)
+            self.invites_endpoint = api.invites.InvitesEndpoint(self)
+            self.images_endpoint = api.imgs.ImageEndpoint(self)
+            self.admins_endpoint = api.admin.AdminEndpoints(self)
+            self.auth_endpoint = api.auth.AuthEndpoints(self)
 
             # setup internal handlers
             self.add_get('version', self.h_get_version)

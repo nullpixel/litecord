@@ -1,6 +1,7 @@
 GATEWAY_VERSION = 69
 
 class OP:
+    """Gateway OP codes."""
     DISPATCH = 0
     HEARTBEAT = 1
     IDENTIFY = 2
@@ -20,6 +21,10 @@ class OP:
     GUILD_SYNC = 12
 
 class VOICE_OP:
+    """Voice OP codes.
+    
+    These OP codes are used in the Voice Websocket.
+    """
     IDENTIFY = 0
     SELECT_PROTOCOL = 1
     READY = 2
