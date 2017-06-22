@@ -16,6 +16,8 @@ import urllib.parse as urlparse
 
 import websockets
 
+from voluptuous import Schema, Optional, REMOVE_EXTRA
+
 from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
@@ -53,6 +55,13 @@ def random_sid():
 
 
 async def decode_dict(data):
+    """Decode a dictionary that all strings are in `bytes` type.
+    
+    Returns
+    -------
+    dict
+        The decoded dictionary with all strings in UTF-8.
+    """
     if isinstance(data, bytes):
         return str(data, 'utf-8')
     elif isinstance(data, dict):
@@ -191,6 +200,15 @@ class Connection:
             OP.GUILD_SYNC: self.guild_sync_handler,
         }
 
+        # identify schema
+        _o = Optional
+        self.identify_schema = Schema({
+            'token': str,
+            'properties': dict,
+            _o('compress'): bool,
+            'large_threshold': int,
+        }, extra=REMOVE_EXTRA)
+
     def __repr__(self):
         return f'Connection(sid={self.session_id} u={self.user!r})'
 
@@ -223,6 +241,13 @@ class Connection:
 
     async def send_payload(self, payload, compress=False):
         """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON).
+
+        Parameters
+        ----------
+        payload: any
+            Payload to be sent through the websocket.
+        compress: bool
+            If this payload will be zlib compressed before sending.
 
         Returns
         -------
@@ -375,7 +400,7 @@ class Connection:
         self.wait_task = self.server.loop.create_task(self.hb_wait_task())
         return True
 
-    async def check_token(self, token):
+    async def check_token(self, token: str) -> tuple:
         """Check if a token is valid and can be used for proper authentication.
         
         Returns
@@ -413,16 +438,17 @@ class Connection:
             await self.ws.close(4005, 'Already authenticated')
             return
 
-        token = data.get('token')
-        prop = data.get('properties')
-        large = data.get('large_threshold')
-        self.compress_flag = data.get('compress', False)
+        try:
+            data = self.identify_schema(data)
+        except Exception as err:
+            log.warning(f'Erroneous IDENTIFY: {err!r}')
+            await self.ws.close(4001, f'Erroneous IDENTIFY: {err!r}')
+            return False
 
-        # check if the client isn't trying to fuck us over
-        if (token is None) or (prop is None) or (large is None):
-            log.warning('Erroneous IDENTIFY')
-            await self.ws.close(4001, 'Erroneous IDENTIFY')
-            return
+        token = data['token']
+        prop = data['properties']
+        large = data['large_threshold']
+        self.compress_flag = data.get('compress', False)
 
         valid, user_object, user = await self.check_token(token)
         if not valid:
