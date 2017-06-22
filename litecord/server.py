@@ -7,11 +7,12 @@ import collections
 
 import motor.motor_asyncio
 
+import litecord.api as api
+
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
 from .voice import VoiceManager
-from .api import users, guilds, channels, imgs, invites, admin, auth
 from .objects import User
 from .images import Images
 from .embedder import EmbedManager
@@ -127,6 +128,7 @@ class LitecordServer:
         self.presence_db = self.litecord_db['presences']
     
         self.settings_coll = self.litecord_db['settings']
+        self.relations_coll = self.litecord_db['relations']
 
         # cache for events
         self.event_cache = collections.defaultdict(empty_ev_cache)
@@ -162,7 +164,7 @@ class LitecordServer:
             'identify': WSBucket('identify', requests=1, seconds=5, mode=close)
         }
 
-    def add_connection(self, user_id: int, conn: Connection):
+    def add_connection(self, user_id: int, conn):
         """Add a connection and tie it to a user.
 
         Parameters
@@ -239,7 +241,6 @@ class LitecordServer:
                     data = json.load(f)
                 except:
                     log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
-                data = json.loads(f.read())
 
             db_to_update = getattr(self, f'{key}_db')
 
@@ -592,13 +593,13 @@ class LitecordServer:
             self.relations = RelationsManager(self)
 
             log.debug('[init] endpoints')
-            self.users_endpoint = api.users.UsersEndpoint(self)
-            self.guilds_endpoint = api.guilds.GuildsEndpoint(selfp)
-            self.channels_endpoint = api.channels.ChannelsEndpoint(self)
-            self.invites_endpoint = api.invites.InvitesEndpoint(self)
-            self.images_endpoint = api.imgs.ImageEndpoint(self)
-            self.admins_endpoint = api.admin.AdminEndpoints(self)
-            self.auth_endpoint = api.auth.AuthEndpoints(self)
+            self.users_endpoint = api.UsersEndpoint(self)
+            self.guilds_endpoint = api.guilds.GuildsEndpoint(self)
+            self.channels_endpoint = api.ChannelsEndpoint(self)
+            self.invites_endpoint = api.InvitesEndpoint(self)
+            self.images_endpoint = api.ImageEndpoint(self)
+            self.admins_endpoint = api.AdminEndpoints(self)
+            self.auth_endpoint = api.AuthEndpoints(self)
 
             # setup internal handlers
             self.add_get('version', self.h_get_version)

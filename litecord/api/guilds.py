@@ -18,7 +18,7 @@ class GuildsEndpoint:
         Schema for guild create payloads.
 
     """
-    def __init__(self, server, app):
+    def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
 
@@ -50,9 +50,9 @@ class GuildsEndpoint:
             _o('permission_overwrites'): list,
         }, required=True, extra=REMOVE_EXTRA)
 
-        self.register(app)
+        self.register()
 
-    def register(self, app):
+    def register(self):
         self.server.add_get('guilds/{guild_id}', self.h_guilds)
         self.server.add_get('guilds/{guild_id}/channels', self.h_get_guild_channels)
         self.server.add_get('guilds/{guild_id}/members/{user_id}', self.h_guild_one_member)

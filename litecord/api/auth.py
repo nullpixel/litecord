@@ -10,9 +10,9 @@ log = logging.getLogger(__name__)
 
 class AuthEndpoints:
     """Handle authentication endpoints."""
-    def __init__(self, server, app):
+    def __init__(self, server):
         self.server = server
-        self.register(app)
+        self.register(server.app)
 
         self.login_schema = Schema({
             'email': str,

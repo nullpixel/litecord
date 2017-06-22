@@ -8,7 +8,7 @@ from ..decorators import auth_route
 log = logging.getLogger(__name__)
 
 class InvitesEndpoint:
-    def __init__(self, server, app):
+    def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
 
@@ -19,7 +19,7 @@ class InvitesEndpoint:
             Required('unique', default=True): bool,
         }, extra=REMOVE_EXTRA)
 
-        self.register(app)
+        self.register(server.app)
 
     def register(self, app):
         self.server.add_get('invites/{invite_code}', self.h_get_invite)

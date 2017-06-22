@@ -13,13 +13,13 @@ from ..decorators import auth_route
 log = logging.getLogger(__name__)
 
 class UsersEndpoint:
-    def __init__(self, server, app):
+    def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
 
-        self.register(app)
+        self.register()
 
-    def register(self, app):
+    def register(self):
         self.server.add_get('users/{user_id}', self.h_users)
 
         self.server.add_patch('users/@me', self.h_patch_me)

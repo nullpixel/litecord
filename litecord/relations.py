@@ -15,8 +15,7 @@ class RelationsManager:
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
-        self.relation_db = server.relation_db
-
+        self.relations_coll = server.relations_coll
         self.relationships = {}
 
     async def get_relationships(self, user_id: int):

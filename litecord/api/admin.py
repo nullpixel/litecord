@@ -31,11 +31,11 @@ class AdminEndpoints:
     as an admin user.
     """
 
-    def __init__(self, server, app):
+    def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
         self._last_result = None
-        self.register(app)
+        self.register(server.app)
 
     def register(self, app):
         self.server.add_get('count', self.h_get_counts)
