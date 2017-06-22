@@ -172,6 +172,8 @@ class Connection:
         self.server = server
         self.guild_man = server.guild_man
         self.presence = server.presence
+        self.relations = server.relations
+        self.settings = server.settings
 
         # OP handlers
         self.op_handlers = {
@@ -298,6 +300,9 @@ class Connection:
 
         if hasattr(evt_data, 'as_json'):
             evt_data = evt_data.as_json
+
+        if isinstance(evt_data, dict):
+            log.warning('Sending something that isnt a dictionary')
 
         try:
             sent_seq = self.events['sent_seq']
@@ -466,9 +471,11 @@ class Connection:
 
             guild_list.append(guild_json)
 
-        stripped_user = strip_user_data(self.raw_user)
+        log.info("READY: New session %s, sending %d guilds", self.session_id, len(guild_list)) 
 
-        log.info("New session %s, sending %d guilds", self.session_id, len(guild_list)) 
+        stripped_user = strip_user_data(self.raw_user)
+        user_settings = await self.settings.get_settings(self.user.id)
+        user_relationships = await self.relations.get_relationships(self.user.id)
 
         ready_packet = {
             'v': self.options['v'],
@@ -476,8 +483,8 @@ class Connection:
             'private_channels': [],
 
             # discord.js why u use undocumented shit
-            'relationships': await self.relations.get_relationships(self.user.id),
-            'user_settings': await self.settings.get_settings(self.user.id),
+            'relationships': user_relationships,
+            'user_settings': user_settings,
 
             'guilds': guild_list,
             'session_id': self.session_id,
@@ -487,7 +494,7 @@ class Connection:
         # If its a bot, we send unavailable guilds on READY
         # and then dispatch GUILD_CREATE events for every guild
         if self.raw_user['bot']:
-            ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list],
+            ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list]
 
             await self.dispatch('READY', ready_packet)
             for raw_guild in guild_list:

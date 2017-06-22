@@ -24,7 +24,7 @@ class SettingsManager:
         user_id: int
             User ID to be get settings from.
         """
-        settings = self.settings_coll.find_one({'user_id': user_id})
+        settings = await self.settings_coll.find_one({'user_id': user_id})
         if settings is None:
             settings = {}
         return settings
