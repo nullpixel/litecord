@@ -158,7 +158,7 @@ class LitecordServer:
             'identify': WSBucket('identify', requests=1, seconds=5, mode=close)
         }
 
-    def add_connection(self, user_id, conn):
+    def add_connection(self, user_id: int, conn: Connection):
         """Add a connection and tie it to a user.
 
         Parameters
@@ -174,8 +174,14 @@ class LitecordServer:
         self.connections[user_id].append(conn)
         self.sessions[conn.session_id] = conn
 
-    def remove_connection(self, session_id):
-        """Remove a connection from the connection table."""
+    def remove_connection(self, session_id: str):
+        """Remove a connection from the connection table.
+        
+        Parameters
+        ----------
+        session_id: str
+            Session ID of the connection to be removed.
+        """
         session_id = str(session_id)
 
         try:
@@ -212,7 +218,12 @@ class LitecordServer:
         return len(self.connections[user_id])
 
     async def boilerplate_init(self):
-        """Load boilerplate data."""
+        """Load boilerplate data.
+        
+        If the ``boilerplate.update`` config flag is set to ``True`` for each
+        field, this function overwrites the boilerplate data with the
+        current data, ignores if set to ``False``.
+        """
 
         b_flags = self.flags.get('boilerplate.update')
 
@@ -220,6 +231,10 @@ class LitecordServer:
             path = BOILERPLATES[key]
             data = None
             with open(path, 'r') as f:
+                try:
+                    data = json.load(f)
+                except:
+                    log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
                 data = json.loads(f.read())
 
             db_to_update = getattr(self, f'{key}_db')
@@ -239,7 +254,7 @@ class LitecordServer:
     async def load_users(self):
         """Load users database using MongoDB.
 
-        Creates the ``id->raw_user`` and ``id->user`` caches in :meth:`LitecordServer.cache`.
+        Creates the ``'id->raw_user'`` and ``'id->user'`` caches in :attr:`LitecordServer.cache`.
         """
 
         # create cache objects
@@ -274,8 +289,9 @@ class LitecordServer:
         log.info(f"Loaded {len(all_users)} users")
 
     async def userdb_update(self):
-        """Update the server's user cache.
+        """Update the server's user cache with new data from the database.
 
+        Only updates if actually required(differences between cache and database greater than 0).
         Dispatches USER_UPDATE events to respective clients.
         """
         cursor = self.user_db.find()
@@ -346,11 +362,11 @@ class LitecordServer:
         return self.get_user(user_id)
 
     # token helper functions
-    async def token_userid(self, user_id):
+    async def token_userid(self, user_id: str):
         """Find a token from a user's ID."""
         return (await self.token_db.find_one({'user_id': str(user_id)}))
 
-    async def token_find(self, token):
+    async def token_find(self, token: str):
         """Return a user ID from a token."""
         res = await self.token_db.find_one({'token': str(token)})
         try:
@@ -359,12 +375,12 @@ class LitecordServer:
             log.warning("No object found")
             return None
 
-    async def token_used(self, token):
+    async def token_used(self, token: str) -> bool:
         """Returns `True` if the token is alredy used by other account."""
         obj = await self.token_find(token)
         return bool(obj)
 
-    async def token_unregister(self, token):
+    async def token_unregister(self, token: str) -> bool:
         """Detach a token from a user."""
         if token is None:
             return True
@@ -372,14 +388,18 @@ class LitecordServer:
         res = await self.token_db.delete_one({'token': str(token)})
         return res.deleted_count > 0
 
-    async def token_register(self, token, user_id):
+    async def token_register(self, token: str, user_id: str) -> bool:
         """Attach a token to a user."""
         log.info(f"Registering {token} to {user_id}")
-        res = self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
-        return res
+        res = await self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
+        return res.acknowledged
 
-    async def check(self):
-        """Returns a dictionary with check data."""
+    async def check(self) -> dict:
+        """Returns a dictionary with self-checking data.
+        
+        Used to determine the state of the server with:
+         - Mongo ping
+        """
 
         report = {
             'good': True
@@ -460,7 +480,7 @@ class LitecordServer:
 
         return token_value
 
-    async def get_discrim(self, username):
+    async def get_discrim(self, username: str) -> str:
         """Generate a discriminator from a username."""
 
         cursor = self.user_db.find({
@@ -484,8 +504,8 @@ class LitecordServer:
                 log.info(f'[discrim] Generated discrim {discrim!r} for {username!r}')
                 return discrim
 
-    async def make_counts(self):
-        """Return a dictionary with some counts."""
+    async def make_counts(self) -> dict:
+        """Return a dictionary with some counts about the server."""
         return {
             'user_count': len(self.cache['id->raw_user']),
             'guild_count': len(self.guild_man.guilds),
