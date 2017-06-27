@@ -215,7 +215,7 @@ class Connection:
     def get_identifiers(self, module):
         return SERVERS.get(module, ['litecord-general-1'])
 
-    def basic_hello(self):
+    def basic_hello(self) -> dict:
         """Returns a JSON serializable OP 10 Hello packet."""
         return {
             'op': OP.HELLO,
@@ -225,8 +225,11 @@ class Connection:
             }
         }
 
-    def gen_sessid(self):
-        """Generate a new Session ID."""
+    def gen_sessid(self) -> str:
+        """Generate a new Session ID.
+        
+        Tries to generate available session ids, if it reaches MAX_TRIES, returns `None`.
+        """
         tries = 0
 
         new_id = random_sid()
@@ -239,7 +242,7 @@ class Connection:
 
         return new_id
 
-    async def send_payload(self, payload, compress=False):
+    async def send_payload(self, payload, compress=False) -> int:
         """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON).
 
         Parameters
@@ -317,7 +320,7 @@ class Connection:
             Follows the same pattern as Discord's event names.
         evt_data: any
             Any JSON serializable object.
-            If this has an `as_json` attribute, it gets called.
+            If this has an `as_json` property, it gets called.
         """
 
         if evt_data is None:
@@ -326,14 +329,11 @@ class Connection:
         if hasattr(evt_data, 'as_json'):
             evt_data = evt_data.as_json
 
-        if isinstance(evt_data, dict):
-            log.warning('Sending something that isnt a dictionary')
-
         try:
             sent_seq = self.events['sent_seq']
         except:
             log.warning("[dispatch] can't dispatch event to unidentified connection")
-            return
+            return 0
 
         sent_seq += 1
 
@@ -358,7 +358,7 @@ class Connection:
         else:
             amount = await self.send_payload(payload)
 
-        log.info(f'[dispatch] {evt_name}: {amount} bytes, compress={self.compress_flag}')
+        log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.compress_flag}')
         self._register(sent_seq, payload)
         return amount
 
@@ -394,7 +394,7 @@ class Connection:
         try:
             self.events['recv_seq'] = data
         except:
-            log.warning("Received OP 1 Heartbeat from unidentified connection")
+            pass
 
         await self.send_op(OP.HEARTBEAT_ACK, {})
         self.wait_task = self.server.loop.create_task(self.hb_wait_task())
@@ -480,12 +480,10 @@ class Connection:
 
         self.identified = True
 
-        all_guild_list = self.guild_man.get_guilds(self.user.id)
-
         # the actual list of guilds to be sent to the client
         guild_list = []
 
-        for guild in all_guild_list:
+        for guild in self.guild_man.yield_guilds(self.user.id):
             if not self.is_atomic:
                 guild.mark_watcher(self.user.id)
 

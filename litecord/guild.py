@@ -102,6 +102,12 @@ class GuildManager:
         return [self.guilds[guild_id] for guild_id in self.guilds \
             if user_id in self.guilds[guild_id].member_ids]
 
+    def yield_guilds(self, user_id):
+        """Yield all Guilds a user is on."""
+        for guild_id, guild in self.guilds.items():
+            if user_id in guild.member_ids:
+                yield guild
+
     def get_invite(self, invite_code):
         """Get an :class:`Invite` object."""
         return self.invites.get(invite_code)
@@ -157,7 +163,7 @@ class GuildManager:
         message = Message(self.server, channel, raw)
 
         result = await self.message_db.insert_one(message.as_db)
-        log.info(f"Adding message with id {result.inserted_id!r}")
+        log.info(f'Adding message with id {message.as_db["id"]}')
 
         self.messages[message.id] = message
         await channel.dispatch('MESSAGE_CREATE', message.as_json)
