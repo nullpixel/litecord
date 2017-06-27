@@ -74,7 +74,7 @@ class ChannelsEndpoint:
         if user.id not in channel.guild.members:
             return _err(errno=40001)
 
-        await self.server.presence.typing_start(user.id, channel_id)
+        self.server.loop.create_task(self.server.presence.typing_start(user.id, channel.id))
         return web.Response(status=204)
 
     @auth_route

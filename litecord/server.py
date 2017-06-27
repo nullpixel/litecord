@@ -6,6 +6,7 @@ import subprocess
 import collections
 
 import motor.motor_asyncio
+from aiohttp import web
 
 import litecord.api as api
 
@@ -518,12 +519,30 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
+    def make_options_handler(self, method):
+        headers = {
+            'Access-Control-Allow-Origin': 'http://127.0.0.1',
+            'Access-Control-Allow-Methods': method,
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        }
+
+        async def options_handler(request):
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
+            return web.Response(status=200, body='', headers=headers)
+
+        return options_handler
+
+    def add_empty(self, route, method):
+        self.app.router.add_route('OPTIONS', route, self.make_options_handler(method))
+
     def add_get(self, route_path, route_handler):
         _r = self.app.router
 
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_get(route, route_handler)
+            self.add_empty(route, 'GET')
 
     def add_post(self, route_path, route_handler):
         _r = self.app.router
@@ -531,6 +550,7 @@ class LitecordServer:
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_post(route, route_handler)
+            self.add_empty(route, 'POST')
 
     def add_put(self, route_path, route_handler):
         _r = self.app.router
@@ -538,6 +558,7 @@ class LitecordServer:
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_put(route, route_handler)
+            self.add_empty(route, 'PUT')
 
     def add_patch(self, route_path, route_handler):
         _r = self.app.router
@@ -545,6 +566,7 @@ class LitecordServer:
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_patch(route, route_handler)
+            self.add_empty(route, 'PATCH')
 
     def add_delete(self, route_path, route_handler):
         _r = self.app.router
@@ -552,6 +574,7 @@ class LitecordServer:
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_delete(route, route_handler)
+            self.add_empty(route, 'DELETE')
 
     async def init(self, app):
         """Initialize the server.
