@@ -118,7 +118,7 @@ class LitecordServer:
 
         # mongodb stuff
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
-        self.litecord_db = self.mongo_client['litecord']
+        self.litecord_db = self.mongo_client[self.flags.get('mongo_name', 'litecord')]
 
         self.message_db = self.litecord_db['messages']
         self.user_db = self.litecord_db['users']

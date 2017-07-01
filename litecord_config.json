@@ -17,5 +17,6 @@
     "boilerplate.update": {
         "user": false,
         "guild": false
-    }
+    },
+    "mongo_name": "litecord"
 }

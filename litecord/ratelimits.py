@@ -33,12 +33,19 @@ WS:
 """
 
 class RestBucket:
-    __slots__ = ('name', 'requests', 'seconds', 'global_rl', 'users')
-    def __init__(self, name, requests, seconds, global_rl=False):
+    """A REST ratelimit bucket.
+    
+    Attributes
+    ----------
+    """
+    __slots__ = ('name', 'requests', 'seconds', 'retry_after', 'global_rl', 'users')
+    def __init__(self, name:str, requests: int, seconds: int, retry_after: float):
         self.name = name
         self.requests = requests
         self.seconds = seconds
-        self.global_rl = global_rl
+        self.retry_after = retry_after
+
+        self.global_rl = self.name == 'global'
 
         self.users = {}
 
@@ -50,8 +57,8 @@ class RestBucket:
         }
 
     async def ratelimit_response(self, user_id):
-        """Returns a HTTP 429 Response.
-        
+        """Returns a HTTP 429 Response object.
+
         Parameters
         ----------
         user_id: int
@@ -65,19 +72,18 @@ class RestBucket:
 
         ratelimit_data = {
             'message': 'You are being ratelimited.',
-            'retry_after': msec_wait,
+            'retry_after': 0,
             'global': self.global_rl,
         }
 
         return _json(ratelimit_data, status=429, headers=headers)
 
-def ratelimit(requests=50, seconds=1, special_bucket=False):
+def ratelimit(bucket_name):
     """Declare a ratelimited REST route.
     """
 
     # NOTE: ratelimits here are the same as discord's
     #  per-user, per-route, etc.
-    #  However I don't know how do we do per-user, do we do per-IP?
     #  Needs more thinking.
 
     def decorator(handler):
