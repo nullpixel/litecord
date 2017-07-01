@@ -171,7 +171,7 @@ class Connection:
 
         # some flags for the client etc
         self.identified = False
-        # TODO: self.replay_lock = asyncio.Lock()
+        self.replay_lock = asyncio.Lock()
 
         # user objects, filled oncce the client is identified
         self.user = None
@@ -264,7 +264,10 @@ class Connection:
                 data = data.encode()
             data = zlib.compress(data)
 
-        await self.ws.send(data)
+        try:
+            await self.ws.send(data)
+        except:
+            return 0
         return len(data)
 
     async def recv_payload(self):
@@ -323,6 +326,8 @@ class Connection:
             If this has an `as_json` property, it gets called.
         """
 
+        await self.dispatch_lock
+
         if evt_data is None:
             evt_data = {}
 
@@ -333,6 +338,7 @@ class Connection:
             sent_seq = self.events['sent_seq']
         except:
             log.warning("[dispatch] can't dispatch event to unidentified connection")
+            self.dispatch_lock.release()
             return 0
 
         sent_seq += 1
@@ -360,6 +366,7 @@ class Connection:
 
         log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.compress_flag}')
         self._register(sent_seq, payload)
+        self.dispatch_lock.release()
         return amount
 
     @property
@@ -647,11 +654,19 @@ class Connection:
         seqs_to_replay = range(replay_seq, sent_seq + 1)
         log.info(f"Replaying {len(seqs_to_replay)} events to {user!r}")
 
-        for seq in seqs_to_replay:
-            try:
-                await self.send_payload(event_data['events'][seq])
-            except KeyError:
-                log.info(f"Event {seq} not found")
+        # critical session etc
+        try:
+            with await self.dispatch_lock:
+                for seq in seqs_to_replay:
+                    try:
+                        evt = event_data['events'][seq]
+                    except KeyError:
+                        log.info(f'Event {seq} not found')
+                        continue
+
+                    await self.send_payload(evt)
+        finally:
+            self.dispatch_lock.release()
 
         self.raw_user = raw_user
         self.user = user
