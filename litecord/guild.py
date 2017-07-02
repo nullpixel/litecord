@@ -163,7 +163,7 @@ class GuildManager:
         message = Message(self.server, channel, raw)
 
         result = await self.message_db.insert_one(message.as_db)
-        log.info(f'Adding message with id {message.as_db["id"]}')
+        log.info(f'Adding message with id {message.id}')
 
         self.messages[message.id] = message
         await channel.dispatch('MESSAGE_CREATE', message.as_json)

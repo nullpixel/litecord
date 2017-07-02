@@ -171,7 +171,7 @@ class Connection:
 
         # some flags for the client etc
         self.identified = False
-        self.replay_lock = asyncio.Lock()
+        self.dispatch_lock = asyncio.Lock()
 
         # user objects, filled oncce the client is identified
         self.user = None
