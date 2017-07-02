@@ -624,15 +624,15 @@ class Connection:
             return False
 
         if session_id not in self.server.event_cache:
-            log.warning("[resume] invalidated from session_id")
-            await self.invalidate(True)
+            log.warning('[resume] invalidated from session_id not found')
+            await self.invalidate(False)
             return True
 
         event_data = self.server.event_cache[session_id]
 
         valid, raw_user, user = await self.check_token(token)
         if not valid:
-            log.warning("[resume] invalidated @ check_token")
+            log.warning('[resume] invalidated @ check_token')
             await self.invalidate(session_id=session_id)
             return False
 
@@ -640,19 +640,19 @@ class Connection:
         sent_seq = event_data['sent_seq']
 
         if replay_seq > sent_seq:
-            log.warning(f"[resume] invalidated from replay_seq > sent_set {replay_seq} {sent_seq}")
+            log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             await self.invalidate(True)
             return True
 
         # if the session lost more than RESUME_MAX_EVENTS
         # events while it was offline, invalidate it.
         if abs(replay_seq - sent_seq) > RESUME_MAX_EVENTS:
-            log.warning("[resume] invalidated from seq delta")
+            log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
             return
 
         seqs_to_replay = range(replay_seq, sent_seq + 1)
-        log.info(f"Replaying {len(seqs_to_replay)} events to {user!r}")
+        log.info(f'Replaying {len(seqs_to_replay)} events to {user!r}')
 
         # critical session etc
         try:
