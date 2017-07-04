@@ -4,12 +4,12 @@ import asyncio
 
 import websockets
 
-from .basics import VOICE_OP
-from .objects import LitecordObject
-from .err import VoiceError
-from .snowflake import get_raw_token
-from .objects import VoiceChannel, User
-from .voice_objects import VoiceChannelState, VoiceState
+from ..basics import VOICE_OP
+from ..objects import LitecordObject
+from ..err import VoiceError
+from ..snowflake import get_raw_token
+from ..objects import VoiceChannel, User
+from .objects import VoiceChannelState, VoiceState
 
 log = logging.getLogger(__name__)
 

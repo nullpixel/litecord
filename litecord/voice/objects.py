@@ -1,5 +1,5 @@
 import logging
-from .objects import LitecordObject, VoiceChannel, User
+from ..objects import LitecordObject, VoiceChannel, User
 
 log = logging.getLogger(__name__)
 

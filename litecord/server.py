@@ -13,7 +13,7 @@ import litecord.api as api
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
-from .voice import VoiceManager
+from .voice.server import VoiceManager
 from .objects import User
 from .images import Images
 from .embedder import EmbedManager
