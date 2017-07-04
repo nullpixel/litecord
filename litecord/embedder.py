@@ -36,7 +36,15 @@ class EmbedManager:
         self.server.add_get('embed', self.h_get_embed)
 
     async def h_get_embed(self, request):
-        """Convert a page to an embed object."""
+        """GET /embed.
+        
+        Convert an URL to an embed object.
+
+        Returns
+        -------
+        dict
+            An embed object.
+        """
         try:
             payload = await request.json()
             url = payload['url']
