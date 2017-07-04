@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from aiohttp import web
 
@@ -7,8 +8,12 @@ from ..utils import _err, _json
 from ..snowflake import get_snowflake
 from ..ratelimits import ratelimit
 from ..decorators import auth_route
+from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
+
+# 2 weeks
+BULK_DELETE_LIMIT = 1209600
 
 class ChannelsEndpoint:
     """Handle channel/message related endpoints."""
@@ -36,6 +41,8 @@ class ChannelsEndpoint:
         #self.server.add_patch('channels/{channel_id}', self.h_edit_channel)
 
         #self.server.add_delete('channels/{channel_id}', self.h_delete_channel)
+
+        self.server.add_post('channels/{chanel_id}/messages/bulk-delete', self.h_bulk_delete)
 
     @auth_route
     async def h_get_channel(self, request, user):
@@ -263,3 +270,36 @@ class ChannelsEndpoint:
 
         await self.server.guild_man.edit_message(message, _data)
         return _json(message.as_json)
+
+    @auth_route
+    async def h_bulk_delete(self, request, user):
+        """`POST /channels/{channel_id}/messages/bulk-delete`.
+        
+        Deletes multiple messages.
+        Returns 204 empty response on success, fires mutiple MESSAGE_DELETEs.
+        """
+        channel_id = request.match_info['channel_id']
+        channel = self.server.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+
+        payload = await request.json()
+        messages = payload['messages']
+        if len(messages) < 1:
+            # uhh, you sent an empty array... I think this is a success.
+            return web.Response(status=204)
+
+        messages = [int(message_id) for message_id in messages]
+        current = time.time()
+        for message_id in messages:
+            timestamp = snowflake_time(message_id)
+            delta = current - timestamp
+            if delta > BULK_DELETE_LIMIT:
+                # do the error
+                pass
+        # TODO: also change messages to a set so we remove duplicates
+
+        # since it can take some time, we create a task
+        self.server.loop.create_task(channel.delete_many(messages, fire_multiple=True))
+
+        return web.Response(status=204)
