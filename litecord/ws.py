@@ -9,7 +9,15 @@ ws - Websocket server
     `Connection` and `VoiceConnection` inherit from this class.
 """
 
+import json
 import inspect
+import logging
+import asyncio
+
+import websockets
+import earl
+
+log = logging.getLogger(__name__)
 
 class StopConnection(Exception):
     pass
@@ -19,37 +27,41 @@ class PayloadLengthExceeded(Exception):
 
 class Handler:
     """Describes a handler for a specific OP code."""
-    def __init__(self, op, func):
+    def __init__(self, op):
         self.op = op
-        self.func = func
+        self.func = None
 
     def is_mine(self, payload):
         return self.op == payload['op']
 
+    def __call__(self, func):
+        print(self.func)
+        self.func = func
+        return self
+
     def __repr__(self):
         return f'Handler({self.op}, {self.func})'
 
-    async def run(self, payload):
-        await self.func()
+    async def run(self, conn, payload):
+        await self.func(conn, payload)
 
 def handler(op):
-    h = Handler(op)
-    def inner(conn, payload):
-        await a
-    return inner
+    return Handler(op)
 
 class WebsocketConnection:
     def __init__(self, ws):
         self.ws = ws
+        self.loop = ws.loop
 
-        self._handlers = {}
+        self._handlers = [] 
         self._register()
 
     def _register(self):
         """Register all handlers"""
-        methods = inspect.getmembers(predicate=inspect.ismethod)
+        methods = inspect.getmembers(self)
 
         for method_id, method in methods:
+            print(method)
             if isinstance(method, Handler):
                 log.debug(f'[ws] Adding handler {handler!r}')
                 self._handlers.append(method)
@@ -118,9 +130,11 @@ class WebsocketConnection:
         This checks for the payload's OP code
         and checks if a handler exists for that OP code.
         """
+        print('processing', self._handlers)
         for handler in self._handlers:
             if handler.is_mine(payload):
-                await handler.run(self, payload['d'])
+                log.info('Handling OP %d', payload['op'])
+                await handler.run(self, payload.get('d'))
 
     async def _run(self):
         """Enter an infinite loop waiting for websocket packets"""
@@ -146,7 +160,56 @@ class WebsocketConnection:
 
         await self.ws.close(1000)
 
+    def clean(self):
+        log.debug('cleaning')
+
     async def run(self):
         """Can be overridden by classes to
         do anything before listening for payloads."""
         await self._run()
+
+
+async def decode_dict(data):
+    """Decode a dictionary that all strings are in `bytes` type.
+    
+    Returns
+    -------
+    dict
+        The decoded dictionary with all strings in UTF-8.
+    """
+    if isinstance(data, bytes):
+        return str(data, 'utf-8')
+    elif isinstance(data, dict):
+        _copy = dict(data)
+        for key in _copy:
+            data[await decode_dict(key)] = await decode_dict(data[key])
+        return data
+    else:
+        return data
+
+
+async def json_encoder(obj):
+    return json.dumps(obj)
+
+async def json_decoder(raw_data):
+    return json.loads(raw_data)
+
+async def etf_encoder(obj):
+    return earl.pack(obj)
+
+async def etf_decoder(raw_data):
+    data = earl.unpack(raw_data)
+
+    # Earl makes all keys and values bytes object.
+    # We convert them into UTF-8
+    if isinstance(data, dict):
+        data = await decode_dict(data)
+
+    return data
+
+def get_data_handlers(name):
+    if name == 'json':
+        return json_encoder, json_decoder
+    elif name == 'etf':
+        return etf_encoder, etf_decoder
+

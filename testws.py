@@ -1,10 +1,14 @@
 import asyncio
-import urllib.urlparse as urlparse
+import urllib.parse as urlparse
+import logging
 
 import websockets
 
-from .ws import WebsocketConnection, handler, StopConnection, get_data_handlers
-from .basic import OP
+from litecord.ws import WebsocketConnection, handler, StopConnection, get_data_handlers
+from litecord.basics import OP
+
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 class Connection(WebsocketConnection):
     """An example on how WebsocketConnection will look.
@@ -14,8 +18,11 @@ class Connection(WebsocketConnection):
     ws: websocket
         the actual websocket
     """
-    def __init__(self, ws):
+    def __init__(self, ws, **kwargs):
         super().__init__(ws)
+        self.config = kwargs['config']
+        self._encoder, self._decoder = get_data_handlers(self.config[1])
+        self.hb_interval = 1000
 
     async def heartbeat_canceller(self):
         """Wait the interval and close the connection."""
@@ -26,8 +33,9 @@ class Connection(WebsocketConnection):
             pass
 
     @handler(OP.HEARTBEAT)
-    async def heartbeat_handler(self, payload):
+    async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets. sends OP 11 Heartbeat ACK."""
+        print('RECV HEARTBEAT')
         try:
             self.wait_task.cancel()
         except AttributeError: pass
@@ -45,7 +53,7 @@ class Connection(WebsocketConnection):
         send an OP 10 Hello payload before actuallly
         listening to payloads.
         """
-        await self.send_op(OP.HELLO, self.hello_payload())
+        await self.send_op(OP.HELLO, {'heartbeat_interval': self.hb_interval})
 
         # this is from WebsocketConnection
         await self._run()
@@ -79,8 +87,11 @@ async def henlo(ws, path):
     await conn.run()
 
 if __name__ == '__main__':
+    logging.info('starting')
     loop = asyncio.get_event_loop()
-    ws_server = websockets.serve(henlo, host='0.0.0.0', port=8069)
-    loop.run_until_complete(ws_server)
+    ws_server = websockets.serve(henlo, host='0.0.0.0', port=8000)
+    loop.create_task(ws_server)
+    loop.run_forever()
     loop.close()
+    logging.info('end')
 

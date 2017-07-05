@@ -20,3 +20,4 @@ from .server import LitecordServer
 from .snowflake import get_snowflake
 from .embeds import *
 from .embedder import EmbedManager
+from .ws import *
