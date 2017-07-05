@@ -86,6 +86,15 @@ class WebsocketConnection:
         return len(anything)
 
     async def send_op(self, op, data=None):
+        """Send a payload with an OP code.
+
+        Parameters
+        ----------
+        op: int
+            OP code to be sent.
+        data: any
+            OP code data.
+        """
         if data is None:
             data = {}
 
@@ -111,16 +120,33 @@ class WebsocketConnection:
         """
         for handler in self._handlers:
             if handler.is_mine(payload):
-                await handler.run(self, payload)
+                await handler.run(self, payload['d'])
 
     async def _run(self):
-        """Enter an infinite loop waiting for a websocket packet"""
+        """Enter an infinite loop waiting for websocket packets"""
         try:
             while True:
                 payload = await self.recv()
                 await self.process(payload)
         except asyncio.CancelledError:
+            log.info('[ws] Run task was cancelled')
+            await self.ws.close(1006, 'Task was cancelled')
+            self.clean()
+        except StopConnection as sc:
+            log.info('[ws] StopConnection: {sc!r}')
+            await self.ws.close(sc.args[0], sc.args[1])
+            self.clean()
+        except websockets.ConnectionClosed as err:
+            log.info('[ws] Closed with {err.code!r}, {err.reason!r}')
+            self.clean()
+        except Exception as err:
+            log.error('Error while running', exc_info=True)
+            await self.ws.close(4000, f'Unexpected error: {err!r}')
             self.clean()
 
+        await self.ws.close(1000)
+
     async def run(self):
+        """Can be overridden by classes to
+        do anything before listening for payloads."""
         await self._run()
