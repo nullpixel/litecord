@@ -35,7 +35,7 @@ class Handler:
         return self.op == payload['op']
 
     def __call__(self, func):
-        print(self.func)
+        print(f'Adding as OP {self.op} handler', func)
         self.func = func
         return self
 
@@ -61,9 +61,7 @@ class WebsocketConnection:
         methods = inspect.getmembers(self)
 
         for method_id, method in methods:
-            print(method)
             if isinstance(method, Handler):
-                log.debug(f'[ws] Adding handler {handler!r}')
                 self._handlers.append(method)
 
     @property
@@ -89,12 +87,15 @@ class WebsocketConnection:
         int
             The amount of bytes transmitted.
         """
-        if isinstance(anything, dict):
-            anything = await self._encoder(anything)
-            if compress and self.is_compressable:
-                anything = zlib.compress(anything)
+        anything = await self._encoder(anything)
 
-        await self.ws.send(anything)
+        if compress and self.is_compressable:
+            anything = zlib.compress(anything.encode())
+
+        try:
+            await self.ws.send(anything)
+        except Exception: return 0
+
         return len(anything)
 
     async def send_op(self, op, data=None):
@@ -118,6 +119,10 @@ class WebsocketConnection:
     async def recv(self):
         """Receive a payload from the websocket.
         Will be decoded.
+
+        Returns
+        -------
+        any
         """
         raw = await self.ws.recv()
         if len(raw) > 4096:
@@ -125,16 +130,27 @@ class WebsocketConnection:
 
         return await self._decoder(raw)
 
-    async def process(self, payload):
+    async def _process(self, payload):
         """Process a payload
         This checks for the payload's OP code
         and checks if a handler exists for that OP code.
         """
-        print('processing', self._handlers)
         for handler in self._handlers:
             if handler.is_mine(payload):
-                log.info('Handling OP %d', payload['op'])
+                log.debug('Handling OP %d', payload['op'])
                 await handler.run(self, payload.get('d'))
+                return
+
+        raise StopConnection(4001, f'opcode not found: {payload["op"]}')
+    
+    async def process(self, payload):
+        """Can be overwritten."""
+        return await self._process(payload)
+
+    async def _clean(self):
+        """Search for a cleanup method and call it"""
+        if hasattr(self, 'cleanup'):
+            await self.cleanup()
 
     async def _run(self):
         """Enter an infinite loop waiting for websocket packets"""
@@ -142,22 +158,23 @@ class WebsocketConnection:
             while True:
                 payload = await self.recv()
                 await self.process(payload)
+        except (PayloadLengthExceeded, earl.DecodeError, json.JSONDecodeError):
+            await self.ws.close(4002, 'Bad Payload.')
         except asyncio.CancelledError:
             log.info('[ws] Run task was cancelled')
             await self.ws.close(1006, 'Task was cancelled')
-            self.clean()
         except StopConnection as sc:
-            log.info('[ws] StopConnection: {sc!r}')
+            log.info(f'[ws] StopConnection: {sc!r}')
             await self.ws.close(sc.args[0], sc.args[1])
-            self.clean()
         except websockets.ConnectionClosed as err:
             log.info('[ws] Closed with {err.code!r}, {err.reason!r}')
-            self.clean()
         except Exception as err:
             log.error('Error while running', exc_info=True)
             await self.ws.close(4000, f'Unexpected error: {err!r}')
-            self.clean()
+            await self._clean()
+            return
 
+        await self._clean()
         await self.ws.close(1000)
 
     def clean(self):

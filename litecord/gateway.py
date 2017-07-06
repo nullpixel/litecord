@@ -24,6 +24,8 @@ from .utils import chunk_list, strip_user_data
 from .err import VoiceError, PayloadLengthExceeded
 from .ratelimits import ws_ratelimit
 
+from .ws import WebsocketConnection, handler, StopConnection, get_data_handlers
+
 # Maximum amount of tries to generate a session ID.
 MAX_TRIES = 20
 
@@ -54,51 +56,7 @@ def random_sid():
     return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()
 
 
-async def decode_dict(data):
-    """Decode a dictionary that all strings are in `bytes` type.
-    
-    Returns
-    -------
-    dict
-        The decoded dictionary with all strings in UTF-8.
-    """
-    if isinstance(data, bytes):
-        return str(data, 'utf-8')
-    elif isinstance(data, dict):
-        _copy = dict(data)
-        for key in _copy:
-            data[await decode_dict(key)] = await decode_dict(data[key])
-        return data
-    else:
-        return data
-
-
-async def json_encoder(obj):
-    return json.dumps(obj)
-
-async def json_decoder(raw_data):
-    return json.loads(raw_data)
-
-async def etf_encoder(obj):
-    return earl.pack(obj)
-
-async def etf_decoder(raw_data):
-    data = earl.unpack(raw_data)
-
-    # Earl makes all keys and values bytes object.
-    # We convert them into UTF-8
-    if isinstance(data, dict):
-        data = await decode_dict(data)
-
-    return data
-
-ENCODING_FUNCS = {
-    'json': (json_encoder, json_decoder),
-    'etf': (etf_encoder, etf_decoder),
-}
-
-
-class Connection:
+class Connection(WebsocketConnection):
     """Represents a websocket connection to Litecord.
 
     .. _the documentation about it here: https://discordapp.com/developers/docs/topics/gateway
@@ -144,13 +102,14 @@ class Connection:
     op_handlers: dict
         OP handlers, they get called from :meth:`Connection.process_recv`
     """
-    def __init__(self, server, ws, options):
+    def __init__(self, ws, **kwargs):
+        super().__init__(ws)
         self.ws = ws
-        self.options = options
+        self.loop = ws.loop
+        self.options = kwargs['config']
+        self.server = kwargs['server']
 
-        # Encoder and decoder for JSON/ETF, JSON by default
-        self.encoder = json_encoder
-        self.decoder = json_decoder
+        self._encoder, self._decoder = get_data_handlers(self.options[1])
 
         # Last sequence sent by the client, last sequence received by it, and a registry of dispatched events are here
         self.events = None
@@ -160,6 +119,7 @@ class Connection:
         self.wait_task = None
 
         # Things that properly identify the client
+        self.session_id = None
         self.token = None
         self.session_id = None
         self.compress_flag = False
@@ -177,28 +137,11 @@ class Connection:
         self.user = None
         self.raw_user = None
 
-        # reference to LitecordServer, GuildManager and PresenceManager
-        self.server = server
-        self.guild_man = server.guild_man
-        self.presence = server.presence
-        self.relations = server.relations
-        self.settings = server.settings
-
-        # OP handlers
-        self.op_handlers = {
-            OP.HEARTBEAT: self.heartbeat_handler,
-            OP.IDENTIFY: self.identify_handler,
-            OP.STATUS_UPDATE: self.status_handler,
-
-            OP.VOICE_STATE_UPDATE: self.v_state_update_handler,
-            OP.VOICE_SERVER_PING: self.v_ping_handler,
-
-            OP.RESUME: self.resume_handler,
-            OP.REQUEST_GUILD_MEMBERS: self.req_guild_handler,
-
-            # Undocumented.
-            OP.GUILD_SYNC: self.guild_sync_handler,
-        }
+        # references to objects
+        self.guild_man = self.server.guild_man
+        self.presence = self.server.presence
+        self.relations = self.server.relations
+        self.settings = self.server.settings
 
         # identify schema
         _o = Optional
@@ -210,6 +153,8 @@ class Connection:
         }, extra=REMOVE_EXTRA)
 
     def __repr__(self):
+        if getattr(self, 'session_id', None) is None:
+            return f'Connection()'
         return f'Connection(sid={self.session_id} u={self.user!r})'
 
     def get_identifiers(self, module):
@@ -241,73 +186,8 @@ class Connection:
             tries += 1
 
         return new_id
-
-    async def send_payload(self, payload, compress=False) -> int:
-        """Send a payload through the websocket. Will be encoded in JSON or ETF before sending(default JSON).
-
-        Parameters
-        ----------
-        payload: any
-            Payload to be sent through the websocket.
-        compress: bool
-            If this payload will be zlib compressed before sending.
-
-        Returns
-        -------
-        int
-            The amount of bytes transmitted.
-        """
-        data = await self.encoder(payload)
-
-        if compress and self.properties['browser'] != 'discord.js':
-            if isinstance(data, str):
-                data = data.encode()
-            data = zlib.compress(data)
-
-        try:
-            await self.ws.send(data)
-        except:
-            return 0
-        return len(data)
-
-    async def recv_payload(self):
-        """Receive a payload from the websocket. Will be decoded using JSON or ETF to a Python object.
-
-        Returns
-        -------
-        any
-            The payload received.
-        """
-
-        raw_data = await self.ws.recv()
-        if len(raw_data) > 4096:
-            raise PayloadLengthExceeded()
-
-        return await self.decoder(raw_data)
-
-    async def send_op(self, op, data=None):
-        """Send a packet through the websocket.
-
-        Parameters
-        ----------
-        op: int
-            Packet's OP code.
-        data: any
-            Any JSON serializable object.
-        """
-
-        if data is None:
-            data = {}
-
-        payload = {
-            # op is always an int
-            # data can be a dict, int or bool
-            'op': op,
-            'd': data,
-        }
-        return (await self.send_payload(payload))
-
-    def _register(self, sent_seq, payload):
+    
+    def _register_payload(self, sent_seq, payload):
         """Register a sent payload."""
         self.events['events'][sent_seq] = payload
         self.events['sent_seq'] = sent_seq
@@ -345,11 +225,7 @@ class Connection:
 
         payload = {
             'op': OP.DISPATCH,
-
-            # always an int
             's': sent_seq,
-
-            # always a str
             't': evt_name,
             'd': evt_data,
         }
@@ -360,12 +236,13 @@ class Connection:
         # This compress_flag is required to be used only on READY
         # because d.js is weird with its compression and ETF at the same time.
         if evt_name == 'READY':
-            amount = await self.send_payload(payload, self.compress_flag)
+            amount = await self.send(payload, compress=self.compress_flag)
         else:
-            amount = await self.send_payload(payload)
+            amount = await self.send(payload)
 
         log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.compress_flag}')
-        self._register(sent_seq, payload)
+        self._register_payload(sent_seq, payload)
+
         self.dispatch_lock.release()
         return amount
 
@@ -377,13 +254,12 @@ class Connection:
     async def hb_wait_task(self):
         """This task automatically closes clients that didn't heartbeat in time."""
         try:
-            await asyncio.sleep((self.hb_interval) / 1000)
-            await asyncio.sleep(3)
-            log.info("Closing client for lack of heartbeats")
-            await self.ws.close(4000)
+            await asyncio.sleep((self.hb_interval / 1000) + 3)
+            raise StopConnection(4000, 'Heartbeat expired')
         except asyncio.CancelledError:
-            log.debug("[hb_wait_task] Cancelled")
+            log.debug("[heartbeat_wait] cancelled")
 
+    @handler(OP.HEARTBEAT)
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
         Sends a OP 11 Heartbeat ACK packet.
@@ -395,17 +271,14 @@ class Connection:
         """
         try:
             self.wait_task.cancel()
-        except:
-            pass
+        except AttributeError: pass
 
         try:
             self.events['recv_seq'] = data
-        except:
-            pass
+        except AttributeError: pass
 
         await self.send_op(OP.HEARTBEAT_ACK, {})
-        self.wait_task = self.server.loop.create_task(self.hb_wait_task())
-        return True
+        self.wait_task = self.loop.create_task(self.hb_wait_task())
 
     async def check_token(self, token: str) -> tuple:
         """Check if a token is valid and can be used for proper authentication.
@@ -431,6 +304,7 @@ class Connection:
         user = self.server.get_user(raw_user['id'])
         return True, raw_user, user
 
+    @handler(OP.IDENTIFY)
     @ws_ratelimit('identify')
     async def identify_handler(self, data):
         """Handle an OP 2 Identify sent by the client.
@@ -449,18 +323,14 @@ class Connection:
             data = self.identify_schema(data)
         except Exception as err:
             log.warning(f'Erroneous IDENTIFY: {err!r}')
-            await self.ws.close(4001, f'Erroneous IDENTIFY: {err!r}')
-            return False
+            raise StopConnection(4001, f'Erroneous IDENTIFY: {err!r}')
 
-        token = data['token']
-        prop = data['properties']
-        large = data['large_threshold']
+        token, prop, large = data['token'], data['properties'], data['large_threshold']
         self.compress_flag = data.get('compress', False)
 
         valid, user_object, user = await self.check_token(token)
         if not valid:
-            await self.ws.close(4004, 'Authentication failed...')
-            return False
+            raise StopConnection(4004, 'Authentication failed...')
 
         self.raw_user = user_object
         self.user = user
@@ -509,7 +379,7 @@ class Connection:
         user_relationships = await self.relations.get_relationships(self.user.id)
 
         ready_packet = {
-            'v': self.options['v'],
+            'v': self.options[0],
             'user': stripped_user,
             'private_channels': [],
 
@@ -533,26 +403,21 @@ class Connection:
         else:
             await self.dispatch('READY', ready_packet)
 
-        return True
-
+    @handler(OP.REQUEST_GUILD_MEMBERS)
     async def req_guild_handler(self, data):
         """Handle OP 8 Request Guild Members.
 
         Dispatches GUILD_MEMBERS_CHUNK (https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
         """
         if not self.identified:
-            log.warning("Client not identified to do OP 8, closing with 4003")
-            await self.ws.close(4003)
-            return False
+            raise StopConnection(4003, 'Not identified to do operation.')
 
         guild_id = data.get('guild_id')
         query = data.get('query')
         limit = data.get('limit')
 
         if guild_id is None or query is None or limit is None:
-            log.info("Invalid OP 8")
-            await self.ws.close(4001)
-            return False
+            raise StopConnection(4001, 'Invalid payload')
 
         if limit > 1000: limit = 1000
         if limit <= 0: limit = 1000
@@ -586,7 +451,6 @@ class Connection:
                 'guild_id': guild_id,
                 'members': chunk,
             })
-        return True
 
     async def invalidate(self, flag=False, session_id=None):
         """Invalidates a session.
@@ -603,10 +467,11 @@ class Connection:
         if not flag:
             try:
                 self.server.event_cache.pop(self.session_id or session_id)
-                await self.ws.close(4001)
+                raise StopConnection(4001, 'Invalidated session')
             except:
                 pass
 
+    @handler(OP.RESUME)
     async def resume_handler(self, data):
         """Handler for OP 6 Resume.
 
@@ -620,13 +485,11 @@ class Connection:
         replay_seq = data.get('seq')
 
         if replay_seq is None or session_id is None or token is None:
-            await self.ws.close(4001)
-            return False
+            raise StopConnection(4001, 'Invalid payload')
 
         if session_id not in self.server.event_cache:
             log.warning('[resume] invalidated from session_id not found')
             await self.invalidate(False)
-            return True
 
         event_data = self.server.event_cache[session_id]
 
@@ -634,7 +497,6 @@ class Connection:
         if not valid:
             log.warning('[resume] invalidated @ check_token')
             await self.invalidate(session_id=session_id)
-            return False
 
         # man how can i resume from the future
         sent_seq = event_data['sent_seq']
@@ -642,14 +504,12 @@ class Connection:
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             await self.invalidate(True)
-            return True
 
         # if the session lost more than RESUME_MAX_EVENTS
         # events while it was offline, invalidate it.
         if abs(replay_seq - sent_seq) > RESUME_MAX_EVENTS:
             log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
-            return
 
         seqs_to_replay = range(replay_seq, sent_seq + 1)
         log.info(f'Replaying {len(seqs_to_replay)} events to {user!r}')
@@ -686,8 +546,7 @@ class Connection:
             '_trace': self.get_identifiers('resume')
         })
 
-        return True
-
+    @handler(OP.STATUS_UPDATE)
     @ws_ratelimit('presence_updates')
     async def status_handler(self, data):
         """Handle OP 3 Status Update packets
@@ -696,45 +555,38 @@ class Connection:
         """
 
         if not self.identified:
-            log.error('Not identified to do operation, closing: 4003')
-            await self.ws.close(4003, 'Not identified')
-            return False
+            raise StopConnection(4003, 'Not identified')
 
         idle_since = data.get('idle_since')
 
         game = data.get('game')
         if game is None:
-            return True
+            return
 
         game_name = game.get('name')
         if game_name is None:
-            return True
+            return
 
         await self.presence.global_update(self.user, {
             'name': game_name,
             'status': 'idle' if idle_since is not None else None
         })
-        return True
 
+    @handler(OP.GUILD_SYNC)
     async def guild_sync_handler(self, data):
-        """Handle OP 12 Guild Sync packets
+        """Handle OP 12 Guild Sync.
 
         This is an undocumented OP on Discord's API docs.
         This OP is sent by the client to request member and presence information.
         """
 
         if not self.identified:
-            log.error("Client not identified to do OP 12, closing with 4003")
-            await self.ws.close(4003)
-            return False
+            raise StopConnection(4003, 'Not identified')
 
         if not isinstance(data, list):
-            log.error('[guild_sync] client didn\'t send a list')
-            await self.ws.close(4001)
-            return False
+            raise StopConnection(4001, 'Invalid data type')
 
         # ASSUMPTION: data is a list of guild IDs
-
         for guild_id in data:
             guild = self.server.guild_man.get_guild(guild_id)
             if guild is None:
@@ -755,6 +607,7 @@ class Connection:
 
         return True
 
+    @handler(OP.VOICE_STATE_UPDATE)
     async def v_state_update_handler(self, data):
         """Handle OP 4 Voice State Update.
 
@@ -769,43 +622,42 @@ class Connection:
 
         if guild_id is None or channel_id is None:
             log.warning("[vsu] missing params")
-            return True
+            return
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
             log.warning("[vsu] unknown guild")
-            return True
+            return
 
         channel = guild.channels.get(channel_id)
         if channel is None:
             log.warning("[vsu] unknown channel")
-            return True
+            return
 
         if channel.str_type != 'voice':
             log.warning("[vsu] not voice channel")
-            return True
+            return
 
         # We request a VoiceState from the voice manager
         try:
             v_state = await channel.voice_request(self)
         except VoiceError:
             log.error('error while requesting VoiceState', exc_info=True)
-            return True
+            return
 
         log.info(f"{self.user!r} => voice => {channel!r} => {channel_vstate!r}")
 
         await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
         await self.dispatch('VOICE_SERVER_UPDATE', v_state.server_as_json)
 
-        return True
-
+    @handler(OP.VOICE_SERVER_PING)
     async def v_ping_handler(self, data):
         """Handle OP 5 Voice Server Ping."""
         log.info("Received OP5 VOICE_SERVER_PING what do i do")
-        return True
+        return
 
     @ws_ratelimit('all')
-    async def process_recv(self, payload):
+    async def process(self, payload):
         """Process a payload sent by the client.
 
         Parameters
@@ -814,58 +666,16 @@ class Connection:
             https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
         """
 
-        op = payload.get('op')
-        data = payload.get('d')
-        if op not in self.op_handlers:
-            log.info("opcode not found, closing with 4001")
-            await self.ws.close(4001)
-            return False
-
-        handler = self.op_handlers[op]
-        return (await handler(data))
+        return await self._process(payload) 
 
     async def run(self):
         """Starts basic handshake with the client
 
-        This only starts when the websocket server notices a new client.
-        The server sends an OP 10 Hello packet to the client, and after that
-        it relays payloads sent by the client to `Connection.process_recv`
+        The server sends an OP 10 Hello packet to the client and then
+        waits in an infinite loop for payloads sent by the client.
         """
-        log.info(f'[conn.run] v={self.options["v"]} encoding={self.options["encoding"]}')
-        await self.send_payload(self.basic_hello())
-
-        try:
-            while True:
-                try:
-                    payload = await self.recv_payload()
-                except (PayloadLengthExceeded, earl.DecodeError):
-                    await self.ws.close(4002)
-                    await self.cleanup()
-                    break
-
-                # if process_recv tells us to stop, we clean everything
-                # process_recv will very probably close the websocket already
-                if not (await self.process_recv(payload)):
-                    log.info("Stopped processing")
-                    await self.cleanup()
-                    break
-        except asyncio.CancelledError:
-            # I try.
-            log.info(f"[ws] Cancelled, cleaning {self!r}")
-            await self.ws.close(1006)
-            await self.cleanup()
-            return
-        except websockets.ConnectionClosed as err:
-            log.info(f"[ws] closed, code {err.code!r}")
-            await self.cleanup()
-        except Exception as err:
-            # if any error we just close with 4000
-            log.error('Error while running the connection', exc_info=True)
-            await self.ws.close(4000, f'Unknown error: {err!r}')
-            await self.cleanup()
-            return
-
-        await self.ws.close(1000)
+        await self.send(self.basic_hello())
+        await self._run()
 
     async def cleanup(self):
         """Remove the connection from being found by :class:`LitecordServer` functions.
@@ -950,6 +760,7 @@ async def http_server(app, flags):
 
     log.info(f'[http] running at {http[0]}:{http[1]}')
 
+
 async def gateway_server(app, flags, loop=None):
     """Main function to start the websocket server
 
@@ -981,45 +792,38 @@ async def gateway_server(app, flags, loop=None):
     # server initialized, release HTTP to load pls
     _load_lock.release()
 
-    async def henlo(websocket, path):
-        log.info(f'[ws] opening')
+    async def henlo(ws, path):
+        """Handles a new connection to the Gateway."""
+        log.info(f'[ws] New client at {path!r}')
 
-        parsed = urlparse.urlparse(path)
-        params = urlparse.parse_qs(parsed.query)
+        params = urlparse.parse_qs(urlparse.urlparse(path).query)
 
-        gateway_version = params.get('v', ['6'])[0]
+        gw_version = params.get('v', [6])[0]
         encoding = params.get('encoding', ['json'])[0]
 
         try:
-            gateway_version = int(gateway_version)
-        except:
-            gateway_version = 6
+            gw_version = int(gw_version)
+        except ValueError:
+            gw_version = 6
 
-        if encoding not in ['json', 'etf']:
-            await websocket.close(4000, f'{encoding} not supported.')
+        if encoding not in ('json', 'etf'):
+            await ws.close(4000, f'encoding not supported: {encoding!r}')
             return
 
-        if gateway_version != 6:
-            await websocket.close(4000, f'gateway v{gateway_version} not supported')
+        if gw_version != 6:
+            await ws.close(4000, f'gw version not supported: {gw_version}')
             return
 
-        conn = Connection(server, websocket, {
-            'v': gateway_version,
-            'encoding': encoding,
-        })
+        conn = Connection(ws, config=(gw_version, encoding), server=server)
 
-        conn.encoder, conn.decoder = ENCODING_FUNCS[encoding]
-
+        # this starts an infinite loop waiting for payloads from the client
         await conn.run()
-        await conn.cleanup()
 
-    # start WS
     ws = flags['server']['ws']
     log.info(f'[ws] running at {ws[0]}:{ws[1]}')
 
     ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
     await ws_server
 
-    # we don't really care about the sentry task lul
     loop.create_task(server_sentry(server))
     return True
