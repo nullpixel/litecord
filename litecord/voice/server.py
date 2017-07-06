@@ -131,13 +131,11 @@ class VoiceManager:
     async def init_task(self, flags):
         """dude people are gonna send voice packets of them crying"""
 
-        async def voice_henlo(websocket, path):
-            log.info("Starting websocket connection")
-            v_conn = VoiceConnection(self, websocket, path)
-            await v_conn.run()
-            log.info("Stopped connection", exc_info=True)
+        async def voice_henlo(ws, path):
+            log.info(f'[vws] new connection at {path}')
 
-            await v_conn.cleanup()
+            v_conn = VoiceConnection(ws, server=self, path=path)
+            await v_conn.run()
 
         vws = flags['server']['voice_ws']
         log.info(f'[voice_ws] running at {vws[0]}:{vws[1]}')
