@@ -21,11 +21,33 @@ from .gateway import VoiceConnection
 
 log = logging.getLogger(__name__)
 
+
+class VoiceGuildManager:
+    """Represents a voice guild manager.
+    
+    This manager has VoiceChannelState obejcts
+    it can query upon.
+    """
+    def __init__(self, vs, guild):
+        self.vserver = vs
+        self.guild = guild
+
+        self.state = []
+        for v_channel in guild.voice_channels:
+            self.state.append(VoiceChannelState(v_channel))
+
+    def get_state(self, channel_id: int):
+        """Get a VoiceChannelState object."""
+        for vc_state in self.state:
+            if vc_state.id == channel_id:
+                return vc_state
+        return None
+
 class VoiceServer(LitecordObject):
     """Represents a voice server.
 
-    Each guld gets a VoiceServer instance.
-    Each voice channel gets a VoiceChannelState instance.
+    Each guld gets a VoiceGuildManager instance.
+    Each voice channel gets a VoiceChannelState instance, tied to the VoiceGuildManager of the guild.
     Each connection to the voice channel gets a VoiceState instance.
 
     Attributes
@@ -108,14 +130,33 @@ class VoiceManager:
         self.server = server
         self.guild_man = server.guild_man
 
-        self.voice_servers = {}
+        self.vg_managers = []
 
         for guild in self.guild_man.all_guilds():
-            self.voice_servers[guild.id] = VoiceServer(server, guild)
+            self.vg_managers[guild.id] = VoiceGuildManager(self, guild)
 
-    def get_voiceserver(self, guild_id):
-        guild_id = int(guild_id)
-        return self.voice_servers.get(guild_id)
+    def get_vgmanager(self, guild_id: int):
+        for vg_manager in self.vg_managers:
+            if vg_manager.guild.id == guild_id:
+                return vg_manager
+        return None
+
+    async def connect(self, channel, conn):
+        """Create a :meth:`VoiceState` object for a connection
+        that is going to connect to the voice websocket.
+        """
+
+        vstate = await vg_man.connect(channel, conn)
+        return vstate
+
+    async def disconnect(self, guild, conn):
+        """Disconnect a client from voice"""
+        vg_man = self.get_vgmanager(guild.id)
+        if vg_man is None:
+            return
+
+        await vg_man.disconnect(conn)
+        return True
 
     async def link_connection(self, conn, channel):
         if channel.str_type != 'voice':
