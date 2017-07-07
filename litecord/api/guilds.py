@@ -258,6 +258,11 @@ class GuildsEndpoint:
         guild_id = request.match_info['guild_id']
         target_id = request.match_info['user_id']
 
+        try:
+            payload = await request.json()
+        except:
+            payload = {}
+
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
             return _err(errno=10004)
@@ -267,7 +272,7 @@ class GuildsEndpoint:
             return _err(errno=10013)
 
         try:
-            await guild.ban(target)
+            await guild.ban(target, delete_days=payload.get('delete-message-days'))
             return web.Response(status=204)
         except Exception as err:
             log.error("Error banning user", exc_info=True)

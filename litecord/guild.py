@@ -452,10 +452,28 @@ class GuildManager:
             'unavailable': False,
         })
 
-    async def ban_user(self, guild, user):
+    async def _ban_clean(self, guild, user, delete_days):
+        """Delete all messages made by a user"""
+        for channel in guild.text_channels:
+            days_ago = time.time() - (delete_days * 24 * 60 * 60)
+            messages = await channel.from_timestamp(days_ago)
+            message_ids = [message.id for message in messages if message.author.id == user.id]
+            await channel.delete_many(message_ids, bulk=True)
+
+    async def ban_user(self, guild, user, delete_days=None):
         """Ban a user from a guild.
 
         Dispatches GUILD_BAN_ADD and GUILD_MEMBER_REMOVE to relevant clients.
+        Dispatches MESSAGE_DELETE_BULK if `delete_days` is specified.
+
+        Parameters
+        ---------
+        guild: :meth:`Guild`
+            Guild that the user is going to be banned from.
+        user: :meth:`User`
+            User to be banned.
+        delete_days: int or None:
+            The amount of days worth of messages to be removed using :meth:`TextChannel.delete_many`.
         """
 
         if user.id in guild.members:
@@ -474,6 +492,9 @@ class GuildManager:
 
         await guild.dispatch('GUILD_BAN_ADD',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
+
+        if delete_days is not None:
+            self.loop.create_task(self._ban_clean(guild, user, delete_days))
 
     async def unban_user(self, guild, user):
         """Unban a user from a guild.

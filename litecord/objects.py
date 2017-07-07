@@ -3,7 +3,7 @@ import datetime
 
 from .basics import CHANNEL_TO_INTEGER
 from .utils import strip_user_data, dt_to_json
-from .snowflake import snowflake_time
+from .snowflake import snowflake_time, _snowflake
 
 
 log = logging.getLogger(__name__)
@@ -475,6 +475,14 @@ class TextChannel(BaseChannel):
 
         return res
 
+    async def from_timestamp(self, timestamp):
+        """Get all messages from the timestamp to latest"""
+        # TODO: THIS IS INNEFICIENT. WE NEED TO YIELD IDFK HOW
+        # BECAUSE THIS IS ASYNCIO AAAA
+        as_snowflake = _snowflake(timestamp)
+        cur = self.message_db.find({'channel_id': self.id, 'message_id': {'$gt': as_snowflake}}).sort('message_id')
+        return (await cur.to_list(length=None))
+
     async def delete_many(self, message_ids, bulk=False):
         """Delete many messages from a channel.
         
@@ -801,14 +809,14 @@ class Guild(LitecordObject):
 
         return (await self.guild_man.add_member(self, user))
 
-    async def ban(self, user):
+    async def ban(self, user, delete_days=None):
         """Ban a user from the guild.
 
         Raises
         ------
         Exception on failure.
         """
-        await self.guild_man.ban_user(self, user)
+        await self.guild_man.ban_user(self, user, delete_days)
 
     async def unban(self, user):
         """Unban a user from the guild.
