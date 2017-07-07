@@ -296,8 +296,9 @@ class ChannelsEndpoint:
             delta = current - timestamp
             if delta > BULK_DELETE_LIMIT:
                 # do the error
-                pass
-        # TODO: also change messages to a set so we remove duplicates
+                return _err('Message too old.')
+
+        messages = set(messages)
 
         # since it can take some time, we create a task
         self.server.loop.create_task(channel.delete_many(messages, fire_multiple=True))
