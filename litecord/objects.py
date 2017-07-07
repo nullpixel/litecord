@@ -475,6 +475,44 @@ class TextChannel(BaseChannel):
 
         return res
 
+    async def delete_many(self, message_ids, bulk=False):
+        """Delete many messages from a channel.
+        
+        Fires `MESSAGE_DELETE` for each deleted message.
+
+        Parameters
+        ----------
+        message_ids: List[int]
+            Message IDs to be deleted from the channel
+        build: bool
+            If thie is going to fire a `MESSAGE_DELETE_BULK` instead of `MESSAGE_DELETE`
+
+        Returns
+        -------
+        None
+        """
+        message_ids = sorted(message_ids, reverse=True)
+        in_bulk = []
+
+        for message_id in message_ids:
+            r = await self.server.message_db.delete_many({'channel_id': self.id, 'message_id': message_id})
+            if r.deleted_count < 1:
+                continue
+
+            if not bulk:
+                await self.dispatch('MESSAGE_DELETE', {
+                    'channel_id': self.id,
+                    'message_id': message_id,
+                })
+            else:
+                in_bulk.append(message_id)
+
+        if bulk:
+            await self.dispatch('MESSAGE_DELETE_BULK', {
+                'channel_id': self.id,
+                'ids': in_bulk,
+            })
+
     @property
     def as_json(self):
         return {
