@@ -34,7 +34,8 @@ class VoiceGuildManager:
 
         self.state = []
         for v_channel in guild.voice_channels:
-            self.state.append(VoiceChannelState(v_channel))
+            #self.state.append(VoiceChannelState(v_channel))
+            pass
 
     def get_state(self, channel_id: int):
         """Get a VoiceChannelState object."""
@@ -133,7 +134,7 @@ class VoiceManager:
         self.vg_managers = []
 
         for guild in self.guild_man.all_guilds():
-            self.vg_managers[guild.id] = VoiceGuildManager(self, guild)
+            self.vg_managers.append(VoiceGuildManager(self, guild))
 
     def get_vgmanager(self, guild_id: int):
         for vg_manager in self.vg_managers:
