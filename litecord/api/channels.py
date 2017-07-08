@@ -3,6 +3,7 @@ import logging
 import time
 
 from aiohttp import web
+from voluptuous import Schema, Optional, All, Length, Range, REMOVE_EXTRA
 
 from ..utils import _err, _json
 from ..snowflake import get_snowflake
@@ -19,10 +20,24 @@ class ChannelsEndpoint:
     """Handle channel/message related endpoints."""
     def __init__(self, server):
         self.server = server
+
+        self.channel_edit_base = Schema({
+            'name': All(str, Length(min=2, max=100)),
+            'position': int
+        })
+
+        self.textchan_editschema = self.channel_edit_base.extend({
+            'topic': All(str, Length(min=0, max=1024))
+        })
+
+        self.voicechan_editschema = self.channel_edit_base.extend({
+            'bitrate': All(int, Range(min=8000, max=96000)),
+            'user_limit': All(int, Range(min=0, max=99)),
+        })
+
         self.register(server.app)
 
     def register(self, app):
-
         self.server.add_get('channels/{channel_id}', self.h_get_channel)
 
         self.server.add_get('channels/{channel_id}/messages', self.h_get_messages)
@@ -37,8 +52,8 @@ class ChannelsEndpoint:
 
         self.server.add_post('channels/{channel_id}/typing', self.h_post_typing)
 
-        #self.server.add_put('channels/{channel_id}', self.h_edit_channel)
-        #self.server.add_patch('channels/{channel_id}', self.h_edit_channel)
+        self.server.add_put('channels/{channel_id}', self.h_edit_channel)
+        self.server.add_patch('channels/{channel_id}', self.h_edit_channel)
 
         #self.server.add_delete('channels/{channel_id}', self.h_delete_channel)
 
@@ -304,3 +319,22 @@ class ChannelsEndpoint:
         self.server.loop.create_task(channel.delete_many(messages, fire_multiple=True))
 
         return web.Response(status=204)
+
+    @auth_route
+    async def h_edit_channel(self, request, user):
+        """`PUT/PATCH /channels/{channel_id}`.
+
+        Edit a channel. Receives a JSON payload.
+        """
+        channel_id = request.match_info['channel_id']
+        chan = self.server.get_channel(channel_id)
+        payload = await request.json()
+
+        if isinstance(chan, TextChannel):
+            # check against text chema
+            payload = self.textchan_editschema(payload)
+        elif isinstance(chan, VoiceChannel):
+            payload = self.voicechan_editschema(payload)
+
+        # TODO: this
+        await chan.edit(payload)
