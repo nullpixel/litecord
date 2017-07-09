@@ -336,6 +336,12 @@ class Connection(WebsocketConnection):
         self.user = user
 
         self.session_id = self.gen_sessid()
+        if self.session_id is None:
+            # Failed to create an unique session
+            # This can happen because of anything
+            await self.invalidate(False)
+            return
+
         self.request_counter = self.server.request_counter[self.session_id]
         self.token = token
 
