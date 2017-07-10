@@ -24,4 +24,4 @@ async def on_message_edit(before, after):
     fmt = '**{0.author}** edited their message:\n{1.content}'
     await client.send_message(after.channel, fmt.format(after, before))
 
-client.run('litecord_RLoWjnc45pDX2shufGjijfyPbh2kV0sYGz2EwARhIAs=')
+client.run('litecord_lH_TrUGPwylwwxFPfnNTR-8AJoHn6GNvtq9-zBaozlDp1CfXGQVEenlXQvj9SROesO5rfnGgHjfCUTflJ8AmlQ')

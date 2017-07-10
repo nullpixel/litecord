@@ -11,7 +11,7 @@ import requests
 import sys
 import json
 
-API_URL = 'http://0.0.0.0:8000/api'
+API_URL = 'https://litecord.memework.org/api'
 
 def main(args):
     email = args[1]
@@ -23,6 +23,7 @@ def main(args):
     }
     _payload = json.dumps(payload)
     _resp = requests.post(f'{API_URL}/auth/login', data=_payload)
+    print(_resp)
     resp = _resp.json()
 
     print(f"Your token is {resp.get('token')}")
