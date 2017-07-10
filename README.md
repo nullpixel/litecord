@@ -28,6 +28,11 @@ py_litecord/bin/python3 -m pip install -r requirements.txt
 
 Then you just run `./run_litecord.sh`, simple.
 
+## Libraries that are known to work with Litecord
+ - `discord.js`, used by Atomic Discord.
+ - `discord.py`, both the `async` and `rewrite` branches.
+  - Tip: edit `discord.http.Route.BASE` in `rewrite` to your litecord instance.
+
 ## Usage
 When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
  * REST runs at `http://0.0.0.0:8000`

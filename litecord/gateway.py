@@ -384,6 +384,17 @@ class Connection(WebsocketConnection):
         user_settings = await self.settings.get_settings(self.user.id)
         user_relationships = await self.relations.get_relationships(self.user.id)
 
+        default_guild_setting = {
+            'suppress_everyone': False,
+            'muted': False,
+            'mobile_push': False,
+            'message_notifications': 1,
+            'guild_id': None,
+            'channel_overrides': [],
+        }
+
+        user_guild_settings = [{**default_guild_setting, **{'guild_id': guild['id']}} for guild in guild_list]
+
         ready_packet = {
             'v': self.options[0],
             'user': stripped_user,
@@ -392,6 +403,10 @@ class Connection(WebsocketConnection):
             # discord.js why u use undocumented shit
             'relationships': user_relationships,
             'user_settings': user_settings,
+
+            # ok eris im gonna make an exception 4 u
+            # but STOP USING UNDOCUMENTED STUFF AAAAAA
+            'user_guild_settings': user_guild_settings,
 
             'guilds': guild_list,
             'session_id': self.session_id,
