@@ -398,6 +398,13 @@ class Connection(WebsocketConnection):
             'user_settings': user_settings,
             'user_guild_settings': user_guild_settings,
 
+            'connected_accounts': [],
+            'notes': [],
+            'friend_suggestion_count': 0,
+            'tutorial': [],
+            'presences': [],
+            'read_state': [],
+
             'guilds': guild_list,
             'session_id': self.session_id,
             '_trace': self.get_identifiers('ready')
