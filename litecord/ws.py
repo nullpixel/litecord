@@ -168,7 +168,7 @@ class WebsocketConnection:
             log.info('[ws] StopConncection: %r', sc)
             await self.ws.close(sc.args[0], sc.args[1])
         except websockets.ConnectionClosed as err:
-            log.info('[ws] Closed with %d, %r', err.code, err.info)
+            log.info('[ws] Closed with %d, %r', err.code, err.reason)
         except Exception as err:
             log.error('Error while running', exc_info=True)
             await self.ws.close(4000, f'Unexpected error: {err!r}')
