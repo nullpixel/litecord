@@ -32,6 +32,14 @@ Then you just run `./run_litecord.sh`, simple.
  - `discord.js`, used by Atomic Discord.
  - `discord.py`, both the `async` and `rewrite` branches.
   - Tip: edit `discord.http.Route.BASE` in `rewrite` to your litecord instance.
+ - `Discordie`
+  - Tip: `lib/Constants.js`, around lines 814 for API base,
+    line 816 for cdn endpoint(`/images`)
+ - `Eris`
+  - Tip: `node_modules/eris/lib/rest/RequestHandler.js`, line 133
+
+## Libraries that are known to not work with Litecord
+ - `discord.io`
 
 ## Usage
 When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
