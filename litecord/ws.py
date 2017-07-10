@@ -13,6 +13,7 @@ import json
 import inspect
 import logging
 import asyncio
+import zlib
 
 import websockets
 import earl
