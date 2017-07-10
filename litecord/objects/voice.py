@@ -1,4 +1,5 @@
 from .channel import BaseChannel
+from .base import LitecordObject
 
 class VoiceChannel(BaseChannel):
     """Represents a voice channel.
@@ -38,3 +39,33 @@ class VoiceChannel(BaseChannel):
             'user_limit': self.user_limit,
         }
 
+class VoiceRegion(LitecordObject):
+    """Represents a voice region
+    
+    Attributes
+    ----------
+    id: int
+        Voice Region ID.
+    name: str
+        Voice Region Name.
+    custom: bool
+        Wheter this voice region is custom.
+    """
+    def __init__(self, server, _raw):
+        super().__init__(server)
+        self.id = int(_raw['id'])
+        self.name = _raw['name']
+        self.custom = _raw.get('custom', False)
+
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'sample_hostname': 'localhost',
+            'sample_port': 6969,
+            'vip': True,
+            'optimal': False,
+            'deprecated': False,
+            'custom': self.custom,
+        }

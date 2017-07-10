@@ -401,11 +401,10 @@ class Connection(WebsocketConnection):
             'connected_accounts': [],
             'notes': [],
             'friend_suggestion_count': 0,
-            'tutorial': [],
             'presences': [],
             'read_state': [],
             'analytics_token': 'hahahahahahahahaha lol',
-            'experiments': True,
+            'experiments': [],
             'guild_experiments': [],
             'required_action': 'die',
 

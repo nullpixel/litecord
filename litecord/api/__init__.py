@@ -5,3 +5,4 @@ from .guilds import *
 from .imgs import *
 from .invites import *
 from .users import *
+from .voice import *

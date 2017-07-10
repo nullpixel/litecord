@@ -14,7 +14,7 @@ from ..basics import VOICE_OP
 from ..objects import LitecordObject
 from ..err import VoiceError
 from ..snowflake import get_raw_token
-from ..objects import VoiceChannel, User
+from ..objects import VoiceChannel, User, VoiceRegion
 
 from .objects import VoiceChannelState, VoiceState
 from .gateway import VoiceConnection
@@ -131,6 +131,12 @@ class VoiceManager:
         self.server = server
         self.guild_man = server.guild_man
 
+        self.voice_regions = [
+            VoiceRegion(server, {'id': 0, 'name': 'Brazeel'}),
+            VoiceRegion(server, {'id': 1, 'name': 'The Wall'}),
+            VoiceRegion(server, {'id': 2, 'name': 'Whorehouse', 'custom': True}),
+        ]
+
         self.vg_managers = []
 
         for guild in self.guild_man.all_guilds():
@@ -141,6 +147,10 @@ class VoiceManager:
             if vg_manager.guild.id == guild_id:
                 return vg_manager
         return None
+
+    def get_all_regions(self):
+        """Get a list of all available :meth:`VoiceRegion` objects."""
+        return self.voice_regions
 
     async def connect(self, channel, conn):
         """Create a :meth:`VoiceState` object for a connection

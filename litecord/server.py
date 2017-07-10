@@ -623,6 +623,7 @@ class LitecordServer:
             self.images_endpoint = api.ImageEndpoint(self)
             self.admins_endpoint = api.AdminEndpoints(self)
             self.auth_endpoint = api.AuthEndpoints(self)
+            self.voice_endpoint = api.VoiceEndpoint(self)
 
             # setup internal handlers
             self.add_get('version', self.h_get_version)
