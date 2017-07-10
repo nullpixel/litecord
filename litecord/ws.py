@@ -160,7 +160,7 @@ class WebsocketConnection:
                 payload = await self.recv()
                 await self.process(payload)
         except (PayloadLengthExceeded, earl.DecodeError, json.JSONDecodeError):
-            await self.ws.close(4002, 'Bad Payload.')
+            await self.ws.close(4002, 'Decoding Error')
         except asyncio.CancelledError:
             log.info('[ws] Run task was cancelled')
             await self.ws.close(1006, 'Task was cancelled')

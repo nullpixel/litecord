@@ -482,7 +482,7 @@ class Connection(WebsocketConnection):
                 # TODO: Make this work with ratelimits
                 # since discord sends you OP 9 + ws close
                 if flag is None:
-                    raise StopConnection(4001, 'Invalidated session')
+                    raise StopConnection(4000, 'Invalidated session')
             except:
                 pass
 
@@ -519,6 +519,7 @@ class Connection(WebsocketConnection):
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             await self.invalidate(True)
+            raise StopConnection(4007, 'Invalid sequence')
 
         # if the session lost more than RESUME_MAX_EVENTS
         # events while it was offline, invalidate it.
