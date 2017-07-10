@@ -325,7 +325,8 @@ class Connection(WebsocketConnection):
             log.warning(f'Erroneous IDENTIFY: {err!r}')
             raise StopConnection(4001, f'Erroneous IDENTIFY: {err!r}')
 
-        token, prop, large = data['token'], data['properties'], data['large_threshold']
+        token, prop, large = data['token'], data['properties']
+        large = data.get('large_threshold', 50)
         self.compress_flag = data.get('compress', False)
 
         valid, user_object, user = await self.check_token(token)
