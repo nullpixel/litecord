@@ -404,6 +404,10 @@ class Connection(WebsocketConnection):
             'tutorial': [],
             'presences': [],
             'read_state': [],
+            'analytics_token': 'hahahahahahahahaha lol',
+            'experiments': True,
+            'guild_experiments': [],
+            'required_action': 'die',
 
             'guilds': guild_list,
             'session_id': self.session_id,
