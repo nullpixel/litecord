@@ -35,6 +35,12 @@ def main():
         config_path = sys.argv[1]
     except IndexError:
         config_path = 'litecord_config.json'
+
+    try:
+        cfgfile = open(config_path, 'r')
+    except FileNotFoundError:
+        cfgfile = open('litecord_config.sample.json', 'r')
+
     flags = json.load(open(config_path, 'r'))
 
     app.router.add_get('/', index)
