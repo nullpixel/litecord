@@ -473,7 +473,11 @@ class Connection(WebsocketConnection):
         if not flag:
             try:
                 self.server.event_cache.pop(self.session_id or session_id)
-                raise StopConnection(4001, 'Invalidated session')
+              
+                # TODO: Make this work with ratelimits
+                # since discord sends you OP 9 + ws close
+                if flag is None:
+                    raise StopConnection(4001, 'Invalidated session')
             except:
                 pass
 
