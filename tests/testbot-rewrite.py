@@ -19,4 +19,4 @@ async def on_message(message):
     if message.content.startswith('$hello'):
         await message.channel.send('Hello!')
 
-client.run('litecord_lH_TrUGPwylwwxFPfnNTR-8AJoHn6GNvtq9-zBaozlDp1CfXGQVEenlXQvj9SROesO5rfnGgHjfCUTflJ8AmlQ')
+client.run('litecord_UaHqNdtGmxprmE4tO3NxieEYfcebJbZj9TZ-lQQd1SNFwgU6Vr0uEPL7tHhbmoZaGx1H4cYMCHBbgiNYk7yxtg')
