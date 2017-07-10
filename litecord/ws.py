@@ -165,10 +165,10 @@ class WebsocketConnection:
             log.info('[ws] Run task was cancelled')
             await self.ws.close(1006, 'Task was cancelled')
         except StopConnection as sc:
-            log.info(f'[ws] StopConnection: {sc!r}')
+            log.info('[ws] StopConncection: %r', sc)
             await self.ws.close(sc.args[0], sc.args[1])
         except websockets.ConnectionClosed as err:
-            log.info('[ws] Closed with {err.code!r}, {err.reason!r}')
+            log.info('[ws] Closed with %d, %r', err.code, err.info)
         except Exception as err:
             log.error('Error while running', exc_info=True)
             await self.ws.close(4000, f'Unexpected error: {err!r}')
@@ -176,7 +176,9 @@ class WebsocketConnection:
             return
 
         await self._clean()
-        await self.ws.close(1000)
+        try:
+            await self.ws.close(1000)
+        except: pass
 
     def clean(self):
         log.debug('cleaning')
