@@ -176,9 +176,8 @@ class WebsocketConnection:
             return
 
         await self._clean()
-        try:
+        if self.ws.open:
             await self.ws.close(1000)
-        except: pass
 
     def clean(self):
         log.debug('cleaning')
