@@ -29,3 +29,33 @@ class SettingsManager:
             settings = {}
         return settings
 
+    async def get_guild_settings(self, user_id: int):
+        """Get a User Guild Settings object to be used
+        in READY payloads.
+        
+        Parameters
+        ----------
+        user_id: int
+            User ID to get User Guild Settings payload for.
+
+        Returns
+        -------
+        list
+            The User Guild Settings payload.
+        """
+
+        res = []
+
+        default_gsetting = {
+            'suppress_everyone': False,
+            'muted': False,
+            'mobile_push': False,
+            'message_notifications': 1,
+            'guild_id': None,
+            'channel_overrides': [],
+        }
+
+        for guild in self.server.guild_man.yield_guilds(user_id):
+            res.append({**default_gsetting, **{'guild_id': str(guild.id)}})
+
+        return res
