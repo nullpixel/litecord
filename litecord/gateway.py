@@ -530,16 +530,16 @@ class Connection(WebsocketConnection):
         log.info(f'Replaying {len(seqs_to_replay)} events to {user!r}')
 
         # critical session etc
+        await self.dispatch_lock
         try:
-            with await self.dispatch_lock:
-                for seq in seqs_to_replay:
-                    try:
-                        evt = event_data['events'][seq]
-                    except KeyError:
-                        log.info(f'Event {seq} not found')
-                        continue
+            for seq in seqs_to_replay:
+                try:
+                    evt = event_data['events'][seq]
+                except KeyError:
+                    log.info(f'Event {seq} not found')
+                    continue
 
-                    await self.send_payload(evt)
+                await self.send_payload(evt)
         finally:
             self.dispatch_lock.release()
 
