@@ -2,8 +2,9 @@ import discord
 import asyncio
 import logging
 
-discord.http.Route.BASE = 'https://litecord.memework.org/api/v6'
+discord.http.Route.BASE = 'http://litecord.memework.org:8000/api/v6'
 #discord.http.Route.BASE = 'http://0.0.0.0:8000/api'
+discord.http.Route.BASE = 'http://163.172.191.166:8000/api'
 logging.basicConfig(level=logging.DEBUG)
 
 client = discord.Client()
@@ -20,5 +21,4 @@ async def on_message(message):
     if message.content.startswith('$hello'):
         await message.channel.send('Hello!')
 
-client.run('litecord_UaHqNdtGmxprmE4tO3NxieEYfcebJbZj9TZ-lQQd1SNFwgU6Vr0uEPL7tHhbmoZaGx1H4cYMCHBbgiNYk7yxtg')
-#client.run('litecord_V00yci0oqnSpcor-HZqA_FZIBGwknysHbCYChZIuQ1QJUKaBW_HqEtZWB2MGLnVlK8zymdW5pchBDZOPtPhIbQ')
+client.run('litecord_Prt3FEpPfiUFT4nwkFbgUSHF872sOjQWOjyE3m9PBTz0jlt2QsS-Oa2DEXuYUODxg4ONDmpd92J5112J7MbMnQ')

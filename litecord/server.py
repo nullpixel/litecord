@@ -637,3 +637,12 @@ class LitecordServer:
         except:
             log.error('Error when initializing LitecordServer', exc_info=True)
             return False
+
+    def shutdown(self):
+        """Send a reconnect packet to all available connections,
+        and make the gateway stop receiving new ones.
+        """
+        self.accept_clients = False
+
+        for (_, conn) in self.sessions.items():
+            self.loop.create_task(conn.send_op(OP.RECONNECT))

@@ -13,6 +13,7 @@ import json
 
 API_URL = 'https://litecord.memework.org/api'
 #API_URL = 'http://0.0.0.0:8000/api'
+API_URL = 'http://163.172.191.166:8000/api'
 
 def main(args):
     email = args[1]

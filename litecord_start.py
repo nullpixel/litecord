@@ -57,6 +57,7 @@ def main():
         loop.run_forever()
     except KeyboardInterrupt:
         log.info("Exiting from a CTRL-C...")
+        app.litecord_server.shutdown()
         litecord._stop(loop)
     except:
         log.error("Oh no! We received an error. Exiting.", exc_info=True)

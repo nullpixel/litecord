@@ -815,11 +815,17 @@ async def gateway_server(app, flags, loop=None):
         _stop(loop)
         return
 
+    app.litecord_server = server
+
     # server initialized, release HTTP to load pls
     _load_lock.release()
 
     async def henlo(ws, path):
         """Handles a new connection to the Gateway."""
+        if not server.accept_clients:
+            await self.ws.close(4069, 'Server is not accepting new clients.')
+            return
+
         log.info(f'[ws] New client at {path!r}')
 
         params = urlparse.parse_qs(urlparse.urlparse(path).query)
