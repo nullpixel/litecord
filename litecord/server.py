@@ -1,4 +1,4 @@
-import asyncio
+    import asyncio
 import json
 import logging
 import time
@@ -647,4 +647,4 @@ class LitecordServer:
         self.accept_clients = False
 
         for (_, conn) in self.sessions.items():
-            self.loop.create_task(conn.send_op(OP.RECONNECT))
+            asyncio.ensure_future(conn.send_op(OP.RECONNECT))
