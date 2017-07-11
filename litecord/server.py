@@ -10,6 +10,7 @@ from aiohttp import web
 
 import litecord.api as api
 
+from .basics import OP
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
 from .presence import PresenceManager
