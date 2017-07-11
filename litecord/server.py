@@ -107,6 +107,7 @@ class LitecordServer:
 
         self.flags = flags
         check_configuration(flags)
+        self.accept_clients = True
 
         self.rest_ratelimits = {}
         self.ws_ratelimits = {}
