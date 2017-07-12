@@ -549,8 +549,9 @@ class Connection(WebsocketConnection):
             log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
 
-        seqs_to_replay = range(replay_seq + 1, sent_seq + 1)
-        log.info(f'Replaying {len(seqs_to_replay)} events to {user!r}')
+        seqs_to_replay = range(replay_seq, sent_seq + 1)
+        total_seqs = len(seqs_to_replay)
+        log.info(f'Replaying {total_seqs} events to {user!r}')
 
         # critical session etc
         await self.dispatch_lock
@@ -561,7 +562,6 @@ class Connection(WebsocketConnection):
                 try:
                     evt = event_data['events'][seq]
                 except KeyError:
-                    log.info(f'Event {seq} not found')
                     continue
 
                 t = evt.get('t')
@@ -570,6 +570,7 @@ class Connection(WebsocketConnection):
                 else:
                     await self.send(evt)
 
+            log.debug('[resume] dispatching PRESENCES_REPLACE')
             await self.dispatch('PRESENCES_REPLACE', presences)
         finally:
             self.dispatch_lock.release()
