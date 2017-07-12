@@ -192,6 +192,8 @@ class Connection(WebsocketConnection):
         
         Ignores certain kinds of payloads and events
         """
+        self.events['sent_seq'] = sent_seq
+
         op = payload['op']
         if op not in (OP.DISPATCH, OP.STATUS_UPDATE):
             return
@@ -201,7 +203,6 @@ class Connection(WebsocketConnection):
             return
 
         self.events['events'][sent_seq] = payload
-        self.events['sent_seq'] = sent_seq
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
