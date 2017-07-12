@@ -553,7 +553,10 @@ class Connection(WebsocketConnection):
         total_seqs = len(seqs_to_replay)
         log.info(f'Replaying {total_seqs} events to {user!r}')
 
-        # critical session etc
+        # NOTE: DON'T CALL self.dispatch in this try block. DON'T. EVER.
+        # it will actually hang the dispatch call indefinetly
+        # because the dispatch_lock is well... locked
+        # and self.dispatch waits for the lock to be released.
         await self.dispatch_lock
         try:
             presences = []
@@ -569,11 +572,11 @@ class Connection(WebsocketConnection):
                     presences.append(evt.get('d'))
                 else:
                     await self.send(evt)
-
-            log.debug('[resume] dispatching PRESENCES_REPLACE')
-            await self.dispatch('PRESENCES_REPLACE', presences)
         finally:
             self.dispatch_lock.release()
+
+        if len(presences) > 0:
+            await self.dispatch('PRESENCES_REPLACE', presences)
 
         self.raw_user = raw_user
         self.user = user
