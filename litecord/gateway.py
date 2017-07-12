@@ -188,7 +188,18 @@ class Connection(WebsocketConnection):
         return new_id
     
     def _register_payload(self, sent_seq, payload):
-        """Register a sent payload."""
+        """Register a sent payload.
+        
+        Ignores certain kinds of payloads and events
+        """
+        op = payload['op']
+        if op not in (OP.DISPATCH, OP.STATUS_UPDATE):
+            return
+
+        t = payload.get('t')
+        if t in ('READY', 'RESUMED'):
+            return
+
         self.events['events'][sent_seq] = payload
         self.events['sent_seq'] = sent_seq
 
@@ -537,12 +548,14 @@ class Connection(WebsocketConnection):
             log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
 
-        seqs_to_replay = range(replay_seq, sent_seq + 1)
+        seqs_to_replay = range(replay_seq + 1, sent_seq + 1)
         log.info(f'Replaying {len(seqs_to_replay)} events to {user!r}')
 
         # critical session etc
         await self.dispatch_lock
         try:
+            presences = []
+
             for seq in seqs_to_replay:
                 try:
                     evt = event_data['events'][seq]
@@ -550,7 +563,13 @@ class Connection(WebsocketConnection):
                     log.info(f'Event {seq} not found')
                     continue
 
-                await self.send(evt)
+                t = evt.get('t')
+                if t == 'PRESENCE_UPDATE':
+                    presences.append(evt.get('d'))
+                else:
+                    await self.send(evt)
+
+            await self.dispatch('PRESENCES_REPLACE', presences)
         finally:
             self.dispatch_lock.release()
 
