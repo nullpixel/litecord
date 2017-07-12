@@ -550,7 +550,7 @@ class Connection(WebsocketConnection):
                     log.info(f'Event {seq} not found')
                     continue
 
-                await self.send_payload(evt)
+                await self.send(evt)
         finally:
             self.dispatch_lock.release()
 
