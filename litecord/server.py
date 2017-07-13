@@ -640,11 +640,44 @@ class LitecordServer:
             log.error('Error when initializing LitecordServer', exc_info=True)
             return False
 
+    async def shutdown_conn(self, conn):
+        """Shutdown a connection.
+
+        Sends an OP 7 Reconnect packet and waits 3 seconds so that the
+        connection is closed client-side, if the client doesn't close
+        in time, the server closes it.
+        """
+        await conn.send_op(OP.RECONNECT)
+        await asyncio.sleep(2)
+        if conn.ws.open:
+            await conn.ws.close(4000, 'Shutdown procedure')
+
     def shutdown(self):
         """Send a reconnect packet to all available connections,
         and make the gateway stop receiving new ones.
+
+        Closes the event loop.
         """
         self.accept_clients = False
 
+        loop = self.loop
+
+        reconnect_tasks = []
         for (_, conn) in self.sessions.items():
-            asyncio.ensure_future(conn.send_op(OP.RECONNECT))
+            reconnect_tasks.append(loop.create_task(self.shutdown_conn(conn)))
+
+        rtasks_gathered = asyncio.gather(*reconnect_tasks, loop=loop)
+        # finish sending RECONNECT to everyone, plz.
+        loop.run_until_complete(rtasks_gathered)
+
+        pending = asyncio.Task.all_tasks(loop=loop)
+        gathered = asyncio.gather(*pending, loop=loop)
+
+        try:
+            gathered.cancel()
+            loop.run_until_complete(gathered)
+            gathered.exception()
+        except:
+            pass
+
+        loop.close()

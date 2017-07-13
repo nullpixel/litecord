@@ -847,7 +847,7 @@ async def gateway_server(app, flags, loop=None):
     async def henlo(ws, path):
         """Handles a new connection to the Gateway."""
         if not server.accept_clients:
-            await self.ws.close(4069, 'Server is not accepting new clients.')
+            await ws.close(4069, 'Server is not accepting new clients.')
             return
 
         log.info(f'[ws] New client at {path!r}')
