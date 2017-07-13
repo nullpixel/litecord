@@ -444,6 +444,9 @@ class LitecordServer:
 
     async def h_give_gateway(self, request):
         ws = self.flags['server']['ws']
+        if not self.accept_clients:
+            return web.Response(status=404, text='Gateway down for server shutdown')
+
         if len(ws) == 2:
             return _json({"url": f"ws://{ws[0]}:{ws[1]}"})
         elif len(ws) == 3:
