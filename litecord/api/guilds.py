@@ -66,6 +66,7 @@ class GuildsEndpoint:
         self.server.add_delete('guilds/{guild_id}/bans/{user_id}', self.h_unban_member)
 
         self.server.add_patch('guilds/{guild_id}', self.h_edit_guild)
+        self.server.add_delete('guilds/{guild_id}', self.h_delete_guild)
 
         self.server.add_post('guilds/{guild_id}/channels', self.h_create_channel)
 
@@ -339,6 +340,27 @@ class GuildsEndpoint:
             return _json(new_guild.as_json)
         except Exception as err:
             return _err(f'{err!r}')
+
+    @auth_route
+    async def h_delete_guild(self, request, user):
+        """`DELETE /guilds/{guild_id}`.
+        
+        Delete a guild. Returns the guild object on success.
+        Dispatches GUILD_DELETE to all guild members.
+        """
+        guild_id = request.match_info['guild_id']
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err(errno=10004)
+
+        if user.id != guild.owner_id:
+            return _err(errno=40001)
+
+        # NOTE: I wonder how we should do the audit log
+        # reason handling, tbh I don't know if we even
+        # are going to implement them :thinking:
+        await guild.delete()
+        return _json(guild.as_json)
 
     @auth_route
     async def h_create_channel(self, request, user):

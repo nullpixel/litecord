@@ -36,7 +36,6 @@ class Handler:
         return self.op == payload['op']
 
     def __call__(self, func):
-        print(f'Adding as OP {self.op} handler', func)
         self.func = func
         return self
 

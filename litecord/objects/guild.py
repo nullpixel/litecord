@@ -284,6 +284,10 @@ class Guild(LitecordObject):
         """
         return await self.guild_man.create_channel(self, chan_create_payload)
 
+    async def delete(self):
+        """Delete a guild."""
+        return await self.guild_man.delete_guild(self)
+
     @property
     def as_json(self):
         return {

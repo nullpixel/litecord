@@ -225,6 +225,9 @@ class GuildManager:
         Used normally after a updating the guild dataabse.
         Updates cache objects.
 
+        If the provided guild does not exist,
+        this removed guild and channel objects from the cache.
+
         Parameters
         ----------
         old_guild: :class:`Guild`
@@ -233,15 +236,32 @@ class GuildManager:
         Returns
         -------
         :class:`Guild`, the new, updated guild object.
+        :py:meth:`None` if the guild doesn't exist anymore
         """
+        assert isinstance(old_guild, Guild)
         guild_id = old_guild.id
 
         raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
+        if raw_guild is None:
+            log.info("[reload] Didn't find a guild, deleting from cache")
+            # since we don't have a guild in DB, but we have the old guild
+            # object, use it to remove the rest from cache.
+            try:
+                self.guilds.pop(guild_id)
+            except KeyError: pass
+
+            for channel in old_guild.all_channels():
+                try:
+                    self.channels.pop(channel.id)
+                except KeyError: pass
+
+            return
 
         guild = Guild(self.server, raw_guild)
 
         try:
-            guild._viewers = old_guild._viewers
+            # make a copy so old_guild gets garbage collected
+            guild._viewers = old_guild._viewers[:]
         except:
             pass
 
@@ -324,6 +344,8 @@ class GuildManager:
     async def edit_guild(self, guild, guild_edit_payload):
         """Edit a guild.
 
+        Dispatches GUILD_UPDATE events to relevant clients.
+
         Parameters
         ----------
         guild: :class:`Guild`
@@ -335,8 +357,6 @@ class GuildManager:
         Returns
         -------
         The edited :class:`Guild`.
-
-        Dispatches GUILD_UPDATE events to relevant clients.
         """
 
         await self.guild_db.update_one({'guild_id': str(guild.id)},
@@ -348,7 +368,28 @@ class GuildManager:
         return guild
 
     async def delete_guild(self, guild):
-        pass
+        """Delete a guild.
+        
+        Dispatches GUILD_DELETE to all guild members.
+
+        Returns
+        -------
+        None
+        """
+        res = await self.guild_db.delete_many({'guild_id': guild_id})
+        if res.deleted_count < 1:
+            log.warning('[guild_delete] Something went weird (deleted_doc == 0)')
+            return
+
+        if res.deleted_count > 1:
+            log.warning('[guild_delete] SOMETHING HAS GONE HORRIBLY WRONG(deleted_doc > 1)')
+
+        await guild.dispatch('GUILD_DELETE', {
+            'id': str(guild.id),
+            'unavailable': False
+        })
+
+        return await self.reload_guild(guild)
 
     async def add_member(self, guild, user):
         """Adds a user to a guild.
