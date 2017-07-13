@@ -21,11 +21,8 @@ class UsersEndpoint:
 
     def register(self):
         self.server.add_get('users/{user_id}', self.h_users)
-
         self.server.add_patch('users/@me', self.h_patch_me)
-
         self.server.add_get('users/@me/settings', self.h_get_me_settings)
-
         self.server.add_get('users/@me/guilds', self.h_users_me_guild)
         self.server.add_delete('api/users/@me/guilds/{guild_id}', self.h_leave_guild)
 

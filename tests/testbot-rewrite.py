@@ -28,4 +28,3 @@ async def on_message(message):
         await message.channel.send('asd')
 
 client.run('litecord_Prt3FEpPfiUFT4nwkFbgUSHF872sOjQWOjyE3m9PBTz0jlt2QsS-Oa2DEXuYUODxg4ONDmpd92J5112J7MbMnQ')
-#client.run('MzM0NDg2Mjg1MTYxMDcwNTkz.DEb9dg.q3tjo26HwO7HFfwbNBXCnQwFRo8')
