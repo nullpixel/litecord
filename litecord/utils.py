@@ -5,8 +5,10 @@ import base64
 import os
 import hashlib
 
-from random import randint
+import sha3
 import aiohttp
+
+from random import randint
 from aiohttp import web
 
 log = logging.getLogger(__name__)
@@ -81,7 +83,7 @@ def get_random_salt(size=32):
 
 
 def pwd_hash(plain, salt):
-    return hashlib.sha256(f'{plain}{salt}'.encode()).hexdigest()
+    return hashlib.sha3_512(f'{plain}{salt}'.encode()).hexdigest()
 
 
 def _err(msg='', errno=None, status_code=500):

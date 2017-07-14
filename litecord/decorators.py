@@ -11,11 +11,15 @@ log = logging.getLogger(__name__)
 
 async def user_from_request(server, request):
     try:
-        token = await server.check_request(request)
+        token, user_id = await server.check_request(request)
     except RequestCheckError as err:
         return err.args[0]
 
-    return await server._user(token)
+    user = server.get_user(user_id)
+    if user is None:
+        return web.Response(status=401, text='Unauthorized [user not found]')
+
+    return user
 
 async def do(handler, *args):
     try:
@@ -35,7 +39,10 @@ def admin_endpoint(handler):
     """
     async def inner_handler(endpoint, request):
         server = endpoint.server
+
         user = await user_from_request(server, request)
+        if isinstance(user, web.Response):
+            return user
 
         # pretty easy lol
         if not user.admin:
@@ -52,9 +59,11 @@ def auth_route(handler):
     """Declare a route that needs authentication to be used."""
     async def inner_handler(endpoint, request):
         server = endpoint.server
+
         user = await user_from_request(server, request)
         if isinstance(user, web.Response):
             return user
+
         return await do(handler, endpoint, request, user)
 
     inner_handler.__doc__ = handler.__doc__

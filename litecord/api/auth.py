@@ -3,7 +3,6 @@ import logging
 from voluptuous import Schema, REMOVE_EXTRA
 
 from ..utils import _err, _json, pwd_hash, get_random_salt
-from ..snowflake import get_raw_token
 from ..decorators import auth_route
 
 log = logging.getLogger(__name__)
@@ -64,18 +63,8 @@ class AuthEndpoints:
             return _err("fail on login [password]")
 
         user_id = raw_user['id']
-        old_token = await self.server.token_userid(user_id)
-
-        new_token = await get_raw_token()
-        while (await self.server.token_used(new_token)):
-            new_token = await get_raw_token()
-
-        await self.server.token_unregister(old_token)
-
-        log.info(f"[login] Generated new token for {user_id}")
-        await self.server.token_register(new_token, user_id)
-
-        return _json({"token": new_token})
+        token = await self.server.generate_token(user_id)
+        return _json({"token": token})
 
     async def h_add_user(self, request):
         """`POST /users/add`.

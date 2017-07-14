@@ -31,4 +31,4 @@ async def on_message(message):
 #client.run('litecord_Prt3FEpPfiUFT4nwkFbgUSHF872sOjQWOjyE3m9PBTz0jlt2QsS-Oa2DEXuYUODxg4ONDmpd92J5112J7MbMnQ')
 
 # local
-client.run('litecord_1q6Bat8SGVYa3yLwgkge514h8o7Te3NW1hRV9e--TpzDk4HKDreZpyM6LnX5fnYjLHnKN6PavHCffAXnVkydcg')
+client.run('MTQ5MjYwMDQ2MzM3.WQk0dDxZBn0ECjGnD038biLGCYs')

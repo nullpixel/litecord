@@ -13,7 +13,6 @@ import websockets
 from ..basics import VOICE_OP
 from ..objects import LitecordObject
 from ..err import VoiceError
-from ..snowflake import get_raw_token
 from ..objects import VoiceChannel, User, VoiceRegion
 
 from .objects import VoiceChannelState, VoiceState
@@ -80,7 +79,8 @@ class VoiceServer(LitecordObject):
         self.global_state = {}
 
     async def make_token(self, user_id: int) -> str:
-        token = await get_raw_token('litecord_vws-')
+        # HOW TO FIX
+        token = await howtofixthis('litecord_vws-')
         self.tokens[token] = user_id
         return token
 

@@ -4,12 +4,15 @@ import logging
 import time
 import subprocess
 import collections
+import base64
+import binascii
 
 import motor.motor_asyncio
+import itsdangerous
 from aiohttp import web
+from itsdangerous import Signer
 
 import litecord.api as api
-
 from .basics import OP
 from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
 from .guild import GuildManager
@@ -260,9 +263,11 @@ class LitecordServer:
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
 
     async def load_users(self):
-        """Load users database using MongoDB.
+        """Load user collection.
+        If the raw user in the collection doesn't have a hashed
+        password in their object, a new one gets created(with a random salt)
 
-        Creates the ``'id->raw_user'`` and ``'id->user'`` caches in :attr:`LitecordServer.cache`.
+        Fills the ``'id->raw_user'`` and ``'id->user'`` caches in :attr:`LitecordServer.cache`.
         """
 
         # create cache objects
@@ -369,38 +374,46 @@ class LitecordServer:
         user_id = await self.token_find(token)
         return self.get_user(user_id)
 
-    # token helper functions
-    async def token_userid(self, user_id: str):
-        """Find a token from a user's ID."""
-        return (await self.token_db.find_one({'user_id': str(user_id)}))
+    async def generate_token(self, user_id: str):
+        """Generate a very random token tied to an user.
 
-    async def token_find(self, token: str):
-        """Return a user ID from a token."""
-        res = await self.token_db.find_one({'token': str(token)})
+        Parameters
+        ----------
+        userid: str
+            User ID tied to that token
+        """
+        user_id = str(user_id)
+
+        userid_encoded = base64.urlsafe_b64encode(user_id.encode())
+
+        raw_user = self.get_raw_user(user_id)
+        s = Signer(raw_user['password']['hash'])
+        return s.sign(userid_encoded).decode()
+
+    async def token_find(self, token: str) -> int:
+        """Return a user ID from a token.
+        
+        Parses the token to get the user ID and then unsigns it
+        using the user's hashed password as a secret key
+        """
+        b64 = lambda x: base64.urlsafe_b64decode(x)
+
+        userid_encoded = token.split('.')[0]
+
         try:
-            return res.get('user_id')
-        except AttributeError:
-            log.warning("No object found")
+            userid = int(b64(userid_encoded))
+        except (binascii.Error, ValueError):
             return None
 
-    async def token_used(self, token: str) -> bool:
-        """Returns `True` if the token is alredy used by other account."""
-        obj = await self.token_find(token)
-        return bool(obj)
+        raw_user = self.get_raw_user(userid)
 
-    async def token_unregister(self, token: str) -> bool:
-        """Detach a token from a user."""
-        if token is None:
-            return True
+        s = Signer(raw_user['password']['hash'])
 
-        res = await self.token_db.delete_one({'token': str(token)})
-        return res.deleted_count > 0
-
-    async def token_register(self, token: str, user_id: str) -> bool:
-        """Attach a token to a user."""
-        log.info(f"Registering {token} to {user_id}")
-        res = await self.token_db.insert_one({'token': str(token), 'user_id': str(user_id)})
-        return res.acknowledged
+        try:
+            userid_encoded_ft = s.unsign(token)
+        except itsdangerous.BadSignature:
+            return None
+        return userid
 
     async def check(self) -> dict:
         """Returns a dictionary with self-checking data.
@@ -452,7 +465,7 @@ class LitecordServer:
         elif len(ws) == 3:
             return _json({"url": f"ws://{ws[2]}:{ws[1]}"})
 
-    async def check_request(self, request):
+    async def check_request(self, request) -> 'tuple(str, int)':
         """Checks a request to the API.
 
         This function checks if a request has the required headers
@@ -461,7 +474,7 @@ class LitecordServer:
         More information at:
         https://discordapp.com/developers/docs/reference#authentication
 
-        NOTE: This function doesn't check for OAuth2 Bearer tokens.
+        NOTE: This function doesn't support OAuth2 Bearer tokens.
         """
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
@@ -474,22 +487,18 @@ class LitecordServer:
         try:
             token_type, token_value = auth_header.split()
         except:
-            if auth_header.startswith('litecord_'):
-                token_type = 'Bot'
-                token_value = auth_header
-            else:
-                log.info(f"Received weird auth header: {auth_header!r}")
-                raise RequestCheckError(_err('error parsing auth header', status_code=401))
+            token_type = 'Bot'
+            token_value = auth_header
 
         if token_type != 'Bot':
             raise RequestCheckError(_err('Invalid token type', status_code=401))
 
-        # check if token is valid
-        raw_token_object = await self.token_db.find_one({'token': token_value})
-        if raw_token_object is None:
-            raise RequestCheckError(_err(f'Invalid token {token_value!r}', status_code=401))
+        try:
+            user_id = await self.token_find(token_value)
+        except itsdangerous.BadSignature:
+            raise RequestCheckError(_err(f'Invalid token', status_code=401))
 
-        return token_value
+        return token_value, user_id
 
     async def get_discrim(self, username: str) -> str:
         """Generate a discriminator from a username."""
