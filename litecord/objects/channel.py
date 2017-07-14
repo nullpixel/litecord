@@ -84,6 +84,10 @@ class BaseChannel(LitecordObject):
 
         return dispatched
 
+    async def delete(self):
+        """Delete a channel"""
+        return await self.guild_man.delete_channel(self)
+
     @property
     def as_invite(self):
         return {

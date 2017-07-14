@@ -636,8 +636,24 @@ class GuildManager:
         """Deletes a channel from a guild.
 
         Dispatches CHANNEL_DELETE to relevant clients
+
+        Returns
+        -------
+        None
         """
-        pass
+        raw_guild = channel.guild._data
+        new_chan_array = []
+
+        for (idx, raw_channel) in enumerate(raw_guild['channels'][:]):
+            if raw_channel['id'] != str(channel.id):
+                new_chan_array.append(raw_channel)
+
+        await self.guild_db.update_one({'id': str(channel.guild.id)}, 
+            {'$set': {'channels': new_chan_array}})
+
+        guild = await self.reload_guild(guild)
+        await guild.dispatch('CHANNEL_DELETE', channel.as_json)
+        return
 
     async def invite_janitor(self):
         """Janitor task for invites.
