@@ -359,7 +359,7 @@ class GuildManager:
         The edited :class:`Guild`.
         """
 
-        await self.guild_db.update_one({'guild_id': str(guild.id)},
+        await self.guild_db.update_one({'id': str(guild.id)},
             {'$set': guild_edit_payload})
 
         guild = await self.reload_guild(guild)
@@ -376,7 +376,7 @@ class GuildManager:
         -------
         None
         """
-        res = await self.guild_db.delete_many({'guild_id': guild_id})
+        res = await self.guild_db.delete_many({'id': guild_id})
         if res.deleted_count < 1:
             log.warning('[guild_delete] Something went weird (deleted_doc == 0)')
             return
@@ -612,12 +612,25 @@ class GuildManager:
         await guild.dispatch('CHANNEL_CREATE', new_channel.as_json)
         return new_channel
 
-    async def edit_channel(self, guild, new_payload):
+    async def edit_channel(self, channel, payload):
         """Edits a channel in a guild.
 
         Dispatches CHANNEL_UPDATE to relevant clients.
         """
-        pass
+
+        raw_guild = channel.guild._data
+        new_chan_array = raw_guild['channels']
+        for raw_channel in new_chan_array:
+            if raw_channel['id'] == str(channel.id):
+                raw_channel = {**raw_channel, **payload}
+
+        await self.guild_db.update_one({'id': str(channel.guild.id)},
+            {'$set': {'channels': new_chan_array}})
+
+        guild = await self.reload_guild(guild)
+        new_chan = guild.get_channel(channel.id)
+        await guild.dispatch('CHANNEL_UPDATE', new_chan.as_json)
+        return new_chan
 
     async def delete_channel(self, channel):
         """Deletes a channel from a guild.

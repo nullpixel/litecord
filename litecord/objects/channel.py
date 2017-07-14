@@ -195,6 +195,20 @@ class TextChannel(BaseChannel):
                 'ids': in_bulk,
             })
 
+    async def edit(self, payload: dict) -> TextChannel:
+        """Edit a text channel with a text channel edit payload.
+        
+        Parameters
+        ----------
+        payload: dict
+            Text channel edit payload.
+
+        Returns
+        -------
+        A new :class:`TextChannel` object with the edited data
+        """
+        return await self.guild_man.edit_channel(payload)
+
     @property
     def as_json(self):
         return {

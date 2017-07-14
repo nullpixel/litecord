@@ -54,8 +54,7 @@ class ChannelsEndpoint:
 
         self.server.add_put('channels/{channel_id}', self.h_edit_channel)
         self.server.add_patch('channels/{channel_id}', self.h_edit_channel)
-
-        #self.server.add_delete('channels/{channel_id}', self.h_delete_channel)
+        self.server.add_delete('channels/{channel_id}', self.h_delete_channel)
 
         self.server.add_post('channels/{chanel_id}/messages/bulk-delete', self.h_bulk_delete)
 
@@ -328,13 +327,38 @@ class ChannelsEndpoint:
         """
         channel_id = request.match_info['channel_id']
         chan = self.server.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+        
+        if chan.guild.owner_id != user.id:
+            return _err(status=40001)
+
         payload = await request.json()
 
         if isinstance(chan, TextChannel):
-            # check against text chema
+            # check against text schema
             payload = self.textchan_editschema(payload)
         elif isinstance(chan, VoiceChannel):
             payload = self.voicechan_editschema(payload)
 
-        # TODO: this
-        await chan.edit(payload)
+        new_chan = await chan.edit(payload)
+        return _json(new_chan.as_json)
+
+    @auth_route
+    async def h_delete_channel(self, request, user):
+        """`DELETE /channels/{channel_id}`.
+        
+        Delete a channel.
+        Fires CHANNEL_DELETE events to respective clients.
+        """
+        channel_id = request.match_info['channel_id']
+        chan = self.server.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+
+        if chan.guild.owner_id != user.id:
+            return _err(status=40001)
+
+        await chan.delete()
+        return _json(chan.as_json)
+
