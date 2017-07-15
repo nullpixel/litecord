@@ -67,6 +67,10 @@ class BaseChannel(LitecordObject):
         self.is_default = self.id == self.guild_id
 
     @property
+    def __eq__(self, other):
+        return isinstance(other, BaseChannel) and other.id == self.id
+
+    @property
     def watchers(self):
         """Yields all :class:`Member` who are online and can watch the channel."""
         for member in self.guild.online_members:

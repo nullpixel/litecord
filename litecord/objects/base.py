@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from ..snowflake import snowflake_time
 
@@ -12,6 +13,12 @@ class LitecordObject:
     """
     def __init__(self, server):
         self.server = server
+
+    def __eq__(self, other):
+        if not (getattr(other, 'id', False) and getattr(self, 'id', False)):
+            raise TypeError("Can't compare things without id attribute")
+
+        return other.id == self.id
 
     @property
     def guild_man(self):
@@ -34,12 +41,8 @@ class LitecordObject:
         """
         raise NotImplementedError('This instance didn\'t implement as_json')
 
-    @property
-    def created_at(self):
-        if not getattr(self, 'id', False):
-            return None
-        
-        ts = snowflake_time(self.id)
+    def to_timestamp(self, snowflake):
+        ts = snowflake_time(snowflake)
         return datetime.datetime.fromtimestamp(ts)
 
     def iter_json(self, indexable):

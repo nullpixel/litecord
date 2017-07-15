@@ -41,19 +41,19 @@ class User(LitecordObject):
         self._raw = raw
         self.id = int(raw['user_id'])
 
-        self.username = _raw['username']
-        self.discriminator = _raw['discriminator']
-        self.avatar_hash = _raw['avatar']
+        self.username = raw['username']
+        self.discriminator = raw['discriminator']
+        self.avatar_hash = raw['avatar']
 
-        self.email = _raw.get('email')
-        self.admin = _raw.get('admin', False)
-        self.bot = _raw.get('bot', False)
+        self.email = raw.get('email')
+        self.admin = raw.get('admin', False)
+        self.bot = raw.get('bot', False)
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'
 
     def __repr__(self):
-        return f'<User id={self.id} name={self.name} discriminator={self.discriminator} ' \
+        return f'<User id={self.id} name={self.username} discriminator={self.discriminator} ' \
                 'bot={self.bot} admin={self.admin}>'
 
     def __eq__(self, other):

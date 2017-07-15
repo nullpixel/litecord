@@ -24,7 +24,7 @@ class Guild(LitecordObject):
     ----------
     server: :class:`LitecordServer`
         Server instance.
-    _raw: dict
+    raw: dict
         Raw gulid data.
 
     Attributes
@@ -69,23 +69,23 @@ class Guild(LitecordObject):
         emojis: A list of `Emoji` objects.
     """
 
-    __slots__ = ('_raw', 'channel_ids', 'role_ids', 'id', 'name', 'icons',
+    __slots__ = ('raw', 'channel_ids', 'role_ids', 'id', 'name', 'icons',
         'created_at', 'owner_id', 'features', 'channels', 'member_ids',
         'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
 
-    def __init__(self, server, _raw):
+    def __init__(self, server, raw):
         super().__init__(server)
-        self._raw = _raw
+        self.raw = raw
         self.members = {}
         self.roles = {}
         self.channels = {}
-        self.icons = {}
+        self.icons = {'splash': None}
 
         # one day... one day.
         self.emojis = {}
 
         self._viewers = []
-        self._from_raw(_raw)
+        self._from_raw(raw)
 
     def _update_caches(self, raw):
         for channel_id in self.channel_ids:
@@ -99,7 +99,7 @@ class Guild(LitecordObject):
                 continue
 
             raw_member = self.guild_man.raw_members[self.id][user.id]
-            member = Member(server, self, user, raw_member)
+            member = Member(self.server, self, user, raw_member)
             self.members[member.id] = member
         
         for role_id in self.role_ids:
@@ -108,19 +108,21 @@ class Guild(LitecordObject):
 
     def _from_raw(self, raw):
         self.id = int(raw['guild_id'])
-        self.name = _raw['name']
-        self.icons['icon'] = _raw['icon']
-        self.owner_id = int(_raw['owner_id'])
+        self.created_at = self.to_timestamp(self.id)
 
-        self.region = _raw['region']
+        self.name = raw['name']
+        self.icons['icon'] = raw['icon']
+        self.owner_id = int(raw['owner_id'])
+
+        self.region = raw['region']
         self.emojis = []
-        self.features = _raw['features']
+        self.features = raw['features']
 
-        self.channel_ids = _raw['channel_ids']
-        self.member_ids = _raw['member_ids']
-        self.role_ids = _raw['role_ids']
-        self.banned_ids = _raw.get('bans', [])
-        self._fill_caches(raw)
+        self.channel_ids = raw['channel_ids']
+        self.member_ids = raw['member_ids']
+        self.role_ids = raw['role_ids']
+        self.banned_ids = raw.get('bans', [])
+        self._update_caches(raw)
 
         self.member_count = len(self.members)
         self.owner = self.members.get(self.owner_id)
@@ -128,8 +130,11 @@ class Guild(LitecordObject):
             log.error('Guild %d without owner(%d)!', self.id, self.owner_id)
 
     def __repr__(self):
-        return f'<Guild id={self.id} name={self.name!r} owner={self.owner!r} region={self.region} ' \
+        return f'<Guild id={self.id} name={self.name!r} owner={self.owner.user!r} region={self.region} ' \
                 'member_count={self.member_count}>'
+
+    def __eq__(self, other):
+        return isinstance(other, Guild) and other.id == self.id
 
     def mark_watcher(self, user_id):
         """Mark a user ID as a viewer in that guild, meaning it will receive
