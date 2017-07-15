@@ -15,10 +15,10 @@
         "local": true
     },
     "boilerplate.update": {
-        "user": true,
-        "guild": true,
-        "channel": true,
-        "role": true
+        "user": false,
+        "guild": false,
+        "channel": false,
+        "role": false
     },
     "mongo_name": "litecord"
 }
