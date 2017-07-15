@@ -1,35 +1,18 @@
 [
     {
-        "id": "150501171201",
+        "guild_id": "150501171201",
         "name": "Memework",
         "owner_id": "149260046337",
         "region": "local",
         "features": ["VANITY_URL"],
         "icon": "",
-        "channels": [
-            {
-                "id": "150501171201",
-                "name": "general",
-                "type": "text",
-                "position": 0,
-                "topic": "general but it is general"
-            },
-            {
-                "id": "155280142337",
-                "name": "general-voice",
-                "type": "voice",
-                "position": 1,
-                "topic": "dude cry"
-            }
+        "channel_ids": [
+            150501171201,
+            155280142337
         ],
-        "roles": [
-            {
-                "id": "150501171201",
-                "position": 0
-            }
-        ],
-        "members": [
-            "149260046337", "149260046338", "149260046339", "152162811905", "152329949185"
+        "role_ids": [150501171201],
+        "member_ids": [
+            149260046337, 149260046338, 149260046339, 152162811905, 152329949185
         ],
         "bans": []
     }

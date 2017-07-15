@@ -313,7 +313,7 @@ class Connection(WebsocketConnection):
             log.warning("(token, user) pair not found")
             return False, None, None
 
-        user = self.server.get_user(raw_user['id'])
+        user = self.server.get_user(raw_user['user_id'])
         return True, raw_user, user
 
     @handler(OP.IDENTIFY)

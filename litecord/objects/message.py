@@ -48,10 +48,10 @@ class Message(LitecordObject):
         super().__init__(server)
         self._data = _message_data
 
-        self.id = int(_message_data['id'])
+        self.id = int(_message_data['message_id'])
         self.author_id = int(_message_data['author_id'])
         if channel is None:
-            log.warning(f"Orphaned message {self.id}")
+            log.warning('Orphaned message %d', self.id)
             return
 
         self.channel_id = channel.id

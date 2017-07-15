@@ -60,7 +60,7 @@ ERRNO_TO_HTTPERR = {
 def strip_user_data(user):
     """Remove unecessary fields from a raw user object"""
     return {
-        'id': str(user['id']),
+        'id': str(user['user_id']),
         'username': user['username'],
         'discriminator': str(user['discriminator']),
         'avatar': user['avatar'],
@@ -134,3 +134,37 @@ def chunk_list(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i:i + n]
+
+
+def get(lst, **kwargs):
+    """Get an object from a list that matches the search criteria in ``**kwargs``.
+
+    Parameters
+    ----------
+    lst: list
+        List to be searched.
+    """
+
+    for element in lst:
+        for attr, val in kwargs.items():
+            res = getattr(element, attr)
+            if res == val:
+                return element
+
+    return None
+
+
+def delete(lst, **kwargs):
+    """Delete an element from a list that matches the search criteria in ``**kwargs``
+
+    Parameters
+    ----------
+    lst: list
+        List to be searched.
+    """
+
+    for (idx, element) in enumerate(lst):
+        for attr, val in kwargs.items():
+            res = getattr(element, attr)
+            if res == val:
+                del lst[idx]

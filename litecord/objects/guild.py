@@ -12,6 +12,11 @@ from ..utils import dt_to_json
 log = logging.getLogger(__name__)
 
 
+class BareGuild:
+    def __init__(self, guild_id):
+        self.id = guild_id
+
+
 class Guild(LitecordObject):
     """A general guild.
 
@@ -70,8 +75,8 @@ class Guild(LitecordObject):
 
     def __init__(self, server, _guild_data):
         super().__init__(server)
-        self._data = _guild_data
-        self.id = int(_guild_data['id'])
+        self._raw = _guild_data
+        self.id = int(_guild_data['guild_id'])
         self.name = _guild_data['name']
         self.icons = {
             'icon': _guild_data['icon'],
@@ -86,49 +91,36 @@ class Guild(LitecordObject):
         self.emojis = []
         self.features = _guild_data['features']
 
-        self._channel_data = _guild_data['channels']
+        self.channel_ids = _guild_data['channel_ids']
         self.channels = {}
 
-        for raw_channel in self._channel_data:
-            raw_channel['guild_id'] = self.id
-            channel_type = raw_channel['type']
-            channel = None
-
-            if channel_type == 'text':
-                channel = TextChannel(server, raw_channel, self)
-            elif channel_type == 'voice':
-                channel = VoiceChannel(server, raw_channel, self)
-            else:
-                raise Exception(f'Invalid type for channel: {channel_type}')
-
+        for channel_id in self.channel_ids:
+            channel = self.guild_man.get_channel(channel_id)
             self.channels[channel.id] = channel
 
         # list of snowflakes
-        self.member_ids = [int(member_id) for member_id in _guild_data['members']]
+        self.member_ids = _guild_data['member_ids']
         self.members = {}
 
         for member_id in self.member_ids:
-            member_id = int(member_id)
-
             user = self.server.get_user(member_id)
             if user is None:
-                log.warning(f"user {member_id} not found")
+                log.warning('user %d not found', user_id)
                 continue
 
-            raw_member = server.guild_man.get_raw_member(self.id, user.id)
-
+            raw_member = self.guild_man.raw_members[self.id][user.id]
             member = Member(server, self, user, raw_member)
             self.members[member.id] = member
 
         self.owner = self.members.get(self.owner_id)
         if self.owner is None:
-            log.error("Guild without owner!")
+            log.error('Guild %d without owner(%d)!', self.id, self.owner_id)
 
-        self._role_data = _guild_data['roles']
+        self.role_ids = _guild_data['role_ids']
         self.roles = {}
 
-        for raw_role in self._role_data:
-            role = Role(server, self, raw_role)
+        for role_id in self.role_ids:
+            role = self.guild_man.get_role(role_id)
             self.roles[role.id] = role
 
         self.banned_ids = _guild_data.get('bans', [])

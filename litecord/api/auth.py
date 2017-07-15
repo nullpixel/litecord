@@ -62,7 +62,7 @@ class AuthEndpoints:
         if pwd_hash(password, pwd['salt']) != pwd['hash']:
             return _err("fail on login [password]")
 
-        user_id = raw_user['id']
+        user_id = raw_user['user_id']
         token = await self.server.generate_token(user_id)
         return _json({"token": token})
 

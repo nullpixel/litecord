@@ -40,7 +40,7 @@ class User(LitecordObject):
         super().__init__(server)
         self._data = _data
 
-        self.id = int(_data['id'])
+        self.id = int(_data['user_id'])
         self.username = _data['username']
         self.discriminator = _data['discriminator']
         self.avatar_hash = _data['avatar']

@@ -1,0 +1,18 @@
+[
+    {
+        "guild_id": "150501171201",
+        "channel_id": "150501171201",
+        "type": "text",
+        "name": "general",
+        "position": 0,
+        "topic": "general but it is general"
+    },
+    {
+        "guild_id": "150501171201",
+        "channel_id": "155280142337",
+        "type": "voice",
+        "name": "general-voice",
+        "position": 1,
+        "topic": "dude cry"
+    }
+]

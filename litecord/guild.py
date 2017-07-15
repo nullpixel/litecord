@@ -4,43 +4,49 @@ import datetime
 
 from collections import defaultdict
 
-from .objects import Guild, Message, Invite
+from .objects import TextChannel, VoiceChannel, Guild, \
+    Message, Invite, Role, BareGuild
 from .snowflake import get_snowflake, get_invite_code
+from .utils import get
 
 log = logging.getLogger(__name__)
 
+
 class GuildManager:
-    """Manage guild, channel and message data.
+    """Manager class for guilds, channels, roles, messages and invites..
 
     .. _LitecordServer: server.html
     .. _AsyncIOMotorCollection: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
 
     Attributes
     ----------
-    server : [`LitecordServer`_]
+    server: [`LitecordServer`_]
         Server instance.
-    guild_db : [`AsyncIOMotorCollection`_]
-        Guild database. Handles raw guild data.
-    message_db : [`AsyncIOMotorCollection`_]
-        Message database. Handles raw message data.
-    guilds : dict
+    guild_coll: [`AsyncIOMotorCollection`_]
+        Guild collection.
+    message_coll: [`AsyncIOMotorCollection`_]
+        Message collection.
+    guilds: list 
         All available :class:`Guild` objects.
-    channels : dict
+    channels: list
         All available :class:`Channel` objects.
     """
     def __init__(self, server):
         self.server = server
 
-        self.guild_db = server.guild_db
-        self.member_db = server.member_db
-        self.message_db = server.message_db
-        self.invite_db = server.invite_db
-
-        self.guilds = {}
-        self.channels = {}
-        self.messages = {}
-        self.invites = {}
+        self.role_coll = server.role_coll
+        self.channel_coll = server.channel_coll
+        self.guild_coll = server.guild_coll
+        self.invite_coll = server.invite_coll
+        self.message_coll = server.message_coll
+        self.member_coll = server.member_coll
+        
         self.raw_members = defaultdict(dict)
+        self.roles = []
+        self.channels = []
+        self.guilds = []
+        self.invites = []
+        self.messages = []
 
         self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
 
@@ -50,7 +56,7 @@ class GuildManager:
             guild_id = int(guild_id)
         except:
             return None
-        return self.guilds.get(guild_id)
+        return get(self.guilds, id=guild_id)
 
     def get_channel(self, channel_id):
         """Get a :class:`Channel` object by its ID."""
@@ -59,12 +65,15 @@ class GuildManager:
         except:
             return None
 
-        channel = self.channels.get(channel_id)
+        channel = get(self.channels, id=channel_id)
         if channel is None:
             return None
 
         async def _updater():
             # Update a channel's last_message_id property
+            if isinstance(channel, VoiceChannel):
+                return
+
             mlist = await channel.last_messages(1)
             try:
                 m_id = mlist[0].id
@@ -72,18 +81,53 @@ class GuildManager:
                 m_id = None
             channel.last_message_id = m_id
 
-        asyncio.async(_updater())
+        asyncio.ensure_future(_updater())
         return channel
+
+    def get_role(self, role_id: int):
+        """Get a :class:`Role` by its ID."""
+        try:
+            role_id = int(role_id)
+        except: return
+        r = get(self.roles, id=role_id)
+        log.debug('[get_role] %d -> %r', role_id, r)
+        return r
 
     def get_message(self, message_id):
         """Get a :class:`Message` object by its ID."""
         try:
             message_id = int(message_id)
-        except:
-            return None
-        return self.messages.get(message_id)
+        except: return
+        m = get(self.messages, id=message_id)
+        log.debug('[get_message] %d -> %r', message_id, m)
+        return m
 
-    def get_guilds(self, user_id):
+    def yield_guilds(self, user_id: int):
+        """Yield all :class:`Guild` a user is in.
+        
+        Parameters
+        ----------
+        user_id: int
+            User ID we want to get the guilds from
+
+        Yields
+        ------
+        :class:`Guild`
+        """
+        try:
+            user_id = int(user_id)
+        except:
+            return
+
+        if self.server.get_user(user_id) is None:
+            return
+
+        # TODO: maybe change this to an async iterator?
+        for guild in self.guilds:
+            if user_id in guild.member_ids:
+                yield guild
+
+    def get_guilds(self, user_id: int) -> list:
         """Get a list of all guilds a user is on.
 
         Parameters
@@ -99,21 +143,36 @@ class GuildManager:
             user_id = int(user_id)
         except:
             return None
-        return [self.guilds[guild_id] for guild_id in self.guilds \
-            if user_id in self.guilds[guild_id].member_ids]
+        
+        return list(self.yield_guilds(user_id))
 
-    def yield_guilds(self, user_id):
-        """Yield all Guilds a user is on."""
-        for guild_id, guild in self.guilds.items():
-            if user_id in guild.member_ids:
-                yield guild
+    def get_invite(self, invite_code: str):
+        """Get an :class:`Invite` object.
+        
+        Parameters
+        ----------
+        invite_code: str
+            Invite code to search on
 
-    def get_invite(self, invite_code):
-        """Get an :class:`Invite` object."""
-        return self.invites.get(invite_code)
+        Returns
+        -------
+        :class:`Invite` or :py:meth:`None`
+        """
+        return get(self.invites, code=invite_code)
 
-    def get_raw_member(self, guild_id, user_id):
-        """Get a raw member."""
+    def get_raw_member(self, guild_id: int, user_id: int) -> dict:
+        """Get a raw member.
+        
+        guild_id: int
+            Guild ID from the member.
+        user_id: int
+            User ID that references the member.
+
+        Returns
+        -------
+        dict
+            Raw member.
+        """
         try:
             guild_id = int(guild_id)
             user_id = int(user_id)
@@ -132,12 +191,12 @@ class GuildManager:
 
     def all_guilds(self):
         """Yield all available guilds."""
-        for guild_id in self.guilds:
-            yield self.guilds[guild_id]
+        for guild in self.guilds:
+            yield guild
 
-    async def all_messages(self, limit=500):
+    async def all_messages_(self, limit=500):
         """Yield `limit` messages, with the 1st being the most recent one."""
-        cursor = self.message_db.find().sort('message_id')
+        cursor = self.message_coll.find().sort('message_id')
 
         for raw_message in reversed(await cursor.to_list(length=limit)):
             message = self.messages[raw_message['message_id']]
@@ -157,20 +216,22 @@ class GuildManager:
         raw: dict
             Raw message object.
 
-        Returns a `Message` object.
+        Returns
+        -------
+        :class:`Message`
+            The created message.
         """
 
         message = Message(self.server, channel, raw)
 
-        result = await self.message_db.insert_one(message.as_db)
+        result = await self.message_coll.insert_one(message.as_db)
+        self.messages.append(message)
         log.info(f'Adding message with id {message.id}')
 
-        self.messages[message.id] = message
         await channel.dispatch('MESSAGE_CREATE', message.as_json)
-
         return message
 
-    async def delete_message(self, message):
+    async def delete_message(self, message) -> 'None':
         """Delete a message.
 
         Dispatches MESSAGE_DELETE events to respective clients.
@@ -180,12 +241,9 @@ class GuildManager:
         message: :class:`Message`
             Message to delete.
 
-        Returns
-        -------
-        bool
         """
 
-        result = await self.message_db.delete_one({'message_id': message.id})
+        result = await self.message_coll.delete_one({'message_id': message.id})
         log.info(f"Deleted {result.deleted_count} messages")
 
         await message.channel.dispatch('MESSAGE_DELETE', {
@@ -193,9 +251,7 @@ class GuildManager:
             'channel_id': str(message.channel.id),
         })
 
-        return True
-
-    async def edit_message(self, message, payload):
+    async def edit_message(self, message, payload) -> 'None':
         """Edit a message.
 
         Dispatches MESSAGE_UPDATE events to respective clients.
@@ -204,20 +260,17 @@ class GuildManager:
         ----------
         message: :class:`Message`
             Message to edit.
-
-        Returns
-        -------
-        bool
+        payload: dict
+            Message edit payload.
         """
 
         new_content = payload['content']
         message.edit(new_content)
 
-        result = await self.message_db.update_one({'message_id': str(message.id)}, {'$set': message.as_db})
+        result = await self.message_coll.update_one({'message_id': str(message.id)}, {'$set': message.as_db})
         log.info(f"Updated {result.modified_count} messages")
 
         await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
-        return True
 
     async def reload_guild(self, old_guild):
         """Reload one guild.
@@ -241,18 +294,18 @@ class GuildManager:
         assert isinstance(old_guild, Guild)
         guild_id = old_guild.id
 
-        raw_guild = await self.guild_db.find_one({'id': str(guild_id)})
+        raw_guild = await self.guild_coll.find_one({'guild_id': str(guild_id)})
         if raw_guild is None:
             log.info("[reload] Didn't find a guild, deleting from cache")
             # since we don't have a guild in DB, but we have the old guild
             # object, use it to remove the rest from cache.
             try:
-                self.guilds.pop(guild_id)
+                self.guilds.remove(guild)
             except KeyError: pass
 
             for channel in old_guild.all_channels():
                 try:
-                    self.channels.pop(channel.id)
+                    self.channels.remove(channel)
                 except KeyError: pass
 
             return
@@ -265,10 +318,14 @@ class GuildManager:
         except:
             pass
 
-        self.guilds[guild.id] = guild
+        self.guilds.remove(old_guild)
+        self.guilds.append(guild)
 
-        for channel in guild.all_channels():
-            self.channels[channel.id] = channel
+        for channel_id in guild.channel_ids:
+            #await self.reload_channel(channel_id)
+            old_channel = self.get_channel(channel_id)
+            self.channels.remove(old_channel)
+            self.channels.append(channel)
 
         return guild
 
@@ -300,8 +357,12 @@ class GuildManager:
             log.warning("User not connected through WS to do this action.")
             return None
 
+        if True:
+            log.warning('THIS DOES NOT WORK')
+            return None
+
         payload['owner_id'] = str(owner.id)
-        payload['id'] = str(get_snowflake())
+        payload['guild_id'] = get_snowflake()
         payload['features'] = []
         payload['roles'] = []
         payload['channels'] = [{
@@ -326,12 +387,12 @@ class GuildManager:
             'mute': False,
         }
 
-        await self.member_db.insert_one(raw_member_owner)
-        self.raw_members[int(payload['id'])][owner.id] = raw_member_owner
+        await self.member_coll.insert_one(raw_member_owner)
+        self.raw_members[payload['guild_id']][owner.id] = raw_member_owner
 
         guild = Guild(self.server, payload)
-        await self.guild_db.insert_one(payload)
-        self.guilds[guild.id] = guild
+        await self.guild_coll.insert_one(guild._raw)
+        self.guilds.append(guild)
 
         for channel in guild.all_channels():
             self.channels[channel.id] = channel
@@ -359,7 +420,7 @@ class GuildManager:
         The edited :class:`Guild`.
         """
 
-        await self.guild_db.update_one({'id': str(guild.id)},
+        await self.guild_coll.update_one({'guild_id': str(guild.id)},
             {'$set': guild_edit_payload})
 
         guild = await self.reload_guild(guild)
@@ -376,7 +437,8 @@ class GuildManager:
         -------
         None
         """
-        res = await self.guild_db.delete_many({'id': guild_id})
+        res = await self.guild_coll.delete_many({'guild_id': guild_id})
+
         if res.deleted_count < 1:
             log.warning('[guild_delete] Something went weird (deleted_doc == 0)')
             return
@@ -416,7 +478,7 @@ class GuildManager:
 
         raw_guild['members'].append(str(user.id))
 
-        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        result = await self.guild_coll.replace_one({'guild_id': guild.id}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
         guild = await self.reload_guild(guild)
@@ -448,7 +510,7 @@ class GuildManager:
         guild = member.guild
         user = member.user
 
-        await self.member_db.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
+        await self.member_coll.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
             {'$set': new_data})
 
         member.update(new_data)
@@ -476,10 +538,10 @@ class GuildManager:
 
         user_id = str(user.id)
 
-        raw_guild = guild._data
-        raw_guild['members'].remove(user_id)
+        raw_guild = guild._raw
+        raw_guild['member_ids'].remove(user_id)
 
-        result = await self.guild_db.update_one({'id': str(guild.id)}, {'$set': raw_guild})
+        result = await self.guild_coll.update_one({'guild_id': guild.id}, {'$set': raw_guild})
         log.info(f"Updated {result.modified_count} guilds")
 
         guild = await self.reload_guild(guild)
@@ -528,7 +590,7 @@ class GuildManager:
         except:
             bans.append(str(user.id))
 
-        await self.guild_db.update_one({'id': str(guild.id)},
+        await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
 
         await guild.dispatch('GUILD_BAN_ADD',
@@ -550,7 +612,7 @@ class GuildManager:
         except:
             raise Exception("User not banned")
 
-        await self.guild_db.update_one({'id': str(guild.id)},
+        await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
 
         await guild.dispatch('GUILD_BAN_REMOVE',
@@ -603,7 +665,7 @@ class GuildManager:
 
         raw_guild['channels'].append(payload)
 
-        result = await self.guild_db.replace_one({'id': str(guild.id)}, raw_guild)
+        result = await self.guild_coll.replace_one({'guild_id': guild.id}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
         guild = await self.reload_guild(guild)
@@ -624,7 +686,7 @@ class GuildManager:
             if raw_channel['id'] == str(channel.id):
                 raw_channel = {**raw_channel, **payload}
 
-        await self.guild_db.update_one({'id': str(channel.guild.id)},
+        await self.guild_coll.update_one({'guild_id': channel.guild.id},
             {'$set': {'channels': new_chan_array}})
 
         guild = await self.reload_guild(guild)
@@ -648,7 +710,7 @@ class GuildManager:
             if raw_channel['id'] != str(channel.id):
                 new_chan_array.append(raw_channel)
 
-        await self.guild_db.update_one({'id': str(channel.guild.id)}, 
+        await self.guild_coll.update_one({'guild_id': channel.guild.id}, 
             {'$set': {'channels': new_chan_array}})
 
         guild = await self.reload_guild(guild)
@@ -664,7 +726,7 @@ class GuildManager:
 
         try:
             while True:
-                cursor = self.invite_db.find()
+                cursor = self.invite_coll.find()
                 now = datetime.datetime.now()
 
                 deleted, total = 0, 0
@@ -701,11 +763,11 @@ class GuildManager:
         """
 
         invi_code = get_invite_code()
-        raw_invite = await self.invite_db.find_one({'code': invi_code})
+        raw_invite = await self.invite_coll.find_one({'code': invi_code})
 
         while raw_invite is not None:
             invi_code = get_invite_code()
-            raw_invite = await self.invite_db.find_one({'code': invi_code})
+            raw_invite = await self.invite_coll.find_one({'code': invi_code})
 
         return invi_code
 
@@ -751,7 +813,7 @@ class GuildManager:
             'unique': True,
         }
 
-        await self.invite_db.insert_one(raw_invite)
+        await self.invite_coll.insert_one(raw_invite)
 
         invite = Invite(self.server, raw_invite)
         if invite.valid:
@@ -800,7 +862,7 @@ class GuildManager:
         Removes it from database and cache.
         """
 
-        res = await self.invite_db.delete_one({'code': invite.code})
+        res = await self.invite_coll.delete_one({'code': invite.code})
         log.info(f"Removed {res.deleted_count} invites")
 
         try:
@@ -811,81 +873,126 @@ class GuildManager:
     async def init(self):
         """Initialize the GuildManager.
 
-        Loads member data, guild data and messages into memory.
+        Loads, in order:
+         - Members
+         - Roles
+         - Channels
+         - Guilds
+         - Invites
+         - Messages
         """
-        cursor = self.member_db.find()
+        cursor = self.member_coll.find()
         member_count = 0
-
         for raw_member in await cursor.to_list(length=None):
-            self.raw_members[int(raw_member['guild_id'])][int(raw_member['user_id'])] = raw_member
+            self.raw_members[raw_member['guild_id']][raw_member['user_id']] = raw_member
             member_count += 1
 
-        log.info(f'[guild] loaded {member_count} members')
+        log.info('[guild] loaded %d members', member_count)
+        log.debug('raw_members: %r', self.raw_members)
 
-        cursor = self.guild_db.find()
-        guild_count = 0
+        # role loading
+        cursor = self.role_coll.find()
+        role_count = 0
+
+        for raw_role in (await cursor.to_list(length=None)):
+            bg = BareGuild(raw_role['guild_id'])
+            role = Role(self.server, bg, raw_role)
+            self.roles.append(role)
+            role_count += 1
+
+        log.info('[guild] loaded %d roles', role_count)
+
+        # channel loading
+        cursor = self.channel_coll.find()
+        chan_count = 0
+
+        for raw_channel in (await cursor.to_list(length=None)):
+            ch_type = raw_channel['type']
+            channel = None
+
+            bg = BareGuild(raw_channel['guild_id'])
+
+            if ch_type == 'text':
+                channel = TextChannel(self.server, raw_channel, bg)
+            elif ch_type == 'voice':
+                channel = VoiceChannel(self.server, raw_channel, bg)
+            else:
+                raise Exception(f'Invalid type for channel: {channel_type}')
+
+            self.channels.append(channel)
+            chan_count += 1
+
+        log.info('[guild] loaded %d channels', chan_count)
+
+        # guild loading
+        cursor = self.guild_coll.find()
+        channel_count, guild_count = 0, 0
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
-            _guild_id = raw_guild['id']
-            guild_id = int(_guild_id)
+            guild_id = raw_guild['guild_id']
 
             raw_guild_members = self.raw_members.get(int(guild_id), {})
 
-            for _member_id in raw_guild['members']:
-                member_id = int(_member_id)
-
-                if member_id in raw_guild_members:
+            # This loads raw members into mongo if they don't exist
+            for user_id in raw_guild['member_ids']:
+                if user_id in raw_guild_members:
                     continue
 
                 raw_member = {
-                    'guild_id': _guild_id,
-                    'user_id': _member_id,
-                    'nick': '',
+                    'guild_id': guild_id,
+                    'user_id': user_id,
+                    'nick': None,
                     'joined': datetime.datetime.now().isoformat(),
                     'deaf': False,
                     'mute': False,
                 }
 
-                await self.member_db.insert_one(raw_member)
-                self.raw_members[guild_id][member_id] = raw_member
+                await self.member_coll.insert_one(raw_member)
+                self.raw_members[guild_id][user_id] = raw_member
+                log.debug('Inserting raw member gid=%r uid=%r', guild_id, user_id)
 
             guild = Guild(self.server, raw_guild)
-            self.guilds[guild.id] = guild
+            self.guilds.append(guild)
 
-            for channel in guild.all_channels():
-                self.channels[channel.id] = channel
+            for channel_id in guild.channel_ids:
+                channel = self.get_channel(channel_id)
+                channel.guild = guild
+
+            for role_id in guild.role_ids:
+                role = self.get_role(role_id)
+                role.guild = guild
+
             guild_count += 1
 
-        log.info(f'[guild] Loaded {guild_count} guilds')
+        log.info('[guild] Loaded %d guilds', guild_count)
 
-        cursor = self.invite_db.find()
-        invite_count = 0
-        valid_invites = 0
+        cursor = self.invite_coll.find()
+        invite_count, valid_invites = 0, 0
 
         for raw_invite in (await cursor.to_list(length=None)):
             invite = Invite(self.server, raw_invite)
 
             if invite.valid:
-                self.invites[invite.code] = invite
+                self.invites.append(invite)
                 valid_invites += 1
             else:
                 await self.delete_invite(invite)
 
             invite_count += 1
 
-        log.info(f'[guild] Loaded {valid_invites} valid out of {invite_count} invites')
+        log.info('[guild] %d valid out of %d invites', valid_invites, invite_count)
 
         # load messages from database
 
-        cursor = self.message_db.find().sort('message_id')
+        cursor = self.message_coll.find().sort('message_id')
         message_count = 0
 
         for raw_message in reversed(await cursor.to_list(length=200)):
-            raw_message['id'] = raw_message['message_id']
+            raw_message['message_id'] = raw_message['message_id']
             channel = self.get_channel(raw_message['channel_id'])
 
             m = Message(self.server, channel, raw_message)
-            self.messages[m.id] = m
+            self.messages.append(m)
             message_count += 1
 
-        log.info(f'[guild] Loaded {message_count} messages')
+        log.info(f'[guild] Loaded %d messages', message_count)

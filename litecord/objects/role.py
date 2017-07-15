@@ -45,7 +45,7 @@ class Role(LitecordObject):
         super().__init__(server)
         self._data = _data
 
-        self.id = int(_data['id'])
+        self.id = int(_data['role_id'])
         self.guild = guild
 
         if self.id == guild.id:

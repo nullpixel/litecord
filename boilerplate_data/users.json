@@ -1,6 +1,6 @@
 [
     {
-        "id": "149260046337",
+        "user_id": "149260046337",
         "username": "Luna",
         "email": "luna@localhost",
         "discriminator": "1337",
@@ -14,7 +14,7 @@
         "verified": true,
         "admin": true
     },{
-        "id": "149260046338",
+        "user_id": "149260046338",
         "email": "jack@null.net",
         "username": "Jack",
         "discriminator": "0000",
@@ -27,7 +27,7 @@
         "bot": false,
         "verified": true
     },{
-        "id": "149260046339",
+        "user_id": "149260046339",
         "username": "lold",
         "email": "iamtheworst@programmer.net",
         "discriminator": "0000",
@@ -40,7 +40,7 @@
         "bot": false,
         "verified": true
     },{
-        "id": "152162811905",
+        "user_id": "152162811905",
         "username": "heatingdevice",
         "email": "suck@generic.sucks",
         "discriminator": "0420",
@@ -54,7 +54,7 @@
         "verified": true,
         "admin": true
     },{
-        "id": "152329949185",
+        "user_id": "152329949185",
         "username": "Alex",
         "email": "alex@localhost",
         "discriminator": "4299",

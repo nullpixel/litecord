@@ -48,7 +48,7 @@ class BaseChannel(LitecordObject):
     def __init__(self, server, _channel, guild=None):
         super().__init__(server)
         self._data = _channel
-        self.id = int(_channel['id'])
+        self.id = int(_channel['channel_id'])
         self.guild_id = int(_channel['guild_id'])
 
         if guild is None:
@@ -136,7 +136,7 @@ class TextChannel(BaseChannel):
             Ordered(by time) list of message objects.
         """
         res = []
-        cursor = self.server.message_db.find({'channel_id': self.id}).sort('message_id')
+        cursor = self.server.message_coll.find({'channel_id': self.id}).sort('message_id')
 
         for raw_message in reversed(await cursor.to_list(length=limit)):
             if len(res) > limit: break
@@ -158,7 +158,8 @@ class TextChannel(BaseChannel):
         # TODO: THIS IS INNEFICIENT. WE NEED TO YIELD IDFK HOW
         # BECAUSE THIS IS ASYNCIO AAAA
         as_snowflake = _snowflake(timestamp)
-        cur = self.message_db.find({'channel_id': self.id, 'message_id': {'$gt': as_snowflake}}).sort('message_id')
+        mc = self.server.message_coll
+        cur = mc.find({'channel_id': self.id, 'message_id': {'$gt': as_snowflake}}).sort('message_id')
         return (await cur.to_list(length=None))
 
     async def delete_many(self, message_ids, bulk=False):
@@ -181,7 +182,7 @@ class TextChannel(BaseChannel):
         in_bulk = []
 
         for message_id in message_ids:
-            r = await self.server.message_db.delete_many({'channel_id': self.id, 'message_id': message_id})
+            r = await self.server.message_coll.delete_many({'channel_id': self.id, 'message_id': message_id})
             if r.deleted_count < 1:
                 continue
 
@@ -199,7 +200,7 @@ class TextChannel(BaseChannel):
                 'ids': in_bulk,
             })
 
-    async def edit(self, payload: dict) -> TextChannel:
+    async def edit(self, payload: dict):
         """Edit a text channel with a text channel edit payload.
         
         Parameters

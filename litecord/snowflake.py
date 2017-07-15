@@ -12,13 +12,13 @@ EPOCH = 1420081200
 _id_in_process = 1
 
 
-def get_invite_code():
+def get_invite_code() -> str:
     random_stuff = hashlib.sha512(os.urandom(4096)).digest()
     code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \
         .replace('_', 'W').replace('-', 'm')
     return code[:6]
 
-def _snowflake(timestamp):
+def _snowflake(timestamp: int) -> int:
     """Generate a snowflake from a specific timestamp.
 
     NOTE: the same timestamp won't generate the same snowflake in this function.
@@ -34,7 +34,7 @@ def _snowflake(timestamp):
     return int(res[2:], 2)
 
 
-def _snowflake_raw(timestamp, process_id):
+def _snowflake_raw(timestamp: int, process_id: int) -> int:
     """Make a snowflake using raw data"""
     since_epoch = int(timestamp - EPOCH)
     b_epoch = '{0:038b}'.format(since_epoch)
@@ -43,7 +43,7 @@ def _snowflake_raw(timestamp, process_id):
     return int(res[2:], 2)
 
 
-def snowflake_time(snowflake):
+def snowflake_time(snowflake: int) -> int:
     """Get a timestamp from a specific snowflake"""
     snowflake = int(snowflake)
     b_snowflake = '{0:049b}'.format(snowflake)

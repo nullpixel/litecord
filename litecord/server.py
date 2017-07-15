@@ -32,12 +32,9 @@ log = logging.getLogger(__name__)
 BOILERPLATES = {
     'user': 'boilerplate_data/users.json',
     'guild': 'boilerplate_data/guilds.json',
+    'channel': 'boilerplate_data/channels.json',
+    'role': 'boilerplate_data/roles.json',
 }
-
-
-LOADING_LINES = [
-    'Loading...',
-]
 
 
 API_PREFIXES = [
@@ -125,14 +122,15 @@ class LitecordServer:
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client[self.flags.get('mongo_name', 'litecord')]
 
-        self.message_db = self.litecord_db['messages']
-        self.user_db = self.litecord_db['users']
-        self.guild_db = self.litecord_db['gulids']
-        self.token_db = self.litecord_db['tokens']
-        self.invite_db = self.litecord_db['invites']
-        self.member_db = self.litecord_db['members']
-        self.presence_db = self.litecord_db['presences']
-    
+        self.message_coll = self.litecord_db['messages']
+        self.user_coll = self.litecord_db['users']
+        self.guild_coll = self.litecord_db['gulids']
+        self.channel_coll = self.litecord_db['channels']
+        self.role_coll = self.litecord_db['roles']
+        self.token_coll = self.litecord_db['tokens']
+        self.invite_coll = self.litecord_db['invites']
+        self.member_coll = self.litecord_db['members']
+        self.presence_coll = self.litecord_db['presences']
         self.settings_coll = self.litecord_db['settings']
         self.relations_coll = self.litecord_db['relations']
 
@@ -239,25 +237,32 @@ class LitecordServer:
 
         b_flags = self.flags.get('boilerplate.update')
 
-        for key in BOILERPLATES:
-            path = BOILERPLATES[key]
+        for key, path in BOILERPLATES.items():
             data = None
             with open(path, 'r') as f:
                 try:
                     data = json.load(f)
-                except:
+                except Exception as err:
                     log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
 
-            db_to_update = getattr(self, f'{key}_db')
+            coll = getattr(self, f'{key}_coll')
 
             tot = 0
 
+            k_field = f'{key}_id'
             for element in data:
-                existing = await db_to_update.find_one({'id': element['id']})
+                query = {k_field: int(element[k_field])}
+
+                existing = await coll.find_one(query)
                 if (existing is not None) and not (b_flags.get(key)):
                     continue
 
-                await db_to_update.replace_one({'id': element['id']}, element, True)
+                for k in element:
+                    if 'id' in k:
+                        try:
+                            element[k] = int(element[k])
+                        except: log.debug('failed to convert field %r to int in boilerplate object', k)
+                await coll.replace_one(query, element, True)
                 tot += 1
 
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
@@ -278,7 +283,7 @@ class LitecordServer:
         id_to_raw_user = self.cache['id->raw_user']
         id_to_user = self.cache['id->user']
 
-        cursor = self.user_db.find()
+        cursor = self.user_coll.find()
         all_users = await cursor.to_list(length=None)
 
         for raw_user in all_users:
@@ -292,7 +297,8 @@ class LitecordServer:
                 pwd['plain'] = None
 
             # put that into the database
-            await self.user_db.find_one_and_replace({'id': raw_user['id']}, raw_user)
+            raw_user.pop('_id')
+            await self.user_coll.update_one({'user_id': raw_user['user_id']}, {'$set': raw_user})
 
             # cache objects
             user = User(self, raw_user)
@@ -307,7 +313,7 @@ class LitecordServer:
         Only updates if actually required(differences between cache and database greater than 0).
         Dispatches USER_UPDATE events to respective clients.
         """
-        cursor = self.user_db.find()
+        cursor = self.user_coll.find()
         all_users = await cursor.to_list(length=None)
 
         updated_users = 0
@@ -319,7 +325,7 @@ class LitecordServer:
         for raw_user in all_users:
             raw_user = strip_user_data(raw_user)
 
-            raw_user_id = int(raw_user['id'])
+            raw_user_id = int(raw_user['user_id'])
 
             cached_raw_user = strip_user_data(raw_user_cache[raw_user_id])
             cached_user = user_cache[raw_user_id]
@@ -357,12 +363,12 @@ class LitecordServer:
 
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""
-        raw_user = await self.user_db.find_one({'email': email})
+        raw_user = await self.user_coll.find_one({'email': email})
 
-        self.cache['id->raw_user'][raw_user['id']] = raw_user
+        self.cache['id->raw_user'][raw_user['user_id']] = raw_user
 
-        if raw_user['id'] not in self.cache['id->user']:
-            self.cache['id->user'][raw_user['id']] = User(self, raw_user)
+        if raw_user['user_id'] not in self.cache['id->user']:
+            self.cache['id->user'][raw_user['user_id']] = User(self, raw_user)
 
         return raw_user
 
@@ -503,7 +509,7 @@ class LitecordServer:
     async def get_discrim(self, username: str) -> str:
         """Generate a discriminator from a username."""
 
-        cursor = self.user_db.find({
+        cursor = self.user_coll.find({
             'username': username
         })
         raw_user_list = await cursor.to_list(length=None)
