@@ -1,5 +1,7 @@
 import logging
 
+from ..snowflake import snowflake_time
+
 class LitecordObject:
     """A general Litecord object.
 
@@ -31,6 +33,14 @@ class LitecordObject:
             as it is usually used to send the object to a client.
         """
         raise NotImplementedError('This instance didn\'t implement as_json')
+
+    @property
+    def created_at(self):
+        if not getattr(self, 'id', False):
+            return None
+        
+        ts = snowflake_time(self.id)
+        return datetime.datetime.fromtimestamp(ts)
 
     def iter_json(self, indexable):
         """Get all objects from an indexable, in JSON serializable form"""

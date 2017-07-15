@@ -24,7 +24,7 @@ class Guild(LitecordObject):
     ----------
     server: :class:`LitecordServer`
         Server instance.
-    _guild_data: dict
+    _raw: dict
         Raw gulid data.
 
     Attributes
@@ -69,38 +69,28 @@ class Guild(LitecordObject):
         emojis: A list of `Emoji` objects.
     """
 
-    __slots__ = ('_data', 'channel_data', '_role_data', 'id', 'name', 'icons',
+    __slots__ = ('_raw', 'channel_ids', 'role_ids', 'id', 'name', 'icons',
         'created_at', 'owner_id', 'features', 'channels', 'member_ids',
         'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
 
-    def __init__(self, server, _guild_data):
+    def __init__(self, server, _raw):
         super().__init__(server)
-        self._raw = _guild_data
-        self.id = int(_guild_data['guild_id'])
-        self.name = _guild_data['name']
-        self.icons = {
-            'icon': _guild_data['icon'],
-            'splash': '',
-        }
-
-        creation_timestamp = snowflake_time(self.id)
-        self.created_at = datetime.datetime.fromtimestamp(creation_timestamp)
-
-        self.owner_id = int(_guild_data['owner_id'])
-        self.region = _guild_data['region']
-        self.emojis = []
-        self.features = _guild_data['features']
-
-        self.channel_ids = _guild_data['channel_ids']
+        self._raw = _raw
+        self.members = {}
+        self.roles = {}
         self.channels = {}
+        self.icons = {}
 
+        # one day... one day.
+        self.emojis = {}
+
+        self._viewers = []
+        self._from_raw(_raw)
+
+    def _update_caches(self, raw):
         for channel_id in self.channel_ids:
             channel = self.guild_man.get_channel(channel_id)
             self.channels[channel.id] = channel
-
-        # list of snowflakes
-        self.member_ids = _guild_data['member_ids']
-        self.members = {}
 
         for member_id in self.member_ids:
             user = self.server.get_user(member_id)
@@ -111,25 +101,35 @@ class Guild(LitecordObject):
             raw_member = self.guild_man.raw_members[self.id][user.id]
             member = Member(server, self, user, raw_member)
             self.members[member.id] = member
-
-        self.owner = self.members.get(self.owner_id)
-        if self.owner is None:
-            log.error('Guild %d without owner(%d)!', self.id, self.owner_id)
-
-        self.role_ids = _guild_data['role_ids']
-        self.roles = {}
-
+        
         for role_id in self.role_ids:
             role = self.guild_man.get_role(role_id)
             self.roles[role.id] = role
 
-        self.banned_ids = _guild_data.get('bans', [])
+    def _from_raw(self, raw):
+        self.id = int(raw['guild_id'])
+        self.name = _raw['name']
+        self.icons['icon'] = _raw['icon']
+        self.owner_id = int(_raw['owner_id'])
+
+        self.region = _raw['region']
+        self.emojis = []
+        self.features = _raw['features']
+
+        self.channel_ids = _raw['channel_ids']
+        self.member_ids = _raw['member_ids']
+        self.role_ids = _raw['role_ids']
+        self.banned_ids = _raw.get('bans', [])
+        self._fill_caches(raw)
 
         self.member_count = len(self.members)
-        self._viewers = []
+        self.owner = self.members.get(self.owner_id)
+        if self.owner is None:
+            log.error('Guild %d without owner(%d)!', self.id, self.owner_id)
 
     def __repr__(self):
-        return f'Guild({self.id}, {self.name!r})'
+        return f'<Guild id={self.id} name={self.name!r} owner={self.owner!r} region={self.region} ' \
+                'member_count={self.member_count}>'
 
     def mark_watcher(self, user_id):
         """Mark a user ID as a viewer in that guild, meaning it will receive

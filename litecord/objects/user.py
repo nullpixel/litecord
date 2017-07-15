@@ -36,23 +36,28 @@ class User(LitecordObject):
     __slots__ = ('_data', 'id', 'username', 'discriminator', 'avatar_hash',
         'email', 'admin')
 
-    def __init__(self, server, _data):
+    def __init__(self, server, raw):
         super().__init__(server)
-        self._data = _data
+        self._raw = raw
+        self.id = int(raw['user_id'])
 
-        self.id = int(_data['user_id'])
-        self.username = _data['username']
-        self.discriminator = _data['discriminator']
-        self.avatar_hash = _data['avatar']
+        self.username = _raw['username']
+        self.discriminator = _raw['discriminator']
+        self.avatar_hash = _raw['avatar']
 
-        self.email = _data.get('email')
-        self.admin = _data.get('admin', False)
+        self.email = _raw.get('email')
+        self.admin = _raw.get('admin', False)
+        self.bot = _raw.get('bot', False)
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'
 
     def __repr__(self):
-        return f'User({self.id}, {self.username}#{self.discriminator})'
+        return f'<User id={self.id} name={self.name} discriminator={self.discriminator} ' \
+                'bot={self.bot} admin={self.admin}>'
+
+    def __eq__(self, other):
+        return isinstance(other, User) and other.id == self.id
 
     @property
     def guilds(self):
@@ -69,8 +74,8 @@ class User(LitecordObject):
 
     @property
     def as_json(self):
-        """Remove sensitive data from `User._data` and make it JSON serializable"""
-        return strip_user_data(self._data)
+        """Remove sensitive data from `User._raw` and make it JSON serializable"""
+        return strip_user_data(self._raw)
 
     @property
     def connections(self):
@@ -113,6 +118,15 @@ class User(LitecordObject):
         return True
 
 
+def default_game():
+    return {
+        'status': 'online',
+        'type': 0,
+        'name': None,
+        'url': None,
+    }
+
+
 class Presence:
     """A presence object.
 
@@ -141,15 +155,16 @@ class Presence:
     __slots__ = ('game', 'user', 'guild')
 
     def __init__(self, guild, user, status=None):
-        _default = {
-            'status': 'online',
-            'type': 0,
-            'name': None,
-            'url': None,
-        }
+        self.game = None
+        self._update(guild, user, status)
 
-        # merge the two, with game overwriting _default
-        self.game = {**_default, **status}
+    def _update(self, guild, user, status=None):
+        _base = self.game
+        if self.game is None:
+            _base = default_game()
+        
+        self.game = {**_base, **status}
+
         self.user = user
         self.guild = guild
 
@@ -157,7 +172,7 @@ class Presence:
             log.warning(f'Presence for {self.user!r} with unknown status')
 
     def __repr__(self):
-        return f'Presence({self.user!s}, {self.game["status"]!r}, {self.game["name"]!r})'
+        return f'<Presence user={self.user!s} status={self.game["status"]!r} game.name={self.game["name"]}>'
 
     @property
     def as_json(self):
