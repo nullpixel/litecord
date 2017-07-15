@@ -63,7 +63,7 @@ class Role(LitecordObject):
     @property
     def as_db(self):
         return {
-            'id': str(self.id),
+            'id': self.id,
             'name': self.name,
             'color': self.color,
             'hoist': self.hoist,
