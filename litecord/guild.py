@@ -884,6 +884,7 @@ class GuildManager:
         cursor = self.member_coll.find()
         member_count = 0
         for raw_member in await cursor.to_list(length=None):
+            raw_member.pop('_id')
             self.raw_members[raw_member['guild_id']][raw_member['user_id']] = raw_member
             member_count += 1
 

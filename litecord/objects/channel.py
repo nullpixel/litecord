@@ -42,27 +42,31 @@ class BaseChannel(LitecordObject):
         If this channel is the default for the guild.
     """
 
-    __slots__ = ('_data', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
+    __slots__ = ('_raw', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
         'position', 'is_private', 'is_default')
 
     def __init__(self, server, _channel, guild=None):
         super().__init__(server)
-        self._data = _channel
+        self._raw = _channel
+
         self.id = int(_channel['channel_id'])
         self.guild_id = int(_channel['guild_id'])
 
+        self.guild = guild
         if guild is None:
             self.guild = self.guild_man.get_guild(self.guild_id)
-        else:
-            self.guild = guild
 
         if self.guild is None:
-            log.error("Creating an orphaned Channel")
+            log.warning('Creating an orphaned channel(no guild found)')
 
-        self.name = _channel['name']
         self.str_type = _channel['type']
         self.type = CHANNEL_TO_INTEGER[_channel['type']]
-        self.position = _channel['position']
+        self._update(_channel)
+
+    def _update(self, raw):
+        self.name = raw['name']
+
+        self.position = raw['position']
         self.is_private = False
         self.is_default = self.id == self.guild_id
 
@@ -117,9 +121,12 @@ class TextChannel(BaseChannel):
 
     def __init__(self, server, raw_channel, guild=None):
         super().__init__(server, raw_channel, guild)
-
-        self.topic = raw_channel['topic']
         self.last_message_id = 0
+        self._update(raw_channel)
+
+    def _update(self, raw):
+        BaseChannel._update(self, raw)
+        self.topic = raw['topic']
 
     def get_message(self, message_id):
         """Get a single message from a channel."""

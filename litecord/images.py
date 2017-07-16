@@ -37,6 +37,9 @@ class Images:
         self.image_db = server.litecord_db['images']
         self.attach_db = server.litecord_db['attachments']
 
+        # NOTE: we could use that cache for image retrieval you know
+        #self.cache = {}
+
     async def raw_add_image(self, data, img_type='avatar'):
         """Add an image.
 
