@@ -41,24 +41,28 @@ class Role(LitecordObject):
     __slots__ = ('_data', 'id', 'guild', 'name', 'color', 'hoist', 'position',
         'position', 'permissions', 'managed', 'mentionable')
 
-    def __init__(self, server, guild, _data):
+    def __init__(self, server, guild, _raw):
         super().__init__(server)
-        self._data = _data
+        self._raw = raw
 
-        self.id = int(_data['role_id'])
+        self.id = int(_raw['role_id'])
         self.guild = guild
 
-        if self.id == guild.id:
-            self.name = '@everyone'
-        else:
-            self.name = _data['name']
+        self.is_default = self.guild.id == self.id
 
-        self.color = _data.get('color', 0)
-        self.hoist = _data.get('hoisted', False)
-        self.position = _data.get('position', 0)
-        self.permissions = _data.get('permissions', 0)
+        self._update(raw)
+
+    def _update(self, raw):
+        rg = raw.get
+        self.name = raw.get('name') or '@everyone'
+
+        # specific role data
+        self.color = rg('color', 0)
+        self.hoist = rg('hoisted', False)
+        self.position = rg('position', 0)
+        self.permissions = rg('permissions', 0)
         self.managed = False
-        self.mentionable = _data.get('mentionable')
+        self.mentionable = rg('mentionable', False)
 
     def __repr__(self):
         return f'<Role id={self.id} name={self.name!r} color={self.color} hoist={self.hoist}' \
@@ -66,16 +70,7 @@ class Role(LitecordObject):
 
     @property
     def as_db(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'color': self.color,
-            'hoist': self.hoist,
-            'position': self.position,
-            'permissions': self.permissions,
-            'managed': self.managed,
-            'mentionable': self.mentionable,
-        }
+        return {**self.as_json, **{'id': self.id}}
 
     @property
     def as_json(self):
