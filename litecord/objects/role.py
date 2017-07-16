@@ -41,20 +41,17 @@ class Role(LitecordObject):
     __slots__ = ('_data', 'id', 'guild', 'name', 'color', 'hoist', 'position',
         'position', 'permissions', 'managed', 'mentionable')
 
-    def __init__(self, server, guild, _raw):
+    def __init__(self, server, guild, raw):
         super().__init__(server)
         self._raw = raw
+        self.id = int(raw['role_id'])
+        self._update(guild, raw)
 
-        self.id = int(_raw['role_id'])
-        self.guild = guild
-
-        self.is_default = self.guild.id == self.id
-
-        self._update(raw)
-
-    def _update(self, raw):
+    def _update(self, guild, raw):
         rg = raw.get
         self.name = raw.get('name') or '@everyone'
+        self.guild = guild
+        self.is_default = self.guild.id == self.id
 
         # specific role data
         self.color = rg('color', 0)

@@ -14,8 +14,8 @@ class VoiceChannel(BaseChannel):
 
     __slots__ = ('bitrate', 'user_limit')
 
-    def __init__(self, server, raw_channel, guild=None):
-        super().__init__(server, raw_channel, guild)
+    def __init__(self, server, raw, guild=None):
+        super().__init__(server, raw, guild)
         self._update(raw)
 
     def _update(self, raw):
