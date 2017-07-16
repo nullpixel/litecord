@@ -954,14 +954,6 @@ class GuildManager:
             guild = Guild(self.server, raw_guild)
             self.guilds.append(guild)
 
-            for channel_id in guild.channel_ids:
-                channel = self.get_channel(channel_id)
-                channel.guild = guild
-
-            for role_id in guild.role_ids:
-                role = self.get_role(role_id)
-                role.guild = guild
-
             guild_count += 1
 
         log.info('[guild] Loaded %d guilds', guild_count)

@@ -76,6 +76,9 @@ class Guild(LitecordObject):
     def __init__(self, server, raw):
         super().__init__(server)
         self.raw = raw
+        self.id = int(raw['guild_id'])
+        self.created_at = self.to_timestamp(self.id)
+
         self.members = {}
         self.roles = {}
         self.channels = {}
@@ -91,6 +94,7 @@ class Guild(LitecordObject):
         for channel_id in self.channel_ids:
             channel = self.guild_man.get_channel(channel_id)
             self.channels[channel.id] = channel
+            channel.guild = self
 
         for member_id in self.member_ids:
             user = self.server.get_user(member_id)
@@ -105,17 +109,14 @@ class Guild(LitecordObject):
         for role_id in self.role_ids:
             role = self.guild_man.get_role(role_id)
             self.roles[role.id] = role
+            role.guild = self
 
     def _from_raw(self, raw):
-        self.id = int(raw['guild_id'])
-        self.created_at = self.to_timestamp(self.id)
-
         self.name = raw['name']
         self.icons['icon'] = raw['icon']
         self.owner_id = int(raw['owner_id'])
 
         self.region = raw['region']
-        self.emojis = []
         self.features = raw['features']
 
         self.channel_ids = raw['channel_ids']
