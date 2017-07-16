@@ -579,22 +579,25 @@ class GuildManager:
             The amount of days worth of messages to be removed using :meth:`TextChannel.delete_many`.
         """
 
-        if user.id in guild.members:
-            await self.remove_member(guild, user)
-
         bans = guild.banned_ids
 
         try:
-            bans.index(str(user.id))
+            bans.index(user.id)
             raise Exception("User already banned")
-        except:
-            bans.append(str(user.id))
+        except ValueError:
+            bans.append(user.id)
 
         await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
 
         await guild.dispatch('GUILD_BAN_ADD',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
+
+        try:
+            guild.member_ids.index(user.id)
+            await self.remove_member(guild, user)
+        except ValueError:
+            pass
 
         if delete_days is not None:
             self.loop.create_task(self._ban_clean(guild, user, delete_days))
