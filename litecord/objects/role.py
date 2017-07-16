@@ -60,6 +60,10 @@ class Role(LitecordObject):
         self.managed = False
         self.mentionable = _data.get('mentionable')
 
+    def __repr__(self):
+        return f'<Role id={self.id} name={self.name!r} color={self.color} hoist={self.hoist}' \
+                f' permissions={self.permissions}>'
+
     @property
     def as_db(self):
         return {

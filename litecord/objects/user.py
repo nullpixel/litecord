@@ -54,7 +54,7 @@ class User(LitecordObject):
 
     def __repr__(self):
         return f'<User id={self.id} name={self.username} discriminator={self.discriminator} ' \
-                'bot={self.bot} admin={self.admin}>'
+               f'bot={self.bot} admin={self.admin}>'
 
     def __eq__(self, other):
         return isinstance(other, User) and other.id == self.id
