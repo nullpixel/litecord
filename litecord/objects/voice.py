@@ -16,9 +16,13 @@ class VoiceChannel(BaseChannel):
 
     def __init__(self, server, raw_channel, guild=None):
         super().__init__(server, raw_channel, guild)
+        self._update(raw)
 
-        self.bitrate = raw_channel.get('birtate', 69)
-        self.user_limit = raw_channel.get('user_limit', 0)
+    def _update(self, raw):
+        BaseChannel._update(self, raw)
+
+        self.bitrate = raw.get('bitrate', 69)
+        self.user_limit = raw.get('user_limit', 0)
 
     async def voice_request(self, connection):
         """Request a voice state from the voice manager."""
