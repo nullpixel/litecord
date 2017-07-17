@@ -446,6 +446,11 @@ class GuildManager:
         if res.deleted_count > 1:
             log.warning('[guild_delete] SOMETHING HAS GONE HORRIBLY WRONG(deleted_doc > 1)')
 
+        result = await self.member_coll.delete_many({'guild_id': guild_id})
+        log.info(f'[guild_delete] Deleted {result.deleted_count} raw members')
+
+        del self.raw_guilds[guild_id]
+
         await guild.dispatch('GUILD_DELETE', {
             'id': str(guild.id),
             'unavailable': False
@@ -481,6 +486,17 @@ class GuildManager:
         result = await self.guild_coll.replace_one({'guild_id': guild.id}, raw_guild)
         log.info(f"Updated {result.modified_count} guilds")
 
+        raw_member = {
+            'guild_id': guild.id,
+            'user_id': user.id,
+            'nick': None,
+            'joined': datetime.datetime.now().isoformat(),
+            'deaf': False,
+            'mute': False,
+        }
+        result = await self.member_coll.insert_one(raw_member)
+        self.raw_members[guild.id][user.id] = raw_member
+
         guild = await self.reload_guild(guild)
 
         new_member = guild.members.get(user.id)
@@ -513,7 +529,11 @@ class GuildManager:
         await self.member_coll.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
             {'$set': new_data})
 
-        member.update(new_data)
+        raw_member = {**member._raw, **new_data})
+        member._update(raw_member)
+
+        # update in cache
+        self.raw_members[guild.id][user.id] = raw_member
 
         await guild.dispatch('GUILD_MEMBER_UPDATE', {
             'guild_id': str(member.guild.id),
@@ -541,8 +561,12 @@ class GuildManager:
         raw_guild = guild._raw
         raw_guild['member_ids'].remove(user_id)
 
-        result = await self.guild_coll.update_one({'guild_id': guild.id}, {'$set': raw_guild})
-        log.info(f"Updated {result.modified_count} guilds")
+        await self.guild_coll.update_one({'guild_id': guild.id}, {'$set': raw_guild})
+
+        result = await self.member_coll.delete_many({'guild_id': guild.id, 'user_id': user.id})
+        log.info(f'Deleted {result.deleted_count} member objects')
+
+        del self.raw_members[guild.id][user.id]
 
         guild = await self.reload_guild(guild)
         await guild.dispatch('GUILD_MEMBER_REMOVE', {
@@ -639,6 +663,27 @@ class GuildManager:
         except:
             log.error("Error kicking member.", exc_info=True)
             return False
+
+    async def shard_count(self, user):
+        """Give the shard count for a user.
+
+        Since Litecord does not support sharding nor clients
+        in a lot of guilds, this usually returns the amazing value of 1.
+
+        The value changes with the user joining/leaving guilds.
+
+        Parameters
+        ----------
+        user: :class:`User`
+            The user to get a shard count from.
+
+        Returns
+        -------
+        int
+            The recommended amount of shards to start the connection.
+        """
+        guild_count = await self.member_coll.count({'user_id': user.id})
+        return max(guild_count / 1200, 1)
 
     async def create_channel(self, guild, payload):
         """Create a channel in a guild.
@@ -884,6 +929,8 @@ class GuildManager:
          - Invites
          - Messages
         """
+
+        # raw member loading
         cursor = self.member_coll.find()
         member_count = 0
         for raw_member in await cursor.to_list(length=None):

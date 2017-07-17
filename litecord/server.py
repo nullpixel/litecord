@@ -461,15 +461,12 @@ class LitecordServer:
             'version': self.litecord_version,
         })
 
-    async def h_give_gateway(self, request):
+    def get_gateway_url(self):
         ws = self.flags['server']['ws']
-        if not self.accept_clients:
-            return web.Response(status=404, text='Gateway down for server shutdown')
-
         if len(ws) == 2:
-            return _json({"url": f"ws://{ws[0]}:{ws[1]}"})
+            return f'ws://{ws[0]}:{ws[1]}'
         elif len(ws) == 3:
-            return _json({"url": f"ws://{ws[2]}:{ws[1]}"})
+            return f"ws://{ws[2]}:{ws[1]}"
 
     async def check_request(self, request) -> 'tuple(str, int)':
         """Checks a request to the API.
@@ -599,7 +596,7 @@ class LitecordServer:
     async def init(self, app):
         """Initialize the server.
 
-        Loads databases, managers and endpoints.
+        Loads databases, managers and endpoint objects.
         """
         try:
             t_init = time.monotonic()
@@ -636,6 +633,7 @@ class LitecordServer:
             self.relations = RelationsManager(self)
 
             log.debug('[init] endpoints')
+            self.gw_endpoint = api.GatewayEndpoint(self)
             self.users_endpoint = api.UsersEndpoint(self)
             self.guilds_endpoint = api.guilds.GuildsEndpoint(self)
             self.channels_endpoint = api.ChannelsEndpoint(self)
@@ -645,9 +643,7 @@ class LitecordServer:
             self.auth_endpoint = api.AuthEndpoints(self)
             self.voice_endpoint = api.VoiceEndpoint(self)
 
-            # setup internal handlers
             self.add_get('version', self.h_get_version)
-            self.add_get('gateway', self.h_give_gateway)
 
             t_end = time.monotonic()
             delta = round((t_end - t_init) * 1000, 2)
