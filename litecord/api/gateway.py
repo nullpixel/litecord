@@ -1,6 +1,6 @@
 import logging
 
-from aiottp import web
+from aiohttp import web
 
 from ..utils import _err, _json
 from ..decorators import auth_route

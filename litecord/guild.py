@@ -529,7 +529,7 @@ class GuildManager:
         await self.member_coll.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
             {'$set': new_data})
 
-        raw_member = {**member._raw, **new_data})
+        raw_member = {**member._raw, **new_data}
         member._update(raw_member)
 
         # update in cache

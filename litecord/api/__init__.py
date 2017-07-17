@@ -6,3 +6,4 @@ from .imgs import *
 from .invites import *
 from .users import *
 from .voice import *
+from .gateway import *
