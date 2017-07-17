@@ -10,12 +10,12 @@ class Role(LitecordObject):
         Server instance.
     guild: :class:`Guild`
         Guild that this role is from.
-    _data: dict
+    raw: dict
         Raw role data.
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw role data.
     id: int
         Role ID

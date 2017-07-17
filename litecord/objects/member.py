@@ -21,7 +21,7 @@ class Member(LitecordObject):
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw member data.
     user: :class:`User`
         The user this member represents.
@@ -43,28 +43,31 @@ class Member(LitecordObject):
         If the member is muted on the guild.
     """
 
-    __slots__ = ('_data', 'user', 'guild', 'id', 'owner', 'nick', 'joined_at',
+    __slots__ = ('_raw', 'user', 'guild', 'id', 'owner', 'nick', 'joined_at',
         'roles', 'voice_deaf', 'voice_mute')
 
-    def __init__(self, server, guild, user, raw_member):
+    def __init__(self, server, guild, user, raw):
         super().__init__(server)
-        self._data = raw_member
+        self._raw = raw
+        self._update(guild, user, raw)
+
+    def _update(self, guild, user, raw):
         self.user = user
         self.guild = guild
 
         self.id = self.user.id
-        self.owner = self.id == self.guild.owner_id
-        self.nick = raw_member.get('nick')
+        self.is_owner = (self.id == self.guild.owner_id)
+        self.nick = raw.get('nick')
 
         joined_timestamp = raw_member.get('joined')
-
         if joined_timestamp is not None:
             self.joined_at = datetime.datetime.strptime(joined_timestamp, \
                 "%Y-%m-%dT%H:%M:%S.%f")
         else:
             log.warning("Member without joined timestamp.")
 
-        self.roles = []
+        self.roles = raw_member.get('roles', [])
+
         self.voice_deaf = False
         self.voice_mute = False
 

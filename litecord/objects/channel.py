@@ -65,7 +65,6 @@ class BaseChannel(LitecordObject):
 
     def _update(self, raw):
         self.name = raw['name']
-
         self.position = raw['position']
         self.is_private = False
         self.is_default = self.id == self.guild_id
@@ -113,7 +112,9 @@ class TextChannel(BaseChannel):
     topic: str
         Channel topic/description.
     last_message_id: int
-        The last message created in the channel.
+        The last message created in the channel,
+        it is only updated when you get the channel
+        through :meth:`GuildManager.get_channel`.
 
     """
 
@@ -143,7 +144,7 @@ class TextChannel(BaseChannel):
 
         Returns
         -------
-        list: list of :py:meth:`Message`
+        list: list of :class:`Message`
             Ordered(by time) list of message objects.
         """
         res = []
@@ -182,8 +183,9 @@ class TextChannel(BaseChannel):
         ----------
         message_ids: List[int]
             Message IDs to be deleted from the channel
-        build: bool
-            If thie is going to fire a `MESSAGE_DELETE_BULK` instead of `MESSAGE_DELETE`
+        build: bool, optional
+            If thie is going to fire a `MESSAGE_DELETE_BULK` instead of `MESSAGE_DELETE`.
+            Defaults to :py:meth:`False`.
 
         Returns
         -------

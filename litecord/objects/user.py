@@ -12,12 +12,12 @@ class User(LitecordObject):
     ----------
     server: :class:`LitecordServer`
         Server instance
-    _data: dict
+    raw: dict
         Raw user data.
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw user data.
     id: int
         Snowflake ID of this user.
@@ -33,7 +33,7 @@ class User(LitecordObject):
         Flag that shows if the user is an admin user.
     """
 
-    __slots__ = ('_data', 'id', 'username', 'discriminator', 'avatar_hash',
+    __slots__ = ('_raw', 'id', 'username', 'discriminator', 'avatar_hash',
         'email', 'admin')
 
     def __init__(self, server, raw):

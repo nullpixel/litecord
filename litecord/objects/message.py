@@ -18,7 +18,7 @@ class Message(LitecordObject):
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw message data.
     id: int
         Message's snowflake ID.
@@ -41,40 +41,39 @@ class Message(LitecordObject):
         If the message was edited, this is set to the time at which this message was edited.
     """
 
-    __slots__ = ('_data', 'id', 'author_id', 'channel_id', 'timestamp', 'channel',
+    __slots__ = ('_raw', 'id', 'author_id', 'channel_id', 'timestamp', 'channel',
         'author', 'member', 'content', 'edited_at')
 
-    def __init__(self, server, channel, _message_data):
+    def __init__(self, server, channel, raw):
         super().__init__(server)
-        self._data = _message_data
+        self._raw = raw
 
-        self.id = int(_message_data['message_id'])
-        self.author_id = int(_message_data['author_id'])
-        if channel is None:
-            log.warning('Orphaned message %d', self.id)
-            return
+        self.id = int(_raw['message_id'])
+        self.author_id = int(_raw['author_id'])
 
-        self.channel_id = channel.id
+        self._update(channel, raw)
 
-        self.timestamp = datetime.datetime.fromtimestamp(snowflake_time(self.id))
-
+    def _update(self, channel, raw):
         self.channel = channel
-        self.author = self.server.get_user(self.author_id)
-        self.member = self.channel.guild.members.get(self.author_id)
+        self.guild = channel.guild
 
-        if self.member is None:
-            log.warning("Message being created with invalid userID [member not found]")
+        self.created_at = datetime.datetime.fromtimestamp(snowflake_time(self.id))
 
-        self.content = _message_data['content']
-        self.edited_at = _message_data.get('edited_timestamp', None)
+        self.author = self.guild.get_member(self.author_id)
+
+        self.content = raw['content']
+        self.edited_timestamp = raw.get('edited_timestamp')
+        self.edited_at = datetime.datetime.strptime(self.edited_timestamp, \
+                "%Y-%m-%dT%H:%M:%S.%f")
 
     def edit(self, new_content, timestamp=None):
         """Edit a message object"""
         if timestamp is None:
             timestamp = datetime.datetime.now()
 
-        self.edited_at = timestamp
-        self.content = new_content
+        self._raw['content'] = new_content
+        self._raw['edited_timestamp'] = timestamp.isoformat()
+        self._update(self.channel, self._raw)
 
     @property
     def as_db(self):

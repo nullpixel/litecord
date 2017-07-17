@@ -1,20 +1,15 @@
 import datetime
 import logging
+import collections
 
 from .base import LitecordObject
-from .channel import TextChannel
-from .voice import VoiceChannel
 from .member import Member
-from .role import Role
 from ..snowflake import snowflake_time
 from ..utils import dt_to_json
 
 log = logging.getLogger(__name__)
 
-
-class BareGuild:
-    def __init__(self, guild_id):
-        self.id = guild_id
+BareGuild = collections.namedtuple('BareGuild', 'id')
 
 
 class Guild(LitecordObject):
@@ -93,8 +88,8 @@ class Guild(LitecordObject):
     def _update_caches(self, raw):
         for channel_id in self.channel_ids:
             channel = self.guild_man.get_channel(channel_id)
-            self.channels[channel.id] = channel
             channel.guild = self
+            self.channels[channel.id] = channel
 
         for member_id in self.member_ids:
             user = self.server.get_user(member_id)
@@ -102,14 +97,18 @@ class Guild(LitecordObject):
                 log.warning('user %d not found', user_id)
                 continue
 
-            raw_member = self.guild_man.raw_members[self.id][user.id]
+            raw_member = self.guild_man.raw_members[self.id].get(user.id)
+
+            if raw_member is None and (user.id in self.members):
+                del self.members[user.id]
+
             member = Member(self.server, self, user, raw_member)
             self.members[member.id] = member
         
         for role_id in self.role_ids:
             role = self.guild_man.get_role(role_id)
-            self.roles[role.id] = role
             role.guild = self
+            self.roles[role.id] = role
 
     def _from_raw(self, raw):
         self.name = raw['name']

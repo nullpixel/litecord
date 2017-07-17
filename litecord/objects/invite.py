@@ -8,12 +8,12 @@ class Invite(LitecordObject):
     ----------
     server: :class:`LitecordServer`
         Server instance.
-    _data: dict
+    _raw: dict
         Raw invite data.
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw invite object.
     code: str
         Invite code.
@@ -39,33 +39,22 @@ class Invite(LitecordObject):
         If not, this becomes :py:const:`None`.
     """
 
-    __slots__ = ('_data', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
+    __slots__ = ('_raw', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
         'temporary', 'uses', 'iso_timestamp', 'infinite', 'expiry_timestamp')
 
-    def __init__(self, server, _data):
+    def __init__(self, server, raw):
         super().__init__(server)
-        self.server = server
-        self._data = _data
+        self._raw = raw
 
-        self.code = _data['code']
-        self.channel_id = int(_data['channel_id'])
+        self.code = _raw['code']
+        self.channel_id = int(_raw['channel_id'])
 
-        self.channel = server.guild_man.get_channel(self.channel_id)
-        if self.channel is None:
-            log.warning("Orphan invite (channel)")
+    def _update_detached(self, raw):
+        self.temporary = raw.get('temporary', False)
 
-        guild = self.channel.guild
+        self.uses = raw.get('uses', -1)
 
-        self.inviter_id = int(_data['inviter_id'])
-        self.inviter = guild.members.get(self.inviter_id)
-        if self.inviter is None:
-            log.warning("Orphan invite (inviter)")
-
-        self.temporary = _data.get('temporary', False)
-
-        self.uses = _data.get('uses', -1)
-
-        self.iso_timestamp = _data.get('timestamp', None)
+        self.iso_timestamp = raw.get('timestamp', None)
         self.infinite = True
         self.expiry_timestamp = None
 
@@ -73,6 +62,20 @@ class Invite(LitecordObject):
             self.infinite = False
             self.expiry_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
                 "%Y-%m-%dT%H:%M:%S.%f")
+
+    def _update(self, raw):
+        self.channel = server.guild_man.get_channel(self.channel_id)
+        if self.channel is None:
+            log.warning('Orphan invite (channel)')
+            self._update_detach(raw)
+            return
+
+        self.inviter_id = int(raw['inviter_id'])
+        self.inviter = guild.members.get(self.inviter_id)
+        if self.inviter is None:
+            log.warning('Orphan invite (inviter)')
+
+        self._update_detach(raw)
 
     @property
     def valid(self):
