@@ -39,9 +39,8 @@ class UsersEndpoint:
         if user_id == '@me':
             return _json(user.as_json)
         else:
-            # If we want to be full discord-like, uncomment this
-            #if not user.bot:
-            #    return _err(errno=40001)
+            if not user.bot:
+                return _err(errno=40001)
 
             log.debug(f'searching for user {user_id!r}')
 

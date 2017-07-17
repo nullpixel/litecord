@@ -394,9 +394,9 @@ class Connection(WebsocketConnection):
         log.info("READY: New session %s, sending %d guilds", self.session_id, len(guild_list)) 
 
         stripped_user = strip_user_data(self.raw_user)
+
         user_settings = await self.settings.get_settings(self.user.id)
         user_relationships = await self.relations.get_relationships(self.user.id)
-
         user_guild_settings = await self.settings.get_guild_settings(self.user.id)
 
         ready_packet = {
@@ -415,7 +415,7 @@ class Connection(WebsocketConnection):
             'friend_suggestion_count': 0,
             'presences': [],
             'read_state': [],
-            'analytics_token': 'hahahahahahahahaha lol',
+            'analytics_token': 'insert a token here',
             'experiments': [],
             'guild_experiments': [],
             'required_action': 'die',
@@ -425,8 +425,9 @@ class Connection(WebsocketConnection):
             '_trace': self.get_identifiers('ready')
         }
 
-        # If its a bot, we send unavailable guilds on READY
-        # and then dispatch GUILD_CREATE events for every guild
+        # If its a real bot(non selfbot), we do guild streaming
+        # which is sending unavailable guild objects in READY and then
+        # dispatching GUILD_CREATE events for all guilds
         if self.raw_user['bot']:
             ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list]
 

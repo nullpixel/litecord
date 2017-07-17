@@ -611,9 +611,9 @@ class GuildManager:
         bans = guild.banned_ids
 
         try:
-            bans.remove(str(user.id))
-        except:
-            raise Exception("User not banned")
+            bans.remove(user.id)
+        except ValueError:
+            raise Exception('User not banned')
 
         await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
