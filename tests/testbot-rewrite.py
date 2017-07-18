@@ -27,8 +27,5 @@ async def on_message(message):
     if message.content.startswith('%hello'):
         await message.channel.send('asd')
 
-# josebox
-#client.run('litecord_Prt3FEpPfiUFT4nwkFbgUSHF872sOjQWOjyE3m9PBTz0jlt2QsS-Oa2DEXuYUODxg4ONDmpd92J5112J7MbMnQ')
-
 # local
-client.run('MTQ5MjYwMDQ2MzM3.cgidRmWFxnYZ3VdfO02s6CN8HHs')
+client.run('MTQ5MjYwMDQ2MzM3.tcLbMZuswIKanjv1FB0Om1yq2rA')

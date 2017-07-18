@@ -407,7 +407,7 @@ class Connection(WebsocketConnection):
             raise StopConnection(4011, 'Sharding required')
 
         # check if current shard is with too many guilds
-        f = lambda o: o.id
+        f = lambda o: self.guild_man.get_shard(o.id, self.shard_count)
         all_guild_ids = map(f, self.guild_man.yield_guilds(self.user.id))
 
         count = collections.Counter(all_guild_ids)
