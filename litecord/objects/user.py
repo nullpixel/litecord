@@ -156,11 +156,10 @@ class Presence:
 
     __slots__ = ('game', 'user', 'guild')
 
-    def __init__(self, guild, user, status=None):
-        self.game = None
+    def __init__(self, guild, user, status):
         self._update(guild, user, status)
 
-    def _update(self, guild, user, status=None):
+    def _update(self, guild, user, status):
         _base = self.game
         if self.game is None:
             _base = default_game()

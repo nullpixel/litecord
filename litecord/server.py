@@ -494,7 +494,6 @@ class LitecordServer:
         """
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
-            return _err('401: Unauthorized, no token provided')
             raise RequestCheckError(_err('No token provided', status_code=401))
 
         if len(auth_header) < 1:

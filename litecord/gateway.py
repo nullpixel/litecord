@@ -477,6 +477,9 @@ class Connection(WebsocketConnection):
         }
 
         if not self.user.bot:
+            friend_presences = [self.presence.get_global_presence(r.u_to.uid) \
+                for r in user_relationships]
+
             user_ready = {
                 # the following fields are for user accounts
                 # and user accounts only.
@@ -499,7 +502,7 @@ class Connection(WebsocketConnection):
                 # Assuming this is used for relationships
                 # so you get presences for your friends on READY
                 # (notice Discord opens your friend list on startup)
-                'presences': [],
+                'presences': friend_presences,
 
                 # This might relate with /channels/:id/ack, somehow.
                 # I don't know
@@ -512,7 +515,7 @@ class Connection(WebsocketConnection):
                 'required_action': 'do something',
             }
 
-            ready_packet = {**ready_packet, **user_ready}
+            ready_packet.update(user_ready)
 
         # If its a real bot(non selfbot), we do guild streaming
         # which is sending unavailable guild objects in READY and then

@@ -22,20 +22,23 @@ class PresenceManager:
     def __init__(self, server):
         self.server = server
         self.presence_coll = server.presence_coll
+
         self.presences = collections.defaultdict(dict)
+        self.global_presences = {}
 
     def get_presence(self, guild_id, user_id):
         """Get a `Presence` object from a guild + user ID pair."""
         guild_id = int(guild_id)
         user_id = int(user_id)
 
-        guild_presences = self.presences[guild_id]
-
         try:
-            return guild_presences[user_id]
+            return self.presences[guild_id][user_id]
         except KeyError:
             log.warning(f"Presence not found for {user_id}")
             return None
+
+    def get_global_presence(self, user_id):
+        return self.global_presences.get(user_id)
 
     def offline(self):
         """Return a presence dict object for offline users"""
@@ -126,6 +129,8 @@ class PresenceManager:
 
         if user is None:
             return
+
+        self.global_presences[user.id] = Presence(None, user, new_status)
 
         for guild in user.guilds:
             await self.status_update(guild, user, new_status)
