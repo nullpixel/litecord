@@ -5,7 +5,8 @@
         "type": "text",
         "name": "general",
         "position": 0,
-        "topic": "general but it is general"
+        "topic": "general but it is general",
+        "pinned_ids": []
     },
     {
         "guild_id": "150501171201",

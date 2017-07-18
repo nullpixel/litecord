@@ -40,6 +40,8 @@ class BaseChannel(LitecordObject):
         Should be False.
     is_default: bool
         If this channel is the default for the guild.
+    pins: list[int]
+        List of message IDs that are pinned.
     """
 
     __slots__ = ('_raw', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
@@ -116,10 +118,11 @@ class TextChannel(BaseChannel):
         The last message created in the channel,
         it is only updated when you get the channel
         through :meth:`GuildManager.get_channel`.
-
+    pins: list[int]
+        List of message IDs that are pinned in the channel.
     """
 
-    __slots__ = ('topic', 'last_message_id')
+    __slots__ = ('topic', 'last_message_id', 'pins')
 
     def __init__(self, server, raw, guild=None):
         super().__init__(server, raw, guild)
@@ -129,6 +132,7 @@ class TextChannel(BaseChannel):
     def _update(self, guild, raw):
         BaseChannel._update(self, guild, raw)
         self.topic = raw['topic']
+        self.pins = raw['pinned_ids']
 
     def get_message(self, message_id):
         """Get a single message from a channel."""
@@ -165,6 +169,32 @@ class TextChannel(BaseChannel):
                 res.append(m)
 
         return res
+
+    async def get_pins(self, limit=None):
+        update = False
+        pinned_messages = []
+
+        cpy = self.pins[:limit]
+        for message_id in cpy:
+            m = self.guild_man.get_message(message_id)
+
+            if m is None:
+                self.pins.remove(message)
+                update = True
+                continue
+
+            pinned_messages.append(m)
+
+        if update:
+            result = await self.guild_man.channel_coll.update_one({'channel_id': self.id}, \
+                {'$set': {'pins': self.pins}})
+
+            log.info('Updated %d channel with %d to %d pins', \
+                result.modified_count, len(cpy), len(self.pins))
+
+            await self.guild_man.reload_channel(self)
+
+        return pinned_messages
 
     async def from_timestamp(self, timestamp):
         """Get all messages from the timestamp to latest"""
