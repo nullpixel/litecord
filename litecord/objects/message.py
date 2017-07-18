@@ -4,6 +4,17 @@ from .base import LitecordObject
 from ..snowflake import snowflake_time
 
 
+class MessageTypes:
+    DEFAULT = 0
+    RECIPIENT_ADD = 1
+    RECIPIENT_REMOVE = 2
+    CALL = 3
+    CHANNEL_NAME_CHANGE = 4
+    CHANNEL_ICON_CHANGE = 5
+    CHANNEL_PINNED_MESSAGE = 6
+    GUILD_MEMBER_JOIN = 7
+
+
 class Message(LitecordObject):
     """A general message object.
 
@@ -51,6 +62,7 @@ class Message(LitecordObject):
 
         self.id = int(_raw['message_id'])
         self.author_id = int(_raw['author_id'])
+        self.type = _raw.get('type', MessageTypes.DEFAULT)
 
         self._update(channel, author, raw)
 
@@ -85,6 +97,8 @@ class Message(LitecordObject):
             'channel_id': int(self.channel_id),
             'author_id': int(self.author.id),
 
+            'type': self.type
+
             'edited_timestamp': dt_to_json(self.edited_at),
 
             'content': str(self.content),
@@ -109,9 +123,10 @@ class Message(LitecordObject):
         return {
             'id': str(self.id),
             'channel_id': str(self.channel_id),
+
             'author': self.author.as_json,
             'content': self.content,
-            'timestamp': dt_to_json(self.timestamp),
+            'timestamp': dt_to_json(self.created_at),
             'edited_timestamp': dt_to_json(self.edited_at),
             'tts': False,
 
@@ -123,5 +138,6 @@ class Message(LitecordObject):
             'embeds': self.embeds,
             'reactions': reactions,
             'pinned': self.pinned,
+            'type': self.type
             #'webhook_id': '',
         }
