@@ -694,11 +694,15 @@ class GuildManager:
             log.error("Error kicking member.", exc_info=True)
             return False
 
+    async def guild_count(self, user) -> int:
+        """Get the guild count for a user"""
+        return await self.member_coll.count({'user_id': user.id})
+
     async def shard_count(self, user):
         """Give the shard count for a user.
 
         Since Litecord does not support sharding nor clients
-        in a lot of guilds, this usually returns the amazing value of 1.
+        in a lot of guilds, this usually returns the `amazing` value of 1.
 
         The value changes with the user joining/leaving guilds.
 
@@ -712,8 +716,14 @@ class GuildManager:
         int
             The recommended amount of shards to start the connection.
         """
-        guild_count = await self.member_coll.count({'user_id': user.id})
-        return max(guild_count / 1200, 1)
+        # 1200 guilds per shard should be allright
+        return max((await self.guild_count(user)) / 1200, 1)
+
+    def get_shard(self, guild_id: int, shard_count: int) -> int:
+        """Get a shard number for a guild ID."""
+        # Discord uses a MAGIC of 22, but we aren't Discord.
+        MAGIC = 0
+        return (guild_id << MAGIC) % shard_count
 
     async def create_channel(self, guild, payload):
         """Create a channel in a guild.

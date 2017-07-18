@@ -179,7 +179,10 @@ class LitecordServer:
             Connection object.
         """
         user_id = int(user_id)
-        log.debug(f"Adding sid={conn.session_id} to uid={user_id}")
+        log.debug('Adding sid=%s to uid=%d', conn.session_id, user_id)
+
+        if conn.sharded:
+            log.debug('Adding a shard (%d).', conn.shard_id)
 
         self.connections[user_id].append(conn)
         self.sessions[conn.session_id] = conn

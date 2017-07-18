@@ -150,6 +150,7 @@ class Connection(WebsocketConnection):
             'properties': dict,
             _o('compress'): bool,
             'large_threshold': int,
+            'shard': list,
         }, extra=REMOVE_EXTRA)
 
     def __repr__(self):
@@ -316,6 +317,30 @@ class Connection(WebsocketConnection):
         user = self.server.get_user(raw_user['user_id'])
         return True, raw_user, user
 
+    def check_shard(self, shard):
+        """Checks for validity of the shard payload.
+        
+        Raises
+        ------
+        StopConnection
+            With error code 4001 and a reason for the error.
+        """
+
+        try:
+            shard = list(map(int, shard))
+        except ValueError:
+            raise StopConnection(4010, 'Invalid shard payload(int).')
+
+        if len(shard) != 2:
+            raise StopConncetion(4010, 'Invalid shard payload(length).')
+
+        shard_id, shard_count = shard
+        if shard_count < 1:
+            raise StopConnection(4010, 'Invalid shard payload(shard_count=0).')
+
+        if shard_id > shard_count:
+            raise StopConnection(4010, 'Invalid shard payload(id > count).')
+
     @handler(OP.IDENTIFY)
     @ws_ratelimit('identify')
     async def identify_handler(self, data):
@@ -345,35 +370,76 @@ class Connection(WebsocketConnection):
         if not valid:
             raise StopConnection(4004, 'Authentication failed...')
 
+        shard = data.get('shard', [0, 1])
+        self.check_shard(shard)
+
+        self.shard_id, self.shard_count = shard
+        self.sharded = self.shard_count > 1
+
+        # NOTE: If we ever implement sharding, remove this piece of code
+        if self.shard_count > 1:
+            log.warning('Failing request for sharding: %r', shard)
+            raise StopConnection(4010, 'Sharding not available')
+
         self.raw_user = user_object
         self.user = user
 
+        # NOTE: When sharding, uncomment this code.
+        #if self.sharded and (not self.user.bot):
+        #    raise StopConnection(4010, 'Sharding not allowed for user accounts.')
+
         self.session_id = self.gen_sessid()
         if self.session_id is None:
-            # Failed to create an unique session
-            # This can happen because of anything
-            await self.invalidate(False)
+            # NOTE: If we get into a reconnection loop
+            # this might be the culprit! check your session ID generation.
+
+            # possible order of events for the loop:
+            #  > client identifies
+            #  > gateway closes with 4009 
+            #  > client reconnects
+            raise StopConnection(4009, 'Session timeout')
             return
+
+        guild_count = await self.guild_man.guild_count(self.user)
+        if guild_count > 2500 and self.user.bot and (not self.sharded):
+            raise StopConnection(4011, 'Sharding required')
+
+        # check if current shard is with too many guilds
+        f = lambda o: o.id
+        all_guild_ids = map(f, self.guild_man.yield_guilds(self.user.id))
+
+        count = collections.Counter(all_guild_ids)
+        for shard_id, guild_count in count.most_common():
+            if shard_id != self.shard_id: continue
+
+            if guild_count > 2500:
+                raise StopConnection(4010, f'Shard {shard_id} is with too many guilds({guild_count} > 2500)')
 
         self.request_counter = self.server.request_counter[self.session_id]
         self.token = token
 
-        # lol properties
-        _prop = self.properties
-        _prop['token'] = self.token
-        _prop['os'] = prop.get('$os')
-        _prop['browser'] = prop.get('$browser')
-        _prop['large'] = large
+        prop = {}
+        prop['os'] = prop.get('$os')
+        prop['browser'] = prop.get('$browser')
+        prop['large'] = large
+        self.properties = prop
 
         self.server.add_connection(self.user.id, self)
-
         self.events = self.server.event_cache[self.session_id]
 
-        # set user status before even calculating guild data to be sent
-        # if we do it *after* READY, the presence manager errors since it tries
-        # to get presence stuff for a member that is still connecting
+        if self.sharded:
+            self.events['shard_id'] = self.shard_id
+
+        # NOTE: Always set user presence before calculating the guild list!
+        # If we set presence after sending READY, PresenceManager
+        # falls apart because it tries to get presence data(for READY)
+        # for a user that is still connecting (the client right now)
+
+        # TODO: maybe store presences between client logon/logoff
+        # like idle and dnd?
         await self.presence.global_update(self.user)
 
+        # I'm happy :)
         self.identified = True
 
         # the actual list of guilds to be sent to the client
@@ -383,52 +449,67 @@ class Connection(WebsocketConnection):
             if not self.is_atomic:
                 guild.mark_watcher(self.user.id)
 
-            guild_json = guild.as_json
+            jguild = guild.as_json
 
-            # Only send online members if the guild is large
             if guild.member_count > large:
-                guild_json['members'] = [m.as_json for m in guild.online_members]
+                jguild['members'] = [m.as_json for m in guild.online_members]
 
-            guild_list.append(guild_json)
+            guild_list.append(jguild)
 
-        log.info("READY: New session %s, sending %d guilds", self.session_id, len(guild_list)) 
-
-        stripped_user = strip_user_data(self.raw_user)
+        log.info('[ready:new_session] sid=%s, len_guilds=%d', self.session_id, len(guild_list)) 
 
         user_settings = await self.settings.get_settings(self.user.id)
         user_relationships = await self.relations.get_relationships(self.user.id)
         user_guild_settings = await self.settings.get_guild_settings(self.user.id)
 
         ready_packet = {
+            '_trace': self.get_identifiers('ready')
             'v': self.options[0],
-            'user': stripped_user,
+
+            'user': self.user.as_json,
             'private_channels': [],
 
-            # those are specific user stuff
-            # that aren't documented in Discord's API Docs.
+            'guilds': guild_list,
+            'session_id': self.session_id,
+            
+            # the following fields are for user accounts
+            # and user accounts only.
+            # but I give them regardless of you're a bot or not
+            # because I'm lazy.
+
             'relationships': user_relationships,
             'user_settings': user_settings,
             'user_guild_settings': user_guild_settings,
 
+            # I don't think we are going to have
+            # Youtube/Twitch/whatever connections
             'connected_accounts': [],
+
+            # Only you can access those
+            # They are handled under another endpoint
             'notes': [],
             'friend_suggestion_count': 0,
+
+            # Assuming this is used for relationships
+            # so you get presences for your friends on READY
+            # (notice Discord opens your friend list on startup)
             'presences': [],
+
+            # This might relate with /channels/:id/ack, somehow.
+            # I don't know
             'read_state': [],
+            
+            # ??????
             'analytics_token': 'insert a token here',
             'experiments': [],
             'guild_experiments': [],
-            'required_action': 'die',
-
-            'guilds': guild_list,
-            'session_id': self.session_id,
-            '_trace': self.get_identifiers('ready')
+            'required_action': 'do something',
         }
 
         # If its a real bot(non selfbot), we do guild streaming
         # which is sending unavailable guild objects in READY and then
         # dispatching GUILD_CREATE events for all guilds
-        if self.raw_user['bot']:
+        if self.user.bot:
             ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list]
 
             await self.dispatch('READY', ready_packet)
@@ -460,16 +541,16 @@ class Connection(WebsocketConnection):
         if guild is None:
             return
 
-        all_members = [member.as_json for member in guild.members]
+        all_members = [m.as_json for m in guild.members]
         member_list = []
 
-        # NOTE: this is inneficient
+        # NOTE: this is inneficient as hell
+        # but that's life I guess..
         if len(query) > 0:
             for member in all_members:
                 if member.user.username.startswith(query):
                     member_list.append(member)
         else:
-            # if no query provided, just give it all
             member_list = all_members
 
         if len(member_list) > 1000:
@@ -483,7 +564,7 @@ class Connection(WebsocketConnection):
         else:
             await self.dispatch('GUILD_MEMBERS_CHUNK', {
                 'guild_id': guild_id,
-                'members': chunk,
+                'members': chunk[:limit],
             })
 
     async def invalidate(self, flag=False, session_id=None):
@@ -576,8 +657,18 @@ class Connection(WebsocketConnection):
         finally:
             self.dispatch_lock.release()
 
+        # Intuition here... Litecord wasn't supposed to be
+        # as fault-tolerant as Discord is, Litecord sure
+        # doesn't crash on any error, but if the server
+        # crash, eventually everything crashes(single point of failure).
+        
+        # I don't think PRESENCES_REPLACE is even supposed to be
+        # used in this non-fault-tolerant scenario... but I added it anyways
+        # so whatever.
         if len(presences) > 0:
             await self.dispatch('PRESENCES_REPLACE', presences)
+
+        # TODO: insert sharding
 
         self.raw_user = raw_user
         self.user = user
@@ -635,7 +726,8 @@ class Connection(WebsocketConnection):
             raise StopConnection(4003, 'Not identified')
 
         if not isinstance(data, list):
-            raise StopConnection(4001, 'Invalid data type')
+            log.warning('[gateway:guild_sync] Invalid data type')
+            return
 
         # ASSUMPTION: data is a list of guild IDs
         for guild_id in data:
@@ -650,10 +742,9 @@ class Connection(WebsocketConnection):
                 guild.mark_watcher(self.user.id)
 
             await self.dispatch('GUILD_SYNC', {
-                'id': guild_id,
-                'presences': [self.presence.get_presence(guild_id, member.id).as_json \
-                    for member in guild.online_members],
-                'members': [member.as_json for member in guild.online_members],
+                'id': str(guild_id),
+                'presences': [p.as_json for p in guild.presences],
+                'members': [m.as_json for m in guild.online_members],
             })
 
         return True
@@ -716,7 +807,6 @@ class Connection(WebsocketConnection):
         payload: dict
             https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
         """
-
         return await self._process(payload) 
 
     async def run(self):
