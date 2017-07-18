@@ -31,6 +31,8 @@ class User(LitecordObject):
         User's email, can be :py:const:`None`
     admin: bool
         Flag that shows if the user is an admin user.
+    bot: bool
+        If this is a bot user.
     """
 
     __slots__ = ('_raw', 'id', 'username', 'discriminator', 'avatar_hash',
