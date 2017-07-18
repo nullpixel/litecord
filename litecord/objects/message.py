@@ -96,8 +96,7 @@ class Message(LitecordObject):
             'message_id': int(self.id),
             'channel_id': int(self.channel_id),
             'author_id': int(self.author.id),
-
-            'type': self.type
+            'type': self.type,
 
             'edited_timestamp': dt_to_json(self.edited_at),
 

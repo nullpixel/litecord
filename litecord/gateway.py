@@ -711,19 +711,19 @@ class Connection(WebsocketConnection):
         if not self.identified:
             raise StopConnection(4003, 'Not identified')
 
-        idle_since = data.get('idle_since')
+        idle_since = data.get('since')
+        afk = data.get('afk')
 
         game = data.get('game')
-        if game is None:
-            return
-
-        game_name = game.get('name')
-        if game_name is None:
-            return
+        game_name = None
+        if game is not None:
+            game_name = game.get('name')
+            if game_name is None:
+                return
 
         await self.presence.global_update(self.user, {
-            'name': game_name,
-            'status': 'idle' if idle_since is not None else None
+            'name': game_name or None,
+            'status': 'idle' if (idle_since is not None and afk) else None
         })
 
     @handler(OP.GUILD_SYNC)
