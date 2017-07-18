@@ -466,7 +466,7 @@ class Connection(WebsocketConnection):
 
         # Everyone gets this one.
         ready_packet = {
-            '_trace': self.get_identifiers('ready')
+            '_trace': self.get_identifiers('ready'),
             'v': self.options[0],
 
             'user': self.user.as_json,

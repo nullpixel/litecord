@@ -1,5 +1,6 @@
-from .channel import BaseChannel, TextChannel
+from .channel import BaseChannel
 from .base import LitecordObject
+from .guild import BareGuild
 
 class VoiceChannel(BaseChannel):
     """Represents a voice channel.
@@ -74,7 +75,20 @@ class VoiceRegion(LitecordObject):
         }
 
 
-class DMChannel(TextChannel, VoiceChannel):
+class DMChannel(BaseChannel):
+    """I don't fucking know."""
+    def __init__(self, user_from, user_to, raw):
+        bg = BareGuild(raw['id'])
+        super().__init__(bg, raw)
+        self._update(user_from, user_to, raw)
+
+    def _update(user_from, user_to, raw):
+        self.user_from = user_from
+        self.user_to = user_to
+
+        self.text = TextChannel(raw)
+        self.voice = VoiceChannel(raw)
+
     async def _single_dispatch(self, user, e_name, e_data):
         """If user is a bot, dispatches to Shard 0"""
         if user.bot and user.sharded:
