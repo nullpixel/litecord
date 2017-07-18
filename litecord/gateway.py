@@ -72,17 +72,19 @@ class Connection(WebsocketConnection):
         The actual websocket connection.
     options: dict
         Websocket options, encoding, gateway version.
+
     encoder: function
         Encoder function that convers objects to the provided encoding over :attr:`Connection.options`
     decoder: function
         Decoder function that converts messages from the websocket to objects.
+
     events: dict
         If the connection is identified, this becomes a reference to
         `LitecordServer.event_cache[connection.user.id]`.
     hb_interval: int
         Amount, in milliseconds, of the client's heartbeat period.
-    wait_task: `asyncio.Task`
-        :meth:`Connection.hb_wait_task`.
+    wait_task: `asyncio.Task` or None
+        Check :meth:`Connection.hb_wait_task` for more details.
     token: str or None
         The token this connection is using.
     session_id: str or None
@@ -95,12 +97,12 @@ class Connection(WebsocketConnection):
         Tasks that clean the specified ratelimit bucket in a period of time.
     request_counter: dict
         A request counter for ratelimit buckets.
+    
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
     raw_user: dict
         Same as :attr:`user`, but it is a raw user object.
-    op_handlers: dict
-        OP handlers, they get called from :meth:`Connection.process_recv`
+
     """
     def __init__(self, ws, **kwargs):
         super().__init__(ws)
@@ -318,7 +320,7 @@ class Connection(WebsocketConnection):
         return True, raw_user, user
 
     def check_shard(self, shard):
-        """Checks for validity of the shard payload.
+        """Checks the validity of the shard payload.
         
         Raises
         ------
@@ -462,6 +464,7 @@ class Connection(WebsocketConnection):
         user_relationships = await self.relations.get_relationships(self.user.id)
         user_guild_settings = await self.settings.get_guild_settings(self.user.id)
 
+        # Everyone gets this one.
         ready_packet = {
             '_trace': self.get_identifiers('ready')
             'v': self.options[0],
@@ -471,40 +474,45 @@ class Connection(WebsocketConnection):
 
             'guilds': guild_list,
             'session_id': self.session_id,
-            
-            # the following fields are for user accounts
-            # and user accounts only.
-            # but I give them regardless of you're a bot or not
-            # because I'm lazy.
-
-            'relationships': user_relationships,
-            'user_settings': user_settings,
-            'user_guild_settings': user_guild_settings,
-
-            # I don't think we are going to have
-            # Youtube/Twitch/whatever connections
-            'connected_accounts': [],
-
-            # Only you can access those
-            # They are handled under another endpoint
-            'notes': [],
-            'friend_suggestion_count': 0,
-
-            # Assuming this is used for relationships
-            # so you get presences for your friends on READY
-            # (notice Discord opens your friend list on startup)
-            'presences': [],
-
-            # This might relate with /channels/:id/ack, somehow.
-            # I don't know
-            'read_state': [],
-            
-            # ??????
-            'analytics_token': 'insert a token here',
-            'experiments': [],
-            'guild_experiments': [],
-            'required_action': 'do something',
         }
+
+        if not self.user.bot:
+            user_ready = {
+                # the following fields are for user accounts
+                # and user accounts only.
+                # but I give them regardless of you're a bot or not
+                # because I'm lazy.
+
+                'relationships': user_relationships,
+                'user_settings': user_settings,
+                'user_guild_settings': user_guild_settings,
+
+                # I don't think we are going to have
+                # Youtube/Twitch/whatever connections
+                'connected_accounts': [],
+
+                # Only you can access those
+                # They are handled under another endpoint
+                'notes': [],
+                'friend_suggestion_count': 0,
+
+                # Assuming this is used for relationships
+                # so you get presences for your friends on READY
+                # (notice Discord opens your friend list on startup)
+                'presences': [],
+
+                # This might relate with /channels/:id/ack, somehow.
+                # I don't know
+                'read_state': [],
+            
+                # ??????
+                'analytics_token': 'insert a token here',
+                'experiments': [],
+                'guild_experiments': [],
+                'required_action': 'do something',
+            }
+
+            ready_packet = {**ready_packet, **user_ready}
 
         # If its a real bot(non selfbot), we do guild streaming
         # which is sending unavailable guild objects in READY and then
