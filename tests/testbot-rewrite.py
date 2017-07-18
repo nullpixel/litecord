@@ -3,7 +3,7 @@ import asyncio
 import logging
 
 #discord.http.Route.BASE = 'http://litecord.memework.org:8000/api/v6'
-discord.http.Route.BASE = 'http://0.0.0.0:8000/api'
+discord.http.Route.BASE = 'http://localhost:8000/api'
 #discord.http.Route.BASE = 'http://163.172.191.166:8000/api'
 logging.basicConfig(level=logging.DEBUG)
 

@@ -269,6 +269,7 @@ class Connection(WebsocketConnection):
     async def hb_wait_task(self):
         """This task automatically closes clients that didn't heartbeat in time."""
         try:
+            log.info(f'Waiting for heartbeat {(self.hb_internval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
             raise StopConnection(4000, 'Heartbeat expired')
         except asyncio.CancelledError:
@@ -292,8 +293,8 @@ class Connection(WebsocketConnection):
             self.events['recv_seq'] = data
         except AttributeError: pass
 
-        await self.send_op(OP.HEARTBEAT_ACK, {})
         self.wait_task = self.loop.create_task(self.hb_wait_task())
+        await self.send_op(OP.HEARTBEAT_ACK, {})
 
     async def check_token(self, token: str) -> tuple:
         """Check if a token is valid and can be used for proper authentication.
@@ -827,6 +828,8 @@ class Connection(WebsocketConnection):
         waits in an infinite loop for payloads sent by the client.
         """
         await self.send(self.basic_hello())
+        log.info('creating wait task')
+        self.wait_task = self.loop.create_task(self.hb_wait_task())
         await self._run()
 
     async def cleanup(self):
