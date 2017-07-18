@@ -272,62 +272,92 @@ class GuildManager:
 
         await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
 
-    async def reload_guild(self, old_guild):
-        """Reload one guild.
-
-        Used normally after a updating the guild dataabse.
-        Updates cache objects.
-
-        If the provided guild does not exist,
-        this removed guild and channel objects from the cache.
+    async def reload_guild(self, guild):
+        """Update a guild.
+        
+        Retrieves the raw guild from the database,
+        and updates the received guild with the new data.
+        
+        Since usually :meth:`GuildManager.get_guild`, which
+        is the usual method to retrieve guild objects, very
+        probably the received guild in this function
+        is already a guild from the cache, meaning that
+        updating the received guild means the guild in the
+        cache is updated as well.
 
         Parameters
         ----------
-        old_guild: :class:`Guild`
-            Guild to be reloaded.
+        guild : :class:`Guild`
+            The guild object to be updated with new data
 
         Returns
         -------
-        :class:`Guild`, the new, updated guild object.
-        :py:meth:`None` if the guild doesn't exist anymore
+        :class:`Guild`
+            The updated guild object, it is the same object
+            as the received guild.
+        :py:meth:`None`
+            If the guild doesn't exist anymore.
+            The guild gets removed from the cache.
         """
-        assert isinstance(old_guild, Guild)
-        guild_id = old_guild.id
 
-        raw_guild = await self.guild_coll.find_one({'guild_id': str(guild_id)})
+        # The strategy here is to query the database
+        # with the guild id and check if it exists or not
+        # and do the appropiate actions
+
+        assert isinstance(guild, Guild)
+        
+        query = {'guild_id': guild.id}
+        raw_guild = await self.guild_coll.find_one()
         if raw_guild is None:
-            log.info("[reload] Didn't find a guild, deleting from cache")
-            # since we don't have a guild in DB, but we have the old guild
-            # object, use it to remove the rest from cache.
+            log.info('[guild:reload] Guild not found, deleting from cache')
             try:
                 self.guilds.remove(guild)
-            except KeyError: pass
+            except ValueError: pass
 
-            for channel in old_guild.all_channels():
+            for channel in guild.channels:
                 try:
                     self.channels.remove(channel)
-                except KeyError: pass
+                except ValueError: pass
 
+            for role in guild.roles:
+                try:
+                    self.roles.remove(role)
+                except ValueError: pass
+
+            del guild
+            return None
+
+        guild._raw.update(raw_guild)
+        guild._update(guild._raw)
+        return guild
+
+    async def reload_channel(self, channel):
+        """Reload one channel.
+        
+        Merges the raw channel the channel object refernces
+        with the new data from the database.
+
+        Follows the same strategies as :meth:`GuildManager.reload_guild`.
+        """
+
+        query = {'channel_id': channel.id}
+        raw_channel = await self.channel_coll.find_one(query)
+        if raw_channel is None:
+            log.info('[channel:reload] Channel not found, deleting from cache')
+            try:
+                channel.guild.channels.remove(channel)
+            except ValueError: pass
+
+            try:
+                self.channels.remove(channel)
+            except ValueError: pass
+
+            del channel
             return
 
-        guild = Guild(self.server, raw_guild)
-
-        try:
-            # make a copy so old_guild gets garbage collected
-            guild._viewers = old_guild._viewers[:]
-        except:
-            pass
-
-        self.guilds.remove(old_guild)
-        self.guilds.append(guild)
-
-        for channel_id in guild.channel_ids:
-            #await self.reload_channel(channel_id)
-            old_channel = self.get_channel(channel_id)
-            self.channels.remove(old_channel)
-            self.channels.append(channel)
-
-        return guild
+        channel._raw.update(raw_channel)
+        channel._update(channel.guild, channel._raw)
+        return channel
 
     async def new_guild(self, owner, payload):
         """Create a Guild.

@@ -24,12 +24,8 @@ class Guild(LitecordObject):
 
     Attributes
     ----------
-    _data: dict
+    _raw: dict
         Raw guild data.
-    _channel_data: list(raw channel)
-        Raw channel data for the guild.
-    _role_data: list(:class:`Role`)
-        Raw role data for the guild.
 
     id: int
         The guild's snowflake ID.
@@ -41,36 +37,44 @@ class Guild(LitecordObject):
         Guild's creation date.
     owner_id: int
         Guild owner's ID.
+    owner: :class:`User`
+        User instance of the guild owner, can be :py:meth:`None`
     region: str
         Guild's voice region.
-    features: list(str)
+    features: list[str]
         Features this guild has.
-    channels: dict
+    
+    channel_ids: list[int]
+        Snowflake IDs that reference channels of the guild.
+    channels: dict[int, :class:`Channel`]
         Channels this guild has.
-    member_ids: list(int)
-        Guild member ids.
-    members: dict
+
+    role_ids: list[int]
+        Snowflake IDs that reference roles of the guild.
+    roles: dict[int, :class:`Role`]
+        Roles of the guild.
+
+    member_ids: list[int]
+        Guild member snowflake IDs.
+    members: dict[int, :class:`Member`]
         Members this guild has.
+
     member_count: int
         Amount of members in this guild.
-    banned_ids: list(str)
+    banned_ids: list[str]
         User IDs that are banned in this guild.
-    _viewers: list(int)
+    _viewers: list[int]
         List of user IDs that are viewers of this guild and will have specific
         guild events dispatched to them.
-
-    TODO:
-        roles: A list of `Role` objects.
-        emojis: A list of `Emoji` objects.
     """
 
-    __slots__ = ('raw', 'channel_ids', 'role_ids', 'id', 'name', 'icons',
-        'created_at', 'owner_id', 'features', 'channels', 'member_ids',
-        'members', 'member_count', 'roles', 'emojis', 'banned_ids', '_viewers')
+    __slots__ = ('_raw', 'id', 'owner_id','created_at', 'members', 'roles', 'channels', 'icons',
+        'emojis', '_viewers', 'region', 'features', 'channel_ids', 'role_ids', 'member_ids',
+        'banned_ids', 'member_count', 'owner')
 
     def __init__(self, server, raw):
         super().__init__(server)
-        self.raw = raw
+        self._raw = raw
         self.id = int(raw['guild_id'])
         self.created_at = self.to_timestamp(self.id)
 
@@ -177,7 +181,7 @@ class Guild(LitecordObject):
     def viewers(self):
         """Yield all members that are viewers of this guild.
 
-        Keep in mind that :py:meth:`Guild.viewers` is different from :py:meth:`Guild.online_members`.
+        Keep in mind that :attr:`Guild.viewers` is different from :py:meth:`Guild.online_members`.
 
         Members are viewers automatically, but if they are Atomic-Discord clients,
         they only *are* viewers if they send a OP 12 Guild Sync(:py:meth:`Connection.guild_sync_handler`)
@@ -203,7 +207,7 @@ class Guild(LitecordObject):
         return [self.server.presence.get_presence(self.id, member.id).as_json \
             for member in self.online_members]
 
-    async def dispatch(self, evt_name, evt_data):
+    async def dispatch(self, evt_name, evt_data) -> int:
         """Dispatch an event to all guild viewers.
 
         Parameters
@@ -230,7 +234,6 @@ class Guild(LitecordObject):
             total += 1
 
         log.debug(f'Dispatched {evt_name} to {dispatched}/{total} gulid viewers')
-
         return dispatched
 
     async def add_member(self, user):
@@ -240,7 +243,6 @@ class Guild(LitecordObject):
         -------
         :class:`Member`.
         """
-
         return (await self.guild_man.add_member(self, user))
 
     async def ban(self, user, delete_days=None):

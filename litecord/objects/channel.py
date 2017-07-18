@@ -61,9 +61,10 @@ class BaseChannel(LitecordObject):
 
         self.str_type = _channel['type']
         self.type = CHANNEL_TO_INTEGER[_channel['type']]
-        self._update(_channel)
+        self._update(self.guild, _channel)
 
-    def _update(self, raw):
+    def _update(self, guild, raw):
+        self.guild = guild
         self.name = raw['name']
         self.position = raw['position']
         self.is_private = False
