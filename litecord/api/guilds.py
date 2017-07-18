@@ -376,14 +376,15 @@ class GuildsEndpoint:
         if guild is None:
             return _err(errno=10004)
 
-        try:
-            _payload = await request.json()
-        except:
-            return _err('error parsing payload')
+        payload = await request.json()
+        raw_channel = self.channel_create_schema(_payload)
 
-        channel_payload = self.channel_create_schema(_payload)
+        raw_channel['type'] = raw_channel.get('type', 'text')
+        if raw_channel['type'] == 'voice':
+            raw_channel['bitrate'] = raw_channel.get('bitrate', 69)
+            raw_channel['user_limit'] = raw_channel.get('user_limit', 0)
 
-        channel_payload['type'] = channel_payload.get('type', 'text')
+        raw_channel['permission_overwrites'] = raw_channel.get('permission_overwrites', [])
 
-        channel = await guild.create_channel(channel_payload)
+        channel = await guild.create_channel(raw_channel)
         return _json(channel.as_json)

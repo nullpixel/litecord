@@ -222,9 +222,8 @@ class GuildManager:
             The created message.
         """
 
-        message = Message(self.server, channel, raw)
-
-        result = await self.message_coll.insert_one(message.as_db)
+        message = Message(self.server, channel, author, raw)
+        result = await self.message_coll.insert_one(raw)
         self.messages.append(message)
         log.info(f'Adding message with id {message.id}')
 
@@ -246,6 +245,8 @@ class GuildManager:
         result = await self.message_coll.delete_one({'message_id': message.id})
         log.info(f"Deleted {result.deleted_count} messages")
 
+        await self.reload_message(message)
+
         await message.channel.dispatch('MESSAGE_DELETE', {
             'id': str(message.id),
             'channel_id': str(message.channel.id),
@@ -264,11 +265,10 @@ class GuildManager:
             Message edit payload.
         """
 
-        new_content = payload['content']
-        message.edit(new_content)
-
-        result = await self.message_coll.update_one({'message_id': str(message.id)}, {'$set': message.as_db})
+        result = await self.message_coll.update_one({'message_id': message.id}, {'$set': payload})
         log.info(f"Updated {result.modified_count} messages")
+
+        message = await self.reload_message(message)
 
         await message.channel.dispatch('MESSAGE_UPDATE', message.as_json)
 
@@ -359,6 +359,15 @@ class GuildManager:
         channel._update(channel.guild, channel._raw)
         return channel
 
+    async def reload_role(self, role):
+        return role
+
+    async def reload_invite(self, invite):
+        return invite
+
+    async def reload_message(self, message):
+        return message
+
     async def new_guild(self, owner, payload):
         """Create a Guild.
 
@@ -391,13 +400,20 @@ class GuildManager:
             log.warning('THIS DOES NOT WORK')
             return None
 
-        payload['owner_id'] = str(owner.id)
+        # For this to work:
+        #  - Create a raw guild
+        #  - Create two default channels
+        #   - Named "General", one is text, other is voice
+        #  - Create the default role, "@everyone"
+        #  - Create raw member object for the owner
+
+        payload['owner_id'] = owner.id
         payload['guild_id'] = get_snowflake()
         payload['features'] = []
         payload['roles'] = []
         payload['channels'] = [{
-            'id': str(payload['id']),
-            'guild_id': str(payload['id']),
+            'id': payload['id'],
+            'guild_id': payload['id'],
             'name': 'general',
             'type': 'text',
             'position': 0,
@@ -503,18 +519,19 @@ class GuildManager:
 
         Returns
         -------
-        :class:`Member` on success or :py:const:`None` on failure
+        :class:`Member`
+            The new member object.
         """
 
         raw_guild = guild._data
 
         if str(user.id) in guild.bans:
-            return None
+            raise Exception('User is banned')
 
         raw_guild['members'].append(str(user.id))
 
         result = await self.guild_coll.replace_one({'guild_id': guild.id}, raw_guild)
-        log.info(f"Updated {result.modified_count} guilds")
+        log.info('Updated %d guilds', result.modified_count)
 
         raw_member = {
             'guild_id': guild.id,
@@ -531,13 +548,12 @@ class GuildManager:
 
         new_member = guild.members.get(user.id)
         if new_member is None:
-            return None
+            raise Exception('New member as raw not found')
 
         to_add = {'guild_id': str(guild.id)}
         payload = {**new_member.as_json, **to_add}
 
         await guild.dispatch('GUILD_MEMBER_ADD', payload)
-
         return new_member
 
     async def edit_member(self, member, new_data):
@@ -556,7 +572,7 @@ class GuildManager:
         guild = member.guild
         user = member.user
 
-        await self.member_coll.update_one({'guild_id': str(guild.id), 'user_id': str(user.id)},
+        await self.member_coll.update_one({'guild_id': guild.id, 'user_id': user.id},
             {'$set': new_data})
 
         raw_member = {**member._raw, **new_data}
@@ -610,7 +626,7 @@ class GuildManager:
         })
 
     async def _ban_clean(self, guild, user, delete_days):
-        """Delete all messages made by a user"""
+        """Delete all messages made by a user. (use as a background `asyncio.Task`)."""
         for channel in guild.text_channels:
             days_ago = time.time() - (delete_days * 24 * 60 * 60)
             messages = await channel.from_timestamp(days_ago)
@@ -644,6 +660,8 @@ class GuildManager:
         await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
 
+        guild = await reload_guild(guild)
+
         await guild.dispatch('GUILD_BAN_ADD',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
 
@@ -662,16 +680,15 @@ class GuildManager:
         Dispatches GUILD_BAN_REMOVE to relevant clients.
         """
 
-        bans = guild.banned_ids
-
         try:
-            bans.remove(user.id)
+            guild.banned_ids.remove(user.id)
         except ValueError:
             raise Exception('User not banned')
 
         await self.guild_coll.update_one({'guild_id': guild.id},
-                                        {'$set': {'bans': bans}})
+                                        {'$set': {'bans': guild.banned_ids}})
 
+        guild = await reload_guild(guild)
         await guild.dispatch('GUILD_BAN_REMOVE',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
 
@@ -694,37 +711,6 @@ class GuildManager:
             log.error("Error kicking member.", exc_info=True)
             return False
 
-    async def guild_count(self, user) -> int:
-        """Get the guild count for a user"""
-        return await self.member_coll.count({'user_id': user.id})
-
-    async def shard_count(self, user):
-        """Give the shard count for a user.
-
-        Since Litecord does not support sharding nor clients
-        in a lot of guilds, this usually returns the `amazing` value of 1.
-
-        The value changes with the user joining/leaving guilds.
-
-        Parameters
-        ----------
-        user: :class:`User`
-            The user to get a shard count from.
-
-        Returns
-        -------
-        int
-            The recommended amount of shards to start the connection.
-        """
-        # 1200 guilds per shard should be allright
-        return max((await self.guild_count(user)) / 1200, 1)
-
-    def get_shard(self, guild_id: int, shard_count: int) -> int:
-        """Get a shard number for a guild ID."""
-        # Discord uses a MAGIC of 22, but we aren't Discord.
-        MAGIC = 0
-        return (guild_id << MAGIC) % shard_count
-
     async def create_channel(self, guild, payload):
         """Create a channel in a guild.
 
@@ -735,52 +721,68 @@ class GuildManager:
         guild: :class:`Guild`
             The guild that is going to have a new channel
         payload: dict
-            Channel create payload.
+            Channel create payload. It is a raw channel with
+            some optional fields, see :meth:`GuildsEndpoint.h_create_channel`.
 
         Returns
         -------
         :class:`Channel`
+            The newly created channel.
         """
 
         if payload['type'] not in ['text', 'voice']:
-            raise Exception("Invalid channel type")
+            raise Exception('Invalid channel type')
 
-        raw_guild = guild._data
+        raw_channel = {**payload, **{
+            'id': get_snowflake(),
+            'topic': '',
+            'position': len(guild.channels) + 1
+        }}
 
-        payload['id'] = str(get_snowflake())
-        payload['topic'] = ""
-        payload['position'] = len(guild.channels) + 1
+        result = await self.channel_coll.insert_one(raw_channel)
+        log.info('Added %d channels', result.inserted_count)
 
-        raw_guild['channels'].append(payload)
+        # I'm proud of this stuff.
+        guild._raw['channel_ids'].append(raw_channel['id'])
 
-        result = await self.guild_coll.replace_one({'guild_id': guild.id}, raw_guild)
-        log.info(f"Updated {result.modified_count} guilds")
+        result = await self.guild_coll.update_one({'guild_id': guild.id}, \
+            {'$set': {'channel_ids': guild._raw['channel_ids']}})
+        log.info('Updated %d guilds', result.modified_count)
+
+        channel = Channel(self.server, guild, raw_channel)
+        self.channels.append(channel)
 
         guild = await self.reload_guild(guild)
-        new_channel = guild.channels.get(int(payload['id']))
 
-        await guild.dispatch('CHANNEL_CREATE', new_channel.as_json)
-        return new_channel
+        await guild.dispatch('CHANNEL_CREATE', channel.as_json)
+        return channel
 
     async def edit_channel(self, channel, payload):
         """Edits a channel in a guild.
 
         Dispatches CHANNEL_UPDATE to relevant clients.
+
+        Parameters
+        ----------
+        channel: :class:`Channel`
+            The channel to be updated.
+        payload: dict
+            Raw channel with any combination of fields.
+
+        Returns
+        -------
+        :class:`Channel`
+            The updated channel
         """
 
-        raw_guild = channel.guild._data
-        new_chan_array = raw_guild['channels']
-        for raw_channel in new_chan_array:
-            if raw_channel['id'] == str(channel.id):
-                raw_channel = {**raw_channel, **payload}
+        channel._raw.update(payload)
 
-        await self.guild_coll.update_one({'guild_id': channel.guild.id},
-            {'$set': {'channels': new_chan_array}})
+        await self.channel_coll.update_one({'channel_id': channel.id},
+            {'$set': channel._raw})
 
-        guild = await self.reload_guild(guild)
-        new_chan = guild.get_channel(channel.id)
-        await guild.dispatch('CHANNEL_UPDATE', new_chan.as_json)
-        return new_chan
+        channel = await self.reload_channel(channel)
+        await guild.dispatch('CHANNEL_UPDATE', channel.as_json)
+        return channel
 
     async def delete_channel(self, channel):
         """Deletes a channel from a guild.
@@ -791,18 +793,21 @@ class GuildManager:
         -------
         None
         """
-        raw_guild = channel.guild._data
-        new_chan_array = []
+        
+        guild = channel.guild
+        guild._raw['channel_ids'].remmove(channel.id)
+        new_channel_ids = guild._raw['channel_ids']
 
-        for (idx, raw_channel) in enumerate(raw_guild['channels'][:]):
-            if raw_channel['id'] != str(channel.id):
-                new_chan_array.append(raw_channel)
+        await self.guild_coll.update_one({'guild_id': channel.guild.id},
+            {'$set': {'channel_ids': guild._raw['channel_ids']}})
 
-        await self.guild_coll.update_one({'guild_id': channel.guild.id}, 
-            {'$set': {'channels': new_chan_array}})
+        await self.channel_coll.delete_many({'channel_id': channel.id})
 
-        guild = await self.reload_guild(guild)
+        await self.reload_channel(channel)
+
         await guild.dispatch('CHANNEL_DELETE', channel.as_json)
+        del channel
+
         return
 
     async def invite_janitor(self):
@@ -893,8 +898,8 @@ class GuildManager:
         invite_code = await self.make_invite_code()
         raw_invite = {
             'code': invite_code,
-            'channel_id': str(channel.id),
-            'inviter_id': str(inviter.id),
+            'channel_id': channel.id,
+            'inviter_id': inviter.id,
             'timestamp': iso_timestamp,
             'uses': uses,
             'temporary': False,
@@ -905,7 +910,7 @@ class GuildManager:
 
         invite = Invite(self.server, raw_invite)
         if invite.valid:
-            self.invites[invite.code] = invite
+            self.invites.append(invite)
 
         return invite
 
@@ -957,6 +962,37 @@ class GuildManager:
             self.invites.pop(invite.code)
         except:
             pass
+
+    async def guild_count(self, user) -> int:
+        """Get the guild count for a user"""
+        return await self.member_coll.count({'user_id': user.id})
+
+    async def shard_count(self, user):
+        """Give the shard count for a user.
+
+        Since Litecord does not support sharding nor clients
+        in a lot of guilds, this usually returns the `amazing` value of 1.
+
+        The value changes with the user joining/leaving guilds.
+
+        Parameters
+        ----------
+        user: :class:`User`
+            The user to get a shard count from.
+
+        Returns
+        -------
+        int
+            The recommended amount of shards to start the connection.
+        """
+        # 1200 guilds per shard should be allright
+        return max((await self.guild_count(user)) / 1200, 1)
+
+    def get_shard(self, guild_id: int, shard_count: int) -> int:
+        """Get a shard number for a guild ID."""
+        # Discord uses a MAGIC of 22, but we aren't Discord.
+        MAGIC = 0
+        return (guild_id << MAGIC) % shard_count
 
     async def init(self):
         """Initialize the GuildManager.
@@ -1077,10 +1113,10 @@ class GuildManager:
         message_count = 0
 
         for raw_message in reversed(await cursor.to_list(length=200)):
-            raw_message['message_id'] = raw_message['message_id']
             channel = self.get_channel(raw_message['channel_id'])
+            author = channel.guild.members.get(raw_message['author_id'])
 
-            m = Message(self.server, channel, raw_message)
+            m = Message(self.server, channel, author, raw_message)
             self.messages.append(m)
             message_count += 1
 
