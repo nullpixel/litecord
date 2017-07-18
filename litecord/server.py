@@ -230,6 +230,16 @@ class LitecordServer:
         """Return the amount of connections connected to a user."""
         return len(self.connections[user_id])
 
+    def get_shards(self, user_id: int) -> 'dict[int, Connection]':
+        """Get all shards for a user"""
+        shards = {}
+
+        for conn in self.get_connections(user_id):
+            if conn.sharded:
+                shards[conn.shard_id] = conn
+
+        return shards
+
     async def boilerplate_init(self):
         """Load boilerplate data.
         

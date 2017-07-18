@@ -88,7 +88,22 @@ class Member(LitecordObject):
 
         Dispatches an event in the same way :py:meth:`User.dispatch` does.
         """
-        return await self.user.dispatch(evt_name, evt_data)
+        if len(self.user.connections) < 1:
+            return
+
+        c = self.user.connections[0]
+        if c.sharded:
+            wanted_shard = self.guild_man.get_shard(self.guild.id)
+            shards = self.server.get_shards(self.user)
+
+            shard = shards.get(wanted_shard)
+            if shard is None:
+                log.warning('[member:dispatch] Shard %d not found', wanted_id)
+                return
+
+            return await shard.dispatch(evt_name, evt_data)
+        else:
+            return await self.user.dispatch(evt_name, evt_data)
 
     @property
     def as_json(self):
