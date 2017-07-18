@@ -61,7 +61,7 @@ class BaseChannel(LitecordObject):
 
         self.str_type = _channel['type']
         self.type = CHANNEL_TO_INTEGER[_channel['type']]
-        self._update(self.guild, _channel)
+        self._update(self.guild, self._raw)
 
     def _update(self, guild, raw):
         self.guild = guild
@@ -121,13 +121,13 @@ class TextChannel(BaseChannel):
 
     __slots__ = ('topic', 'last_message_id')
 
-    def __init__(self, server, raw_channel, guild=None):
-        super().__init__(server, raw_channel, guild)
+    def __init__(self, server, raw, guild=None):
+        super().__init__(server, raw, guild)
         self.last_message_id = 0
-        self._update(raw_channel)
+        self._update(guild, raw)
 
-    def _update(self, raw):
-        BaseChannel._update(self, raw)
+    def _update(self, guild, raw):
+        BaseChannel._update(self, guild, raw)
         self.topic = raw['topic']
 
     def get_message(self, message_id):

@@ -977,6 +977,7 @@ class GuildManager:
 
         for raw_role in (await cursor.to_list(length=None)):
             bg = BareGuild(raw_role['guild_id'])
+            log.debug(f'[role:load] Loading role {raw_role["role_id"]}')
             role = Role(self.server, bg, raw_role)
             self.roles.append(role)
             role_count += 1
@@ -990,6 +991,8 @@ class GuildManager:
         for raw_channel in (await cursor.to_list(length=None)):
             ch_type = raw_channel['type']
             channel = None
+
+            log.debug(f'[chan:load] Loading channel {raw_channel["channel_id"]}')
 
             bg = BareGuild(raw_channel['guild_id'])
 
@@ -1011,6 +1014,8 @@ class GuildManager:
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
             guild_id = raw_guild['guild_id']
+
+            log.debug(f'[guild:load] Loading guild {guild_id}')
 
             raw_guild_members = self.raw_members.get(int(guild_id), {})
 
@@ -1043,6 +1048,7 @@ class GuildManager:
         invite_count, valid_invites = 0, 0
 
         for raw_invite in (await cursor.to_list(length=None)):
+            log.debug(f'[invite:load] Loading invite {raw_invite["code"]}')
             invite = Invite(self.server, raw_invite)
 
             if invite.valid:

@@ -59,14 +59,14 @@ class Member(LitecordObject):
         self.is_owner = (self.id == self.guild.owner_id)
         self.nick = raw.get('nick')
 
-        joined_timestamp = raw_member.get('joined')
+        joined_timestamp = raw.get('joined')
         if joined_timestamp is not None:
             self.joined_at = datetime.datetime.strptime(joined_timestamp, \
                 "%Y-%m-%dT%H:%M:%S.%f")
         else:
             log.warning("Member without joined timestamp.")
 
-        self.roles = raw_member.get('roles', [])
+        self.roles = raw.get('roles', [])
 
         self.voice_deaf = False
         self.voice_mute = False

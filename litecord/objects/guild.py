@@ -134,8 +134,8 @@ class Guild(LitecordObject):
             log.error('Guild %d without owner(%d)!', self.id, self.owner_id)
 
     def __repr__(self):
-        return f'<Guild id={self.id} name={self.name!r} owner={self.owner.user!r} region={self.region} ' \
-                'member_count={self.member_count}>'
+        return f'<Guild id={self.id} name={self.name!r} owner={self.owner.user!s} region={self.region} ' \
+               f'member_count={self.member_count}>'
 
     def __eq__(self, other):
         return isinstance(other, Guild) and other.id == self.id

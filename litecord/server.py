@@ -677,10 +677,14 @@ class LitecordServer:
         loop = self.loop
 
         reconnect_tasks = []
+        sent = 0
         for (_, conn) in self.sessions.items():
             reconnect_tasks.append(loop.create_task(self.shutdown_conn(conn)))
+            sent += 1
 
         rtasks_gathered = asyncio.gather(*reconnect_tasks, loop=loop)
+        log.info('[shutdown] Sending op 7 reconnect to %d connections', sent)
+
         # finish sending RECONNECT to everyone, plz.
         loop.run_until_complete(rtasks_gathered)
 
