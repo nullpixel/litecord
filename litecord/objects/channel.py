@@ -242,4 +242,3 @@ class TextChannel(BaseChannel):
             'last_message_id': str(self.last_message_id),
         }
 
-

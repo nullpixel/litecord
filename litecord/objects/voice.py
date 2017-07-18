@@ -1,4 +1,4 @@
-from .channel import BaseChannel
+from .channel import BaseChannel, TextChannel
 from .base import LitecordObject
 
 class VoiceChannel(BaseChannel):
@@ -72,3 +72,21 @@ class VoiceRegion(LitecordObject):
             'deprecated': False,
             'custom': self.custom,
         }
+
+
+class DMChannel(TextChannel, VoiceChannel):
+    async def _single_dispatch(self, user, e_name, e_data):
+        """If user is a bot, dispatches to Shard 0"""
+        if user.bot and user.sharded:
+            shards = self.server.get_shards(user.id)
+            shard = shard.get(0)
+            if shard is None:
+                return
+            await shard.dispatch(e_name, e_data)
+        else:
+            await user.dispatch(e_name, e_data)
+
+    async def dispatch(self, e_name, e_data):
+        # Dispatch to both users
+        await self._single_dispatch(self.user_from, e_name, e_data)
+        await self._single_dispatch(self.user_to, e_name, e_data)
