@@ -1,8 +1,8 @@
 {
     "server": {
-        "http": ["localhost", 8000],
-        "ws": ["localhost", 12000],
-        "voice_ws": ["localhost", 6969]
+        "http": ["10.0.0.4", 8000],
+        "ws": ["10.0.0.4", 12000],
+        "voice_ws": ["10.0.0.4", 6969]
     },
     "ratelimits": {
         "rest": true,
