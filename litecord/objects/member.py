@@ -92,7 +92,7 @@ class Member(LitecordObject):
         if len(conns) < 1:
             return
 
-        c = self.user.connections[0]
+        c = conns[0]
         if c.sharded:
             wanted_shard = self.guild_man.get_shard(self.guild.id)
             shards = self.server.get_shards(self.user)
