@@ -22,6 +22,7 @@ class GatewayEndpoint:
         self.server.add_get('gateway/bot', self.h_gateway_bot)
 
     async def h_gateway(self, request):
+        log.info('Accepting clients: %s', self.server.accept_clients)
         if not self.server.accept_clients:
             return self.gw_down()
 
@@ -31,6 +32,9 @@ class GatewayEndpoint:
     async def h_gateway_bot(self, request, user):
         if not self.server.accept_clients:
             return self.gw_down()
+
+        if not user.bot:
+            return _err('401: Unauthorized')
 
         url = self.server.get_gateway_url()
         shards = await self.guild_man.shard_amount(user)

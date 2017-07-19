@@ -476,9 +476,12 @@ class LitecordServer:
 
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
+        log.debug(ws)
         if len(ws) == 2:
+            log.info('Returning %s [ws 2]', f'ws://{ws[0]}:{ws[1]}')
             return f'ws://{ws[0]}:{ws[1]}'
         elif len(ws) == 3:
+            log.info('Returning %s [ws 3]', f"ws://{ws[2]}:{ws[1]}")
             return f"ws://{ws[2]}:{ws[1]}"
 
     async def check_request(self, request) -> 'tuple(str, int)':
@@ -616,17 +619,17 @@ class LitecordServer:
             self.app = app
 
             log.debug("[load] boilerplate data")
-            await self.boilerplate_init()
+            asyncio.ensure_future(self.boilerplate_init())
 
             log.debug('[load] user database')
-            await self.load_users()
+            asyncio.ensure_future(self.load_users())
 
             log.debug('[load] Images')
             self.images = Images(self, self.flags.get('images', {}))
 
             log.debug('[init] GuildManager')
             self.guild_man = GuildManager(self)
-            await self.guild_man.init()
+            asyncio.ensure_future(self.guild_man.init())
 
             log.debug('[init] PresenceManager')
             self.presence = PresenceManager(self)

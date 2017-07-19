@@ -88,7 +88,8 @@ class Member(LitecordObject):
 
         Dispatches an event in the same way :py:meth:`User.dispatch` does.
         """
-        if len(self.user.connections) < 1:
+        conns = list(self.connections)
+        if len(conns) < 1:
             return
 
         c = self.user.connections[0]

@@ -28,7 +28,7 @@ log.addHandler(handler)
 app = web.Application()
 
 async def index(request):
-    return web.Response(text='meme')
+    return web.Response(text='beep boop this is litecord!')
 
 def main():    
     try:
@@ -41,17 +41,14 @@ def main():
     except FileNotFoundError:
         cfgfile = open('litecord_config.sample.json', 'r')
 
+    loop = asyncio.get_event_loop()
     flags = json.load(open(config_path, 'r'))
-
     app.router.add_get('/', index)
 
-    loop = asyncio.get_event_loop()
+    litecord.init_server(app, flags, loop)
 
-    log.debug("[main] starting ws task")
-    gateway_task = loop.create_task(litecord.gateway_server(app, flags))
-
-    log.debug("[main] starting http")
-    http_task = loop.create_task(litecord.http_server(app, flags))
+    loop.create_task(litecord.gateway_server(app))
+    loop.create_task(litecord.http_server(app))
 
     try:
         loop.run_forever()

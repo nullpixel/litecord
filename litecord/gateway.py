@@ -269,7 +269,7 @@ class Connection(WebsocketConnection):
     async def hb_wait_task(self):
         """This task automatically closes clients that didn't heartbeat in time."""
         try:
-            log.info(f'Waiting for heartbeat {(self.hb_internval / 1000) + 3}s')
+            log.info(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
             raise StopConnection(4000, 'Heartbeat expired')
         except asyncio.CancelledError:
@@ -828,7 +828,6 @@ class Connection(WebsocketConnection):
         waits in an infinite loop for payloads sent by the client.
         """
         await self.send(self.basic_hello())
-        log.info('creating wait task')
         self.wait_task = self.loop.create_task(self.hb_wait_task())
         await self._run()
 
@@ -897,17 +896,27 @@ async def server_sentry(server):
         log.error(exc_info=True)
         pass
 
-async def http_server(app, flags):
-    """Main function to start the HTTP server.
 
-    This function waits for `gateway_server` to finish(using asyncio locks).
+def init_server(app, flags, loop=None):
+    """Load the LitecordServer instance."""
 
-    That is needed since `gateway_server` initializes server state and registers
-    all API routes, and in aiohttp, you need to register
-    routes **before** the app starts.
-    """
-    await _load_lock.acquire()
-    http = flags['server']['http']
+    try:
+        server = LitecordServer(flags, loop)
+    except Exception as err:
+        log.error(f'We had an error loading the litecord server. {err!r}')
+        raise err # bump
+
+    success = asyncio.ensure_future(server.init(app))
+    if not success:
+        log.error('We had an error initializing the Litecord Server.')
+        raise Exception('Error initializing LitecordServer')
+
+    app.litecord_server = server
+    return True
+
+async def http_server(app):
+    """Main function to start the HTTP server."""
+    http = app.litecord_server.flags['server']['http']
 
     handler = app.make_handler()
     f = app.loop.create_server(handler, http[0], http[1])
@@ -916,46 +925,18 @@ async def http_server(app, flags):
     log.info(f'[http] running at {http[0]}:{http[1]}')
 
 
-async def gateway_server(app, flags, loop=None):
-    """Main function to start the websocket server
+async def gateway_server(app):
+    """Main function to start the Gateway."""
 
-    This function initializes a LitecordServer object, which
-    initializes databases, fills caches, etc.
-
-    When running, for each new websocket client, a `Connection` object is
-    created to represent it, its `.run()` method is called and the
-    connection will stay alive forever until it gets closed or the client
-    stops heartbeating with us.
-    """
-    await _load_lock.acquire()
-
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    try:
-        server = LitecordServer(flags, loop)
-    except Exception as err:
-        log.error(f'We had an error loading the litecord server. {err!r}')
-        _stop(loop)
-        return
-
-    if not (await server.init(app)):
-        log.error('We had an error initializing the Litecord Server.')
-        _stop(loop)
-        return
-
-    app.litecord_server = server
-
-    # server initialized, release HTTP to load pls
-    _load_lock.release()
+    server = app.litecord_server
+    flags = server.flags
 
     async def henlo(ws, path):
         """Handles a new connection to the Gateway."""
-        if not server.accept_clients:
-            await ws.close(4069, 'Server is not accepting new clients.')
-            return
-
         log.info(f'[ws] New client at {path!r}')
+        if not server.accept_clients:
+            await ws.close(1000, 'Server is not accepting new clients.')
+            return
 
         params = urlparse.parse_qs(urlparse.urlparse(path).query)
 
@@ -981,10 +962,10 @@ async def gateway_server(app, flags, loop=None):
         await conn.run()
 
     ws = flags['server']['ws']
-    log.info(f'[ws] running at {ws[0]}:{ws[1]}')
+    log.info(f'[ws] running at {ws[0]}:{ws[1]} {f"with redirect to {ws[2]}" if len(ws) > 2 else ""}')
 
-    ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
-    await ws_server
-
-    loop.create_task(server_sentry(server))
+    server.loop.create_task(server_sentry(server))
+    server.ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
+    await server.ws_server
     return True
+

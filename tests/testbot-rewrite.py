@@ -2,8 +2,8 @@ import discord
 import asyncio
 import logging
 
-#discord.http.Route.BASE = 'http://litecord.memework.org:8000/api/v6'
-discord.http.Route.BASE = 'http://10.0.0.4:8000/api'
+#discord.http.Route.BASE = 'http://litecord.memework.org/api'
+discord.http.Route.BASE = 'http://localhost:8000/api'
 #discord.http.Route.BASE = 'http://163.172.191.166:8000/api'
 logging.basicConfig(level=logging.DEBUG)
 
@@ -26,6 +26,9 @@ async def on_message(message):
 
     if message.content.startswith('%hello'):
         await message.channel.send('asd')
+
+# sexhouse
+#client.run('MTQ5MjYwMDQ2MzM3.UtJ0lVDikk2VAJBGT9HTRnU2kkQ')
 
 # local
 client.run('MTQ5MjYwMDQ2MzM3.tcLbMZuswIKanjv1FB0Om1yq2rA')

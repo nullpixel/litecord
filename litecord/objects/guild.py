@@ -98,7 +98,7 @@ class Guild(LitecordObject):
         for member_id in self.member_ids:
             user = self.server.get_user(member_id)
             if user is None:
-                log.warning('user %d not found', user_id)
+                log.warning('user %d not found', member_id)
                 continue
 
             raw_member = self.guild_man.raw_members[self.id].get(user.id)
