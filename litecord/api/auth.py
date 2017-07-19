@@ -28,6 +28,11 @@ class AuthEndpoints:
         self.server.add_post('auth/login', self.login)
         self.server.add_post('auth/users/add', self.h_add_user)
 
+        # botto
+        self.server.add_post('auth/bot/add', self.h_create_bot)
+        self.server.add_get('auth/bot/list', self.h_list_bots)
+        self.server.add_get('auth/bot/info', self.h_bot_info)
+
     async def login(self, request):
         """Login a user through the `POST /auth/login` endpoint.
 

@@ -13,7 +13,9 @@
         "bot": false,
         "verified": true,
         "admin": true
-    },{
+    },
+    
+    {
         "user_id": "149260046338",
         "email": "jack@null.net",
         "username": "Jack",
@@ -26,7 +28,9 @@
         "avatar": "",
         "bot": false,
         "verified": true
-    },{
+    },
+    
+    {
         "user_id": "149260046339",
         "username": "lold",
         "email": "iamtheworst@programmer.net",
@@ -39,13 +43,15 @@
         "avatar": "",
         "bot": false,
         "verified": true
-    },{
+    },
+    
+    {
         "user_id": "152162811905",
         "username": "heatingdevice",
-        "email": "suck@generic.sucks",
+        "email": "heating@memework.org",
         "discriminator": "0420",
         "password": {
-            "plain": "generic-sucks",
+            "plain": "password",
             "hash": "",
             "salt": ""
         },
@@ -53,13 +59,31 @@
         "bot": false,
         "verified": true,
         "admin": true
-    },{
+    },
+    
+    {
         "user_id": "152329949185",
         "username": "Alex",
         "email": "alex@localhost",
         "discriminator": "4299",
         "password": {
             "plain": "LivesInAlaska",
+            "hash": "",
+            "salt": ""
+        },
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": true
+    },
+
+    {
+        "user_id": "164669048833",
+        "username": "luke",
+        "email": "me@lukej.me",
+        "discriminator": "0001",
+        "password": {
+            "plain": "FUCKnik",
             "hash": "",
             "salt": ""
         },
