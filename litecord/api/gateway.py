@@ -1,4 +1,5 @@
 import logging
+import random
 
 from aiohttp import web
 
@@ -14,6 +15,7 @@ class GatewayEndpoint:
         self.guild_man = server.guild_man
 
         self.gw_down = lambda: web.Response(status=404, text='Gateway it not accepting any new clients.')
+        self.gw_Starting = lambda: web.Response(status=503, text='Gateway is still starting')
 
         self.register()
 
@@ -22,6 +24,9 @@ class GatewayEndpoint:
         self.server.add_get('gateway/bot', self.h_gateway_bot)
 
     async def h_gateway(self, request):
+        if not self.server.good.is_set():
+            return self.gw_starting()
+
         log.info('Accepting clients: %s', self.server.accept_clients)
         if not self.server.accept_clients:
             return self.gw_down()
@@ -30,6 +35,9 @@ class GatewayEndpoint:
 
     @auth_route
     async def h_gateway_bot(self, request, user):
+        if not self.server.good.is_set():
+            return self.gw_starting()
+
         if not self.server.accept_clients:
             return self.gw_down()
 

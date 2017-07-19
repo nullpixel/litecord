@@ -478,12 +478,9 @@ class LitecordServer:
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
         log.debug(ws)
-        if len(ws) == 2:
-            log.info('Returning %s [ws 2]', f'ws://{ws[0]}:{ws[1]}')
-            return f'ws://{ws[0]}:{ws[1]}'
-        elif len(ws) == 3:
-            log.info('Returning %s [ws 3]', f"ws://{ws[2]}:{ws[1]}")
-            return f"ws://{ws[2]}:{ws[1]}"
+        url = f'ws://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
+        log.info('Returning %s', url)
+        return url
 
     async def check_request(self, request) -> 'tuple(str, int)':
         """Checks a request to the API.

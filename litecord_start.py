@@ -47,10 +47,14 @@ def main():
 
     litecord.init_server(app, flags, loop)
 
-    loop.create_task(litecord.gateway_server(app))
-    loop.create_task(litecord.http_server(app))
+    #loop.create_task(litecord.gateway_server(app))
+    #loop.create_task(litecord.http_server(app))
 
     try:
+        loop.run_until_complete(litecord.start_all(app))
+        
+        loop.run_until_complete(app.litecord_server.http_server)
+        loop.run_until_complete(app.litecord_server.ws_server)
         loop.run_forever()
     except KeyboardInterrupt:
         log.info("Exiting from a CTRL-C...")

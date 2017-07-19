@@ -914,21 +914,38 @@ def init_server(app, flags, loop=None):
     app.litecord_server = server
     return True
 
-async def http_server(app):
-    """Main function to start the HTTP server."""
-    server = app.litecord_server
-    await server.good.wait()
-    http = server.flags['server']['http']
 
-    handler = app.make_handler()
-    f = app.loop.create_server(handler, http[0], http[1])
-    await f
+async def on_connection(server, ws, path):
+    log.info(f'[ws] New client at {path!r}')
+    if not server.accept_clients:
+        await ws.close(1000, 'Server is not accepting new clients.')
+        return
 
-    log.info(f'[http] running at {http[0]}:{http[1]}')
+    params = urlparse.parse_qs(urlparse.urlparse(path).query)
 
+    gw_version = params.get('v', [6])[0]
+    encoding = params.get('encoding', ['json'])[0]
 
-async def gateway_server(app):
-    """Main function to start the Gateway."""
+    try:
+        gw_version = int(gw_version)
+    except ValueError:
+        gw_version = 6
+
+    if encoding not in ('json', 'etf'):
+        await ws.close(4000, f'encoding not supported: {encoding!r}')
+        return
+
+    if gw_version != 6:
+        await ws.close(4000, f'gw version not supported: {gw_version}')
+        return
+
+    conn = Connection(ws, config=(gw_version, encoding), server=server)
+
+    # this starts an infinite loop waiting for payloads from the client
+    await conn.run()
+
+async def start_all(app):
+    """Start Gateway and HTTP."""
 
     server = app.litecord_server
     flags = server.flags
@@ -936,40 +953,19 @@ async def gateway_server(app):
     await server.good.wait()
 
     async def henlo(ws, path):
-        """Handles a new connection to the Gateway."""
-        log.info(f'[ws] New client at {path!r}')
-        if not server.accept_clients:
-            await ws.close(1000, 'Server is not accepting new clients.')
-            return
+        return await on_connection(server, ws, path)
 
-        params = urlparse.parse_qs(urlparse.urlparse(path).query)
+    # start HTTP
+    http = server.flags['server']['http']
 
-        gw_version = params.get('v', [6])[0]
-        encoding = params.get('encoding', ['json'])[0]
+    handler = app.make_handler()
+    server.http_server = app.loop.create_server(handler, http[0], http[1])
+    log.info(f'[http] http://{http[0]}:{http[1]}')
 
-        try:
-            gw_version = int(gw_version)
-        except ValueError:
-            gw_version = 6
-
-        if encoding not in ('json', 'etf'):
-            await ws.close(4000, f'encoding not supported: {encoding!r}')
-            return
-
-        if gw_version != 6:
-            await ws.close(4000, f'gw version not supported: {gw_version}')
-            return
-
-        conn = Connection(ws, config=(gw_version, encoding), server=server)
-
-        # this starts an infinite loop waiting for payloads from the client
-        await conn.run()
-
+    # start ws
     ws = flags['server']['ws']
-    log.info(f'[ws] running at {ws[0]}:{ws[1]} {f"with redirect to {ws[2]}" if len(ws) > 2 else ""}')
 
-    server.loop.create_task(server_sentry(server))
     server.ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
-    await server.ws_server
-    return True
+    log.info(f'[ws] ws://{ws[0]}:{ws[1]} {f"-> ws://{ws[2]}:{ws[1]}" if len(ws) > 2 else ""}')
 
+    return True
