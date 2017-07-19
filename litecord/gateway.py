@@ -269,9 +269,11 @@ class Connection(WebsocketConnection):
     async def hb_wait_task(self):
         """This task automatically closes clients that didn't heartbeat in time."""
         try:
-            log.info(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
+            log.debug(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
-            raise StopConnection(4000, 'Heartbeat expired')
+            log.info(f'Heartbeat expired for sid=%s', self.session_id)
+            #raise StopConnection(4000, 'Heartbeat expired')
+            await self.ws.close(4000, 'Heartbeat expired')
         except asyncio.CancelledError:
             log.debug("[heartbeat_wait] cancelled")
 
@@ -881,6 +883,8 @@ async def server_sentry(server):
     log.info('Starting sentry')
     try:
         while True:
+            log.debug('ws sockets: %s', server.ws_server.websockets)
+
             check_data = await server.check()
 
             if not check_data.get('good', False):
@@ -892,9 +896,10 @@ async def server_sentry(server):
             #log.info(f"[sentry] WS throughput: {check_data['ws_throughput']}packets/s")
 
             await asyncio.sleep(10)
-    except:
-        log.error(exc_info=True)
+    except asyncio.CancelledError:
         pass
+    except:
+        log.error('fug', exc_info=True)
 
 
 def init_server(app, flags, loop=None):

@@ -4,7 +4,7 @@ __license__ = 'MIT'
 __copyright__ = 'Copyright 2017 lnmds'
 __version__ = '0.0.1'
 
-from .gateway import Connection, init_server, start_all, _stop
+from .gateway import Connection, init_server, start_all, server_sentry, _stop
 
 from .basics import OP
 from .guild import GuildManager

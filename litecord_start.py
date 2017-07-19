@@ -25,6 +25,10 @@ handler.setFormatter(formatter)
 
 log.addHandler(handler)
 
+logger = logging.getLogger('websockets.server')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler())
+
 app = web.Application()
 
 async def index(request):
@@ -52,9 +56,10 @@ def main():
 
     try:
         loop.run_until_complete(litecord.start_all(app))
-        
-        loop.run_until_complete(app.litecord_server.http_server)
-        loop.run_until_complete(app.litecord_server.ws_server)
+        server = app.litecord_server
+        server.http_server = loop.run_until_complete(server.http_server)
+        server.ws_server = loop.run_until_complete(server.ws_server)
+        loop.create_task(litecord.server_sentry(server))
         loop.run_forever()
     except KeyboardInterrupt:
         log.info("Exiting from a CTRL-C...")
