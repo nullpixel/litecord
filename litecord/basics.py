@@ -1,4 +1,4 @@
-GATEWAY_VERSION = 69
+GATEWAY_VERSION = 6
 
 class OP:
     """Gateway OP codes."""
@@ -32,9 +32,3 @@ class VOICE_OP:
     SESSION_DESCRIPTION = 4
     SPEAKING = 5
 
-CHANNEL_TO_INTEGER = {
-    'text': 0,
-    'private': 1,
-    'voice': 2,
-    'group': 3,
-}
