@@ -4,6 +4,7 @@ from voluptuous import Schema, REMOVE_EXTRA
 
 from ..utils import _err, _json, pwd_hash, get_random_salt
 from ..decorators import auth_route
+from ..enums import AppType
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class AuthEndpoints:
         # botto
         self.server.add_post('auth/bot/add', self.h_create_bot)
         self.server.add_get('auth/bot/list', self.h_list_bots)
-        self.server.add_get('auth/bot/info', self.h_bot_info)
+        self.server.add_get('auth/bot/info/{app_id}', self.h_bot_info)
 
     async def login(self, request):
         """Login a user through the `POST /auth/login` endpoint.
@@ -128,3 +129,56 @@ class AuthEndpoints:
             "code": 1,
             "message": "success"
         })
+
+    @auth_route
+    async def h_list_bots(self, request, user):
+        """`GET:/auth/bot/list`.
+
+        Get all bot IDs that are tied to this account
+        """
+        if user.bot:
+            return _err('401: Unauthorized')
+
+        bots = await self.app_man.get_apps(user)
+        return _json([bot.id for bot in bots if bot.type == AppType.BOT])
+
+    @auth_route
+    async def h_bot_info(self, request, user):
+        """`GET:/auth/bot/info/{app_id}`.
+        
+        Get Bot Application Info.
+        Returns a JSON object with bot info:
+        name, avatar, token, etc.
+        """
+        app_id = request.match_info['app_id']
+        if user.bot:
+            return _err('401: Unauthorized')
+
+        bot = await self.app_man.get_app(app_id)
+        if bot.type != AppType.BOT:
+            return _err('400: Invalid application type')
+
+        return _json(bot.as_json)
+
+    @auth_route
+    async def h_patch_bot_info(self, request, user):
+        raise NotImplementedError
+
+    @auth_route
+    async def h_create_bot(self, request, user):
+        """`POST:/auth/bot/add`.
+        
+        Create a bot.
+        Returns bot user on success
+        """
+        if user.bot:
+            return _err('401: Unauthorized')
+
+        payload = await request.json()
+        payload = self.app_add_schema(payload)
+
+        if payload['type'] != AppType.BOT:
+            return _err('400: Invalid app type')
+
+        app = await self.app_man.make_app(payload)
+        return _json(app.as_json)
