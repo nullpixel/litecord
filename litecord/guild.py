@@ -325,7 +325,7 @@ class GuildManager:
                 except ValueError: pass
 
             del guild
-            return None
+            return
 
         guild._raw.update(raw_guild)
         guild._update(guild._raw)
@@ -343,7 +343,7 @@ class GuildManager:
         query = {'channel_id': channel.id}
         raw_channel = await self.channel_coll.find_one(query)
         if raw_channel is None:
-            log.info('[channel:reload] Channel not found, deleting from cache')
+            log.info('[channel:reload] chid=%d not found, deleting from cache', channel.id)
             try:
                 channel.guild.channels.remove(channel)
             except ValueError: pass
@@ -360,12 +360,75 @@ class GuildManager:
         return channel
 
     async def reload_role(self, role):
+        """Reload a :class:`Role` object with new data from
+        the role collection.
+        
+        Follows the same strategies as :meth:`GuildManager.reload_guild`
+        """
+        query = {'role_id': role.id}
+        raw_role = await self.role_coll.find_one(qyery)
+        if raw_role is None:
+            log.info('[role:reload] rid=%d not found', role.id)
+            try:
+                role.guild.roles.remove(role)
+            except ValueError: pass
+
+            for channel in role.guild.channels:
+                if role in channel.overwrites:
+                    channel.overwrites.remove(role)
+
+            try:
+                self.roles.remove(channel)
+            except ValueError: pass
+
+            del role
+            return
+
+        role._raw.update(raw_role)
+        role._update(role.guild, role._raw)
         return role
 
     async def reload_invite(self, invite):
+        """Reload a :class:`Invite` object with
+        new data from the invite collection.
+        
+        Follows the same strategies as :meth:`GuildManager.reload_guild`
+        """
+        query = {'invite_code': invite.code}
+        raw_invite = await self.invite_coll.find_one(query)
+        if raw_invite is None:
+            log.info('[invite:reload] i_code=%s not found', invite.code)
+            try:
+                self.invites.remove(invite)
+            except ValueError: pass
+
+            try:
+                invite.guild.invites.remove(invite)
+            except ValueError: pass
+
+            del invite
+            return
+
+        invite._raw.update(raw_invite)
+        invite._update(invite.guild, invite._raw)
         return invite
 
     async def reload_message(self, message):
+        """Reload a :class:`Message` object with
+        new data from the message collection.
+        
+        Follows the same strategies as :meth:`GuildManager.reload_guild`
+        """
+        query = {'message_id': message.id}
+        raw_message = await self.message_coll.find_one(query)
+        if raw_message is None:
+            log.info('[message:reload] mid=%s not found', message.id)
+            try:
+                self.messages.remove(message)
+            except ValueError: pass
+
+        message._raw.update(raw_message)
+        message._update(message.channel, message.author, message._raw)
         return message
 
     async def new_guild(self, owner, payload):
