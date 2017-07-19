@@ -3,8 +3,9 @@ class AppType:
     BOT = 0
 
 class ChannelInteger:
-    text = 0
-    private = 1
-    voice = 2
-    group = 3
+    GUILD_TEXT = 0
+    DM = 1
+    GUILD_VOICE = 2
+    GROUP_DM = 3
+    GUILD_CATEGORY = 4
 
