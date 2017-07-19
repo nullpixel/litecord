@@ -12,7 +12,7 @@ async def main():
         gateway = await r.json()
 
     logging.info('gateway: %r', gateway)
-    ws = await websockets.connect('ws://localhost:12000')
+    ws = await websockets.connect(gateway['url'])
     try:
         while True: await ws.recv()
     except KeyboardInterrupt:

@@ -109,6 +109,7 @@ class LitecordServer:
         self.flags = flags
         check_configuration(flags)
         self.accept_clients = True
+        self.good = asyncio.Event()
 
         self.rest_ratelimits = {}
         self.ws_ratelimits = {}
@@ -619,17 +620,17 @@ class LitecordServer:
             self.app = app
 
             log.debug("[load] boilerplate data")
-            asyncio.ensure_future(self.boilerplate_init())
+            await self.boilerplate_init()
 
             log.debug('[load] user database')
-            asyncio.ensure_future(self.load_users())
+            await self.load_users()
 
             log.debug('[load] Images')
             self.images = Images(self, self.flags.get('images', {}))
 
             log.debug('[init] GuildManager')
             self.guild_man = GuildManager(self)
-            asyncio.ensure_future(self.guild_man.init())
+            await self.guild_man.init()
 
             log.debug('[init] PresenceManager')
             self.presence = PresenceManager(self)
@@ -664,6 +665,7 @@ class LitecordServer:
             delta = round((t_end - t_init) * 1000, 2)
 
             log.info(f"[server] Loaded in {delta}ms")
+            self.good.set()
             return True
         except:
             log.error('Error when initializing LitecordServer', exc_info=True)

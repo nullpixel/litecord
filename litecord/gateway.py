@@ -916,7 +916,9 @@ def init_server(app, flags, loop=None):
 
 async def http_server(app):
     """Main function to start the HTTP server."""
-    http = app.litecord_server.flags['server']['http']
+    server = app.litecord_server
+    await server.good.wait()
+    http = server.flags['server']['http']
 
     handler = app.make_handler()
     f = app.loop.create_server(handler, http[0], http[1])
@@ -930,6 +932,8 @@ async def gateway_server(app):
 
     server = app.litecord_server
     flags = server.flags
+
+    await server.good.wait()
 
     async def henlo(ws, path):
         """Handles a new connection to the Gateway."""
