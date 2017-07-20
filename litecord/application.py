@@ -3,6 +3,7 @@ import logging
 from .utils import get_random_salt, pwd_hash
 from .objects import Application
 from .snowflake import get_snowflake
+from .enums import AppType
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class ApplicationManager:
         app_id = get_snowflake() 
         app['app_id'] = app_id
         app['owner_id'] = owner.id
+        app['type'] = AppType.BOT
 
         log.info('Making a bot app: uid=%d name=%r', app_id, app['name'])
 
@@ -63,8 +65,14 @@ class ApplicationManager:
             'avatar': '',
             'bot': True,
             'verified': True,
+            'email': '',
         }
+
         await self.user_coll.insert_one(bot_user)
+        await self.server.userdb_update()
+
+        token = await self.server.generate_token(app_id)
+        app['token'] = token
 
         return Application(owner, app)
 

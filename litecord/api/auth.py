@@ -1,6 +1,7 @@
 import logging
 
 from voluptuous import Schema, REMOVE_EXTRA, Optional
+from aiohttp import web
 
 from ..utils import _err, _json, pwd_hash, get_random_salt
 from ..decorators import auth_route
@@ -38,16 +39,30 @@ class AuthEndpoints:
         self.register()
 
     def register(self):
-        self.server.add_post('auth/login', self.login)
+        self.server.add_post('auth/login', self.h_login)
         self.server.add_post('auth/users/add', self.h_add_user)
 
-        # botto
-        self.server.add_post('auth/bot/add', self.h_create_bot)
-        self.server.add_get('auth/bot/list', self.h_list_bots)
-        self.server.add_get('auth/bot/info/{app_id}', self.h_bot_info)
+        # create a bot, list all bots
+        self.server.add_post('oauth2/applications', self.h_create_bot)
+        self.server.add_get('oauth2/applications', self.h_list_bots)
 
-    async def login(self, request):
-        """Login a user through the `POST /auth/login` endpoint.
+        # get bot info
+        self.server.add_get('oauth2/applications/{app_id}', self.h_bot_info)
+
+        # invite a bot to a guild
+        self.server.add_post('oauth2/authorize', self.h_authorize_bot)
+
+        # patch bot
+        self.server.add_patch('oauth2/applications/{app_id}', self.h_patch_bot_info)
+        self.server.add_put('oauth2/applications/{app_id}', self.h_patch_bot_info)
+
+    def app_to_bot(self, app):
+        raw_bot_user = self.server.get_raw_user(app.id)
+        #raw_bot_user.pop('pwd')
+        return {**app.as_json, **raw_bot_user}
+
+    async def h_login(self, request):
+        """`POST:/auth/login`.
 
         With the provided token you can connect to the
         gateway and send an IDENTIFY payload.
@@ -85,7 +100,7 @@ class AuthEndpoints:
         return _json({"token": token})
 
     async def h_add_user(self, request):
-        """`POST /users/add`.
+        """`POST:/users/add`.
 
         Creates a user.
         Input: A JSON object::
@@ -106,9 +121,9 @@ class AuthEndpoints:
 
         payload = self.useradd_schema(payload)
 
-        email =     payload['email']
-        password =  payload['password']
-        username =  payload['username']
+        email = payload['email']
+        password = payload['password']
+        username = payload['username']
 
         res = await self.user_coll.find_one({'email': email})
 
@@ -135,6 +150,7 @@ class AuthEndpoints:
 
         log.info(f"New user {new_user['username']}#{new_user['discriminator']}")
         await self.user_coll.insert_one(new_user)
+        await self.server.userdb_update()
 
         return _json({
             "code": 1,
@@ -143,15 +159,15 @@ class AuthEndpoints:
 
     @auth_route
     async def h_list_bots(self, request, user):
-        """`GET:/auth/bot/list`.
+        """`GET:/oauth2/applications`.
 
-        Get all bot IDs that are tied to this account
+        Get all applications and their info info that are tied to this account
         """
         if user.bot:
             return _err('401: Unauthorized')
 
         bots = await self.apps.get_apps(user)
-        return _json([bot.id for bot in bots if bot.type == AppType.BOT])
+        return _json(list(map(self.app_to_bot, bots)))
 
     @auth_route
     async def h_bot_info(self, request, user):
@@ -177,7 +193,7 @@ class AuthEndpoints:
 
     @auth_route
     async def h_create_bot(self, request, user):
-        """`POST:/auth/bot/add`.
+        """`POST:/oauth2/applications`.
         
         Create a bot.
         Returns bot user on success
@@ -189,4 +205,52 @@ class AuthEndpoints:
         payload = self.app_add_schema(payload)
 
         app = await self.apps.create_bot(user, payload)
-        return _json(app.as_json)
+        return _json(self.app_to_bot(app))
+
+    @auth_route
+    async def h_authorize_bot(self, request, user):
+        """`POST:/oauth2/authorize`.
+
+        Authorize a bot to a guild.
+        """
+        if user.bot:
+            return _err('401: nani')
+
+        bot_id = request.query['client_id']
+        app = await self.apps.get_app(bot_id)
+        if app is None:
+            return _err('404: Application not found')
+
+        scope = request.query.get('scope', 'bot')
+        if scope != 'bot':
+            return _err('400: Unauthorized scope')
+
+        wanted_permissions = request.query.get('permissions', 0)
+
+        payload = await request.json()
+
+        guild_id = payload['bot_guild_id']
+        guild = self.guild_man.get_guild(guild_id)
+        if guild is None:
+            return _err('404: Guild not found')
+
+        permissions = payload.get('permissions', 0)
+
+        bot_perm = None
+        if permissions != 0:
+            #bot_perm = Permissions(permissions)
+            pass
+
+        authorize = payload.get('authorize', False)
+        if not authorize:
+            return _err('401: Unauthorized')
+
+        inviter = guild.members.get(user.id)
+        if not inviter.has(Permissions.MANAGE_SERVER):
+            return _err('401: Not enough permissions')
+
+        bot_user = self.get_user(app.id)
+        #bot_role = await guild.add_role(bot_user.name, bot_perm, managed=True)
+        bot_member = await guild.add_member(bot_user)
+        #await bot_member.add_role(bot_member, bot_role)
+        return web.Response(status=200, text='authorized')

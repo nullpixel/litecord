@@ -339,13 +339,25 @@ class LitecordServer:
         user_cache = self.cache['id->user']
 
         for raw_user in all_users:
-            raw_user = strip_user_data(raw_user)
+            log.debug('Getting raw %r', raw_user)
+
+            try:
+                raw_user.pop('_id')
+            except: pass
 
             raw_user_id = int(raw_user['user_id'])
 
-            cached_raw_user = strip_user_data(raw_user_cache[raw_user_id])
+            cached_raw_user = raw_user_cache.get(raw_user_id)
+            if cached_raw_user is None:
+                raw_user_cache[raw_user_id] = raw_user
+                user_cache[raw_user_id] = User(self, raw_user)
+                continue
+
+            cached_raw_user = strip_user_data(cached_raw_user)
+            raw_user = strip_user_data(raw_user)
             cached_user = user_cache[raw_user_id]
 
+            print(raw_user, cached_raw_user)
             differences = set(raw_user.values()) ^ set(cached_raw_user.values())
             if len(differences) > 0:
                 user = User(self, raw_user)
@@ -409,7 +421,16 @@ class LitecordServer:
         userid_encoded = base64.urlsafe_b64encode(user_id.encode())
 
         raw_user = self.get_raw_user(user_id)
-        s = Signer(raw_user['password']['hash'])
+        if raw_user is None:
+            raise Exception('User not found to generate a token from')
+
+        try:
+            pwd_hash = raw_user['password']['hash']
+        except:
+            log.debug(raw_user)
+            raise Exception('Raw user is not a good one')
+
+        s = Signer(pwd_hash)
         return s.sign(userid_encoded).decode()
 
     async def token_find(self, token: str) -> int:

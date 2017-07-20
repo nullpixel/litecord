@@ -9,6 +9,7 @@ class Application:
         self._raw = raw
         self.owner = owner
         self.name = raw['name']
+        self.type = raw['type']
         self.description = raw.get('description')
 
     @property

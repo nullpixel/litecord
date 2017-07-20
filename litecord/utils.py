@@ -60,7 +60,7 @@ ERRNO_TO_HTTPERR = {
 def strip_user_data(user):
     """Remove unecessary fields from a raw user object"""
     return {
-        'id': str(user['user_id']),
+        'user_id': str(user['user_id']),
         'username': user['username'],
         'discriminator': str(user['discriminator']),
         'avatar': user['avatar'],
