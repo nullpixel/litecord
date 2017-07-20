@@ -25,6 +25,7 @@ from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
 from .user_settings import SettingsManager
 from .relations import RelationsManager
+from .application import ApplicationManager
 
 log = logging.getLogger(__name__)
 
@@ -134,6 +135,7 @@ class LitecordServer:
         self.presence_coll = self.litecord_db['presences']
         self.settings_coll = self.litecord_db['settings']
         self.relations_coll = self.litecord_db['relations']
+        self.app_coll = self.litecord_db['applications']
 
         # cache for events
         self.event_cache = collections.defaultdict(empty_ev_cache)
@@ -304,7 +306,7 @@ class LitecordServer:
             pwd = raw_user['password']
 
             if len(pwd['salt']) < 1:
-                pwd['salt'] = get_random_salt()
+                pwd['salt'] = await get_random_salt()
 
             if len(pwd['hash']) < 1 and len(pwd['salt']) > 0:
                 pwd['hash'] = pwd_hash(pwd['plain'], pwd['salt'])
@@ -644,6 +646,9 @@ class LitecordServer:
 
             log.debug('[init] RelationsManager')
             self.relations = RelationsManager(self)
+
+            log.debug('[init] ApplicationManager')
+            self.apps = ApplicationManager(self)
 
             log.debug('[init] endpoints')
             self.gw_endpoint = api.GatewayEndpoint(self)

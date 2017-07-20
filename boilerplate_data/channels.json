@@ -2,7 +2,7 @@
     {
         "guild_id": "150501171201",
         "channel_id": "150501171201",
-        "type": "text",
+        "type": 0,
         "name": "general",
         "position": 0,
         "topic": "general but it is general",
@@ -11,9 +11,9 @@
     {
         "guild_id": "150501171201",
         "channel_id": "155280142337",
-        "type": "voice",
+        "type": 2,
         "name": "general-voice",
-        "position": 1,
+        "position": 2,
         "topic": "dude cry"
     }
 ]

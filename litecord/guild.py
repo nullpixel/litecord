@@ -8,6 +8,7 @@ from .objects import Guild, TextGuildChannel, VoiceGuildChannel, \
     Message, Invite, Role, BareGuild, BaseTextChannel
 from .snowflake import get_snowflake, get_invite_code
 from .utils import get
+from .enums import ChannelType
 
 log = logging.getLogger(__name__)
 
@@ -1112,12 +1113,12 @@ class GuildManager:
 
             bg = BareGuild(raw_channel['guild_id'])
 
-            if ch_type == 'text':
+            if ch_type == ChannelType.GUILD_TEXT:
                 channel = TextGuildChannel(self.server, raw_channel, bg)
-            elif ch_type == 'voice':
+            elif ch_type == ChannelType.GUILD_VOICE:
                 channel = VoiceGuildChannel(self.server, raw_channel, bg)
             else:
-                raise Exception(f'Invalid type for channel: {channel_type}')
+                raise Exception(f'Invalid type for channel: {ch_type}')
 
             self.channels.append(channel)
             chan_count += 1

@@ -7,3 +7,4 @@ from .message import *
 from .role import *
 from .user import *
 from .voice import *
+from .application import *

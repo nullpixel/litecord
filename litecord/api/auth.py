@@ -1,6 +1,6 @@
 import logging
 
-from voluptuous import Schema, REMOVE_EXTRA
+from voluptuous import Schema, REMOVE_EXTRA, Optional
 
 from ..utils import _err, _json, pwd_hash, get_random_salt
 from ..decorators import auth_route
@@ -12,7 +12,9 @@ class AuthEndpoints:
     """Handle authentication endpoints."""
     def __init__(self, server):
         self.server = server
-        self.register(server.app)
+        self.user_coll = server.user_coll
+        self.app_coll = server.app_coll
+        self.apps = server.apps
 
         self.login_schema = Schema({
             'email': str,
@@ -25,7 +27,17 @@ class AuthEndpoints:
             'username': str,
         }, extra=REMOVE_EXTRA)
 
-    def register(self, app):
+        _o = Optional
+        self.app_add_schema = Schema({
+            'name': str,
+            _o('description'): str,
+            _o('bot_public'): bool,
+            _o('icon'): str,
+        }, extra=REMOVE_EXTRA)
+
+        self.register()
+
+    def register(self):
         self.server.add_post('auth/login', self.login)
         self.server.add_post('auth/users/add', self.h_add_user)
 
@@ -98,32 +110,31 @@ class AuthEndpoints:
         password =  payload['password']
         username =  payload['username']
 
-        user_db = self.server.user_db
-        res = await user_db.find_one({'email': email})
+        res = await self.user_coll.find_one({'email': email})
 
         if res is not None:
             return _err("email already used")
 
         discrim = await self.server.get_discrim(username)
-        _salt = get_random_salt()
+        salt = await get_random_salt()
 
         new_user = {
-            "id": get_snowflake(),
-            "email": email,
-            "username": username,
-            "discriminator": discrim,
-            "password": {
-                "plain": None,
-                "hash": pwd_hash(password, _salt),
-                "salt": _salt
+            'user_id': get_snowflake(),
+            'email': email,
+            'username': username,
+            'discriminator': discrim,
+            'password': {
+                'plain': None,
+                'hash': pwd_hash(password, salt),
+                'salt': salt
             },
-            "avatar": "",
-            "bot": False,
-            "verified": True
+            'avatar': "",
+            'bot': False,
+            'verified': True
         }
 
         log.info(f"New user {new_user['username']}#{new_user['discriminator']}")
-        await user_db.insert_one(new_user)
+        await self.user_coll.insert_one(new_user)
 
         return _json({
             "code": 1,
@@ -139,7 +150,7 @@ class AuthEndpoints:
         if user.bot:
             return _err('401: Unauthorized')
 
-        bots = await self.app_man.get_apps(user)
+        bots = await self.apps.get_apps(user)
         return _json([bot.id for bot in bots if bot.type == AppType.BOT])
 
     @auth_route
@@ -154,7 +165,7 @@ class AuthEndpoints:
         if user.bot:
             return _err('401: Unauthorized')
 
-        bot = await self.app_man.get_app(app_id)
+        bot = await self.apps.get_app(app_id)
         if bot.type != AppType.BOT:
             return _err('400: Invalid application type')
 
@@ -177,8 +188,5 @@ class AuthEndpoints:
         payload = await request.json()
         payload = self.app_add_schema(payload)
 
-        if payload['type'] != AppType.BOT:
-            return _err('400: Invalid app type')
-
-        app = await self.app_man.make_app(payload)
+        app = await self.apps.create_bot(user, payload)
         return _json(app.as_json)

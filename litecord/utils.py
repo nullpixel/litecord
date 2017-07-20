@@ -78,7 +78,7 @@ def random_digits(n):
     return randint(range_start, range_end)
 
 
-def get_random_salt(size=32):
+async def get_random_salt(size=64):
     return base64.b64encode(os.urandom(size)).decode()
 
 
