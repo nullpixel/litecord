@@ -6,6 +6,7 @@ from .base import LitecordObject
 from .member import Member
 from ..snowflake import snowflake_time
 from ..utils import dt_to_json
+from ..enums import ChannelType
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class Guild(LitecordObject):
     def voice_channels(self):
         """Yield all voice channels from a guild."""
         for channel in self.all_channels():
-            if channel.str_type == 'voice':
+            if channel.type == ChannelType.GUILD_VOICE:
                 yield channel
 
     def all_members(self):

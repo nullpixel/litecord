@@ -4,8 +4,8 @@ import datetime
 
 from collections import defaultdict
 
-from .objects import TextChannel, VoiceChannel, Guild, \
-    Message, Invite, Role, BareGuild
+from .objects import Guild, TextGuildChannel, VoiceGuildChannel, \
+    Message, Invite, Role, BareGuild, BaseTextChannel
 from .snowflake import get_snowflake, get_invite_code
 from .utils import get
 
@@ -70,8 +70,7 @@ class GuildManager:
             return None
 
         async def _updater():
-            # Update a channel's last_message_id property
-            if isinstance(channel, VoiceChannel):
+            if not isinstance(channel, BaseTextChannel):
                 return
 
             mlist = await channel.last_messages(1)
@@ -345,7 +344,8 @@ class GuildManager:
         if raw_channel is None:
             log.info('[channel:reload] chid=%d not found, deleting from cache', channel.id)
             try:
-                channel.guild.channels.remove(channel)
+                if isinstance(channel, BaseGuildChannel):
+                    channel.guild.channels.remove(channel)
             except ValueError: pass
 
             try:
@@ -356,7 +356,14 @@ class GuildManager:
             return
 
         channel._raw.update(raw_channel)
-        channel._update(channel.guild, channel._raw)
+
+        if isinstance(channel, BaseGuildChannel):
+            channel._update(channel.guild, channel._raw)
+        elif isinstance(channel, GroupDMChannel):
+            channel._update(channel.owner, channel._raw)
+        elif isinstance(channel, DMChannel):
+            channel._update(channel._raw)
+
         return channel
 
     async def reload_role(self, role):
@@ -709,7 +716,7 @@ class GuildManager:
         user: :meth:`User`
             User to be banned.
         delete_days: int or None:
-            The amount of days worth of messages to be removed using :meth:`TextChannel.delete_many`.
+            The amount of days worth of messages to be removed using :meth:`TextGuildChannel.delete_many`.
         """
 
         bans = guild.banned_ids
@@ -1106,9 +1113,9 @@ class GuildManager:
             bg = BareGuild(raw_channel['guild_id'])
 
             if ch_type == 'text':
-                channel = TextChannel(self.server, raw_channel, bg)
+                channel = TextGuildChannel(self.server, raw_channel, bg)
             elif ch_type == 'voice':
-                channel = VoiceChannel(self.server, raw_channel, bg)
+                channel = VoiceGuildChannel(self.server, raw_channel, bg)
             else:
                 raise Exception(f'Invalid type for channel: {channel_type}')
 

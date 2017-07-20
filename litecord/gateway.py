@@ -18,7 +18,7 @@ import websockets
 
 from voluptuous import Schema, Optional, REMOVE_EXTRA
 
-from .basics import OP, GATEWAY_VERSION, CHANNEL_TO_INTEGER
+from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
 from .utils import chunk_list, strip_user_data
 from .err import VoiceError, PayloadLengthExceeded

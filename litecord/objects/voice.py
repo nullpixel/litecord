@@ -1,8 +1,8 @@
-from .channel import BaseChannel
+from .channel import BaseGuildChannel
 from .base import LitecordObject
 from .guild import BareGuild
 
-class VoiceChannel(BaseChannel):
+class VoiceGuildChannel(BaseGuildChannel):
     """Represents a voice channel.
 
     Attributes
@@ -16,17 +16,13 @@ class VoiceChannel(BaseChannel):
     __slots__ = ('bitrate', 'user_limit')
 
     def __init__(self, server, raw, guild=None):
-        super().__init__(server, raw, guild)
+        super().__init__(guild, raw)
         self._update(guild, raw)
 
     def _update(self, guild, raw):
-        BaseChannel._update(self, guild, raw)
+        super()._update(guild, raw)
         self.bitrate = raw.get('bitrate', 69)
         self.user_limit = raw.get('user_limit', 0)
-
-    async def voice_request(self, connection):
-        """Request a voice state from the voice manager."""
-        return await self.server.voice.link_connection(connection, self)
 
     @property
     def as_json(self):
@@ -36,7 +32,6 @@ class VoiceChannel(BaseChannel):
             'name': self.name,
             'type': self.type,
             'position': self.position,
-            'is_private': self.is_private,
             'permission_overwrites': [],
 
             'bitrate': self.bitrate,
@@ -75,19 +70,29 @@ class VoiceRegion(LitecordObject):
         }
 
 
-class DMChannel(BaseChannel):
-    """I don't fucking know."""
-    def __init__(self, user_from, user_to, raw):
-        bg = BareGuild(raw['id'])
-        super().__init__(bg, raw)
-        self._update(user_from, user_to, raw)
+class DMChannel:
+    """A DM channel object.
+    
+    Attributes
+    ----------
+    id: int
+        DM Channel ID.
+    recipients: List[:class:`User`]
+        The recipients of the DM.
+    text: :class:`BaseTextChannel`
+        Text channel that is linked to the DM.
+    voice: :class:`BaseVoiceChannel`
+        Voice channel linked to the DM.
+    """
+    def __init__(self, recipients, raw):
+        self.id = raw['id']
+        self._update(recipients, raw)
 
-    def _update(user_from, user_to, raw):
-        self.user_from = user_from
-        self.user_to = user_to
+    def _update(recipients, raw):
+        self.recipients = recipients
 
-        self.text = TextChannel(raw)
-        self.voice = VoiceChannel(raw)
+        self.text = BaseTextChannel(raw)
+        self.voice = BaseVoiceChannel(raw)
 
     async def _single_dispatch(self, user, e_name, e_data):
         """If user is a bot, dispatches to Shard 0"""
@@ -102,5 +107,14 @@ class DMChannel(BaseChannel):
 
     async def dispatch(self, e_name, e_data):
         # Dispatch to both users
-        await self._single_dispatch(self.user_from, e_name, e_data)
-        await self._single_dispatch(self.user_to, e_name, e_data)
+        await self._single_dispatch(self.recipients[0], e_name, e_data)
+        await self._single_dispatch(self.recipients[1], e_name, e_data)
+
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'type': self.type,
+            'last_message_id': self.text.last_message_id,
+            'recipients': [u.as_json for u in self.recipients]
+        }

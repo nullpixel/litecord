@@ -1,80 +1,72 @@
 import logging
 
 from .base import LitecordObject
-from ..basics import CHANNEL_TO_INTEGER
+from ..enums import ChannelType
 from ..snowflake import _snowflake
 
 log = logging.getLogger(__name__)
 
+
 class BaseChannel(LitecordObject):
-    """A general base channel object.
-
-    Parameters
-    ----------
-    server: :class:`LitecordServer`
-        Server instance.
-    _channel: dict
-        Raw channel data.
-    guild: :class:`Guild`, optional
-        Guild that this channel refers to.
-
+    """Base class for all channels.
+    
     Attributes
     ----------
-    _data: dict
-        Raw channel data.
     id: int
-        The channel's snowflake ID.
-    guild_id: int
-        The guild's ID this channel is in.
-    guild: :class:`Guild`
-        The guild that this channel refers to, can be :py:const:`None`.
-    name: str
-        Channel's name.
+        Channel ID.
     type: int
-        Channel's type.
-    str_type: str
-        Channel's type as a string. Usually it is ``"text"``.
-    position: int
-        Channel's position on the guild, channel position starts from 0.
-    is_private: bool
-        Should be False.
-    is_default: bool
-        If this channel is the default for the guild.
-    pins: list[int]
-        List of message IDs that are pinned.
+        Channel Type.
     """
+    def __init__(self, raw):
+        log.debug(raw)
+        self.id = int(raw['channel_id'])
+        self.type = raw['type']
 
-    __slots__ = ('_raw', 'id', 'guild_id', 'guild', 'name', 'type', 'str_type',
-        'position', 'is_private', 'is_default')
-
-    def __init__(self, server, _channel, guild=None):
-        super().__init__(server)
-        self._raw = _channel
-
-        self.id = int(_channel['channel_id'])
-        self.guild_id = int(_channel['guild_id'])
-
-        self.guild = guild
-        if guild is None:
-            self.guild = self.guild_man.get_guild(self.guild_id)
-
-        if self.guild is None:
-            log.warning('Creating an orphaned channel(no guild found)')
-
-        self.str_type = _channel['type']
-        self.type = CHANNEL_TO_INTEGER[_channel['type']]
-        self._update(self.guild, self._raw)
-
-    def _update(self, guild, raw):
-        self.guild = guild
-        self.name = raw['name']
-        self.position = raw['position']
-        self.is_private = False
-        self.is_default = self.id == self.guild_id
-
-    @property
     def __eq__(self, other):
         return isinstance(other, BaseChannel) and other.id == self.id
+
+    def _update(self, *args):
+        return None
+
+class BaseTextChannel(BaseChannel):
+    """Base text channel."""
+    def __init__(self, raw):
+        super().__init__(raw)
+        self.last_message_id = -1
+        self._update(raw)
+
+    def _update(self, raw):
+        self._raw = raw
+        self.name = raw['name']
+
+class BaseVoiceChannel(BaseChannel):
+    """Base voice channel."""
+    def __init__(self, raw):
+        super().__init__(raw)
+        BaseVoiceChannel._update(self, raw)
+
+    def _update(self, raw):
+        super()._update(raw)
+        self._raw = raw
+        self.name = raw['name']
+
+        self.bitrate = raw['bitrate']
+        self.user_limit = raw['user_limit']
+
+class BaseGuildChannel(BaseChannel):
+    def __init__(self, guild, raw):
+        super().__init__(raw)
+        BaseGuildChannel._update(self, guild, raw)
+
+    def _update(self, guild, raw):
+        super()._update(raw)
+        self._raw = raw
+        self.name = raw['name']
+        self.guild = guild
+        self.guild_id = raw['guild_id']
+        self.position = raw['position']
+        self.perm_overwrites = raw.get('perm_overwrites', [])
+        self.is_default = self.id == self.guild_id
 
     @property
     def watchers(self):
@@ -107,7 +99,7 @@ class BaseChannel(LitecordObject):
         }
 
 
-class TextChannel(BaseChannel):
+class TextGuildChannel(BaseGuildChannel):
     """Represents a text channel.
 
     Attributes
@@ -125,12 +117,13 @@ class TextChannel(BaseChannel):
     __slots__ = ('topic', 'last_message_id', 'pins')
 
     def __init__(self, server, raw, guild=None):
-        super().__init__(server, raw, guild)
+        super().__init__(guild, raw)
+        self.server = server
         self.last_message_id = 0
         self._update(guild, raw)
 
     def _update(self, guild, raw):
-        BaseChannel._update(self, guild, raw)
+        super()._update(guild, raw)
         self.topic = raw['topic']
         self.pins = raw['pinned_ids']
 
@@ -266,8 +259,7 @@ class TextChannel(BaseChannel):
             'name': self.name,
             'type': self.type,
             'position': self.position,
-            'is_private': self.is_private,
-            'permission_overwrites': [],
+            'permission_overwrites': [o.as_json for o in self.perm_overwrites],
             'topic': self.topic,
             'last_message_id': str(self.last_message_id),
         }

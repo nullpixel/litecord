@@ -1,5 +1,5 @@
 import logging
-from ..objects import LitecordObject, VoiceChannel, User
+from ..objects import LitecordObject, BaseVoiceChannel, User
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class VoiceState(LitecordObject):
         Voice server instance.
     vc_state: :class:`VoiceChannelState`
         Voice channel state this user state is referring to.
-    channel: :class:`VoiceChannel`
+    channel: :class:`BaseVoiceChannel`
         Voice channel this state is referring to.
     guild: :class:`Guild`
         Guild this state is referring to
@@ -26,7 +26,7 @@ class VoiceState(LitecordObject):
     session_id: str
         Session ID of this voice state.
     """
-    def __init__(self, server, v_channel_state, channel: VoiceChannel, conn):
+    def __init__(self, server, v_channel_state, channel: BaseVoiceChannel, conn):
         LitecordObject.__init__(self, server)
 
         self.v_man = server.voice
@@ -72,14 +72,14 @@ class VoiceChannelState(LitecordObject):
 
     Attributes
     ----------
-    v_channel: :class:`VoiceChannel`
+    v_channel: :class:`BaseVoiceChannel`
         Voice channel this state is referring to.
     states: dict
         Relates User IDs to :class:`VoiceState` objects.
     """
     def __init__(self, server, v_channel):
         super().__init__(server)
-        if not isinstance(v_channel, VoiceChannel):
+        if not isinstance(v_channel, BaseVoiceChannel):
             log.error(f'[VChannelState] received a non-voice channel')
 
         self.v_channel = v_channel

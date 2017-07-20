@@ -13,7 +13,7 @@ import websockets
 from ..basics import VOICE_OP
 from ..objects import LitecordObject
 from ..err import VoiceError
-from ..objects import VoiceChannel, User, VoiceRegion
+from ..objects import VoiceGuildChannel, User, VoiceRegion
 
 from .objects import VoiceChannelState, VoiceState
 from .gateway import VoiceConnection
@@ -84,7 +84,7 @@ class VoiceServer(LitecordObject):
         self.tokens[token] = user_id
         return token
 
-    async def connect(self, channel: VoiceChannel, conn) -> VoiceState:
+    async def connect(self, channel: VoiceGuildChannel, conn) -> VoiceState:
         """Create a :class:`VoiceState`"""
         vc_state = self.states[channel.id]
         if vc_state is None:

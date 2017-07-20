@@ -11,8 +11,7 @@ from .guild import GuildManager
 from .snowflake import get_snowflake, snowflake_time, \
     _snowflake_raw, get_invite_code
 
-from .objects import LitecordObject, Presence, User, Member, BaseChannel, \
-    TextChannel, VoiceChannel, Guild, Invite, Message
+from .objects import *
 
 from .presence import PresenceManager
 from .ratelimits import ratelimit, ws_ratelimit
