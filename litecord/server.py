@@ -294,6 +294,7 @@ class LitecordServer:
 
         count = 0
         async for raw_user in cur:
+            raw_user.pop('_id')
             uid = raw_user['user_id']
             password = raw_user['password']
 
@@ -320,6 +321,7 @@ class LitecordServer:
     async def reload_user(self, user):
         """Update the user cache with an existing user object."""
         raw_user = await self.user_coll.find_one({'user_id': user.id})
+        raw_user.pop('_id')
 
         if raw_user is None:
             # non-existing
@@ -341,7 +343,7 @@ class LitecordServer:
     async def insert_user(self, raw_user):
         old = await self.user_coll.find_one({'user_id': user.id})
         if old is not None:
-            log.warning('Inserting an existing user')
+            log.warning('Inserting an existing user, ignoring')
             return
 
         uid = raw_user['user_id']
@@ -354,7 +356,13 @@ class LitecordServer:
         """Get a raw user object using the user's ID."""
         user_id = int(user_id)
         u = self.raw_users.get(user_id)
-        log.debug('[get:raw_user] %d -> %r', user_id, u)
+
+        # no one should use the _id field tbh
+        try:
+            u.pop('_id')
+        except: pass
+
+        log.debug('[get:raw_user] %d -> %r', user_id, u.keys())
         return u
 
     def get_user(self, user_id):

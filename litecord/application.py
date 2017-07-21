@@ -1,7 +1,7 @@
 import logging
 
 from .utils import get_random_salt, pwd_hash
-from .objects import Application
+from .objects import Application, User
 from .snowflake import get_snowflake
 from .enums import AppType
 
@@ -49,8 +49,6 @@ class ApplicationManager:
 
         log.info('Making a bot app: uid=%d name=%r', app_id, app['name'])
 
-        await self.app_coll.insert_one(app)
-
         discrim = await self.server.get_discrim(app['name'])
         salt = await get_random_salt()
 
@@ -69,10 +67,12 @@ class ApplicationManager:
         }
 
         await self.user_coll.insert_one(bot_user)
-        await self.server.userdb_update()
+        self.server.users.append(User(self.server, bot_user))
+        self.server.raw_users[bot_user['user_id']] = bot_user
 
         token = await self.server.generate_token(app_id)
         app['token'] = token
+        await self.app_coll.insert_one(app)
 
         return Application(owner, app)
 

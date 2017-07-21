@@ -10,6 +10,7 @@ class Application:
         self.owner = owner
         self.name = raw['name']
         self.type = raw['type']
+        self.token = raw['token']
         self.description = raw.get('description')
 
     @property
@@ -20,5 +21,6 @@ class Application:
             'description': self.description,
             'name': self.name,
             'owner': self.owner.as_json,
+            'token': self.token,
         }
 
