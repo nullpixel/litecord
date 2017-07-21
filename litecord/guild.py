@@ -625,6 +625,7 @@ class GuildManager:
         payload = {**new_member.as_json, **to_add}
 
         await guild.dispatch('GUILD_MEMBER_ADD', payload)
+        await new_member.dispatch('GUILD_CREATE', guild.as_json)
         return new_member
 
     async def edit_member(self, member, new_data):

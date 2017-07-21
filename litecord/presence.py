@@ -114,25 +114,24 @@ class PresenceManager:
             log.info(f'[presence] {guild!r} -> {user_presence!r}, updating')
             await guild.dispatch('PRESENCE_UPDATE', user_presence.as_json)
 
-    async def global_update(self, user, new_status=None):
+    async def global_update(self, conn, new_status=None):
         """Updates a user's status, globally.
 
         Dispatches PRESENCE_UPDATE to all guilds the user is in.
 
         Parameters
         ----------
-        user: :class:`User`
-            The user we are updating.
+        conn: :class:`Connection`
+            Connection to have its presence updated
         new_status: dict, optional
             Raw presence object.
         """
 
-        if user is None:
-            return
-
+        user = conn.user
         self.global_presences[user.id] = Presence(None, user, new_status)
 
-        for guild in user.guilds:
+        for gid in conn.guild_ids:
+            guild = self.server.guild_man.get_guild(gid)
             await self.status_update(guild, user, new_status)
 
     async def typing_start(self, user_id, channel_id):

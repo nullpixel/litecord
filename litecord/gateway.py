@@ -404,10 +404,16 @@ class Connection(WebsocketConnection):
             raise StopConnection(4011, 'Sharding required')
 
         # check if current shard is with too many guilds
-        f = lambda o: self.guild_man.get_shard(o.id, self.shard_count)
-        all_guild_ids = map(f, self.guild_man.yield_guilds(self.user.id))
+        gm = self.guild_man
 
-        count = collections.Counter(all_guild_ids)
+        self.guild_ids = []
+        def f(guild):
+            self.guild_ids.append(guild.id)
+            return gm.get_shard(guild.id, self.shard_count)
+
+        shard_guild = map(f, gm.yield_guilds(self.user.id))
+
+        count = collections.Counter(shard_guild)
         for shard_id, guild_count in count.most_common():
             if shard_id != self.shard_id: continue
 
@@ -436,7 +442,7 @@ class Connection(WebsocketConnection):
 
         # TODO: maybe store presences between client logon/logoff
         # like idle and dnd?
-        await self.presence.global_update(self.user)
+        await self.presence.global_update(self)
 
         # I'm happy :)
         self.identified = True
@@ -689,7 +695,7 @@ class Connection(WebsocketConnection):
 
         self.identified = True
 
-        await self.presence.global_update(self.user)
+        await self.presence.global_update(self)
 
         await self.dispatch('RESUMED', {
             '_trace': self.get_identifiers('resume')
@@ -698,27 +704,30 @@ class Connection(WebsocketConnection):
     @handler(OP.STATUS_UPDATE)
     @ws_ratelimit('presence_updates')
     async def status_handler(self, data):
-        """Handle OP 3 Status Update packets
-
-        Checks the payload format and if it is OK, calls `PresenceManager.global_update`
-        """
+        """Handle OP 3 Status Update."""
 
         if not self.identified:
-            raise StopConnection(4003, 'Not identified')
+            raise StopConnection(4003, 'Not Identified')
+
+        try:
+            status = data['status']
+            afk = data['afk']
+        except KeyError:
+            return
 
         idle_since = data.get('since')
-        afk = data.get('afk')
 
         game = data.get('game')
         game_name = None
         if game is not None:
             game_name = game.get('name')
-            if game_name is None:
-                return
 
-        await self.presence.global_update(self.user, {
-            'name': game_name or None,
-            'status': 'idle' if (idle_since is not None and afk) else None
+        if afk or idle_since:
+            status = 'afk'
+
+        await self.presence.global_update(self, {
+            'name': game_name,
+            'status': status,
         })
 
     @handler(OP.GUILD_SYNC)
@@ -853,7 +862,7 @@ class Connection(WebsocketConnection):
             amount_conns = self.server.count_connections(self.user.id)
             log.info(f"{self.user!r} now with {amount_conns} connections")
             if amount_conns < 1:
-                await self.presence.global_update(self.user, self.presence.offline())
+                await self.presence.global_update(self, self.presence.offline())
 
             self.token = None
 
