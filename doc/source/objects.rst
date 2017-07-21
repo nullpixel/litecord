@@ -26,11 +26,23 @@ LitecordObject, Presence, User, Member, Channel, Guild, Invite, Message
     :members:
     :private-members:
 
-.. autoclass:: TextChannel
+.. autoclass:: BaseTextChannel
     :members:
     :private-members:
 
-.. autoclass:: VoiceChannel
+.. autoclass:: BaseVoiceChannel
+    :members:
+    :private-members:
+
+.. autoclass:: BaseGuildChanenl
+    :members:
+    :private-members:
+
+.. autoclass:: TextGuildChannel
+    :members:
+    :private-members:
+
+.. autoclass:: VoiceGuildChannel
     :members:
     :private-members:
 
