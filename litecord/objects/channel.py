@@ -152,10 +152,10 @@ class TextGuildChannel(BaseGuildChannel):
         for raw_message in reversed(await cursor.to_list(length=limit)):
             if len(res) > limit: break
             m_id = raw_message['message_id']
-            raw_message['id'] = m_id
 
-            if m_id in self.guild_man.messages:
-                res.append(self.guild_man.messages[m_id])
+            m = self.guild_man.get_message(m_id)
+            if m is not None:
+                res.append(m)
             else:
                 m = Message(self.server, self, raw_message)
                 self.guild_man.messages[m_id] = m

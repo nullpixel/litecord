@@ -85,7 +85,7 @@ class Guild(LitecordObject):
         self.icons = {'splash': None}
 
         # one day... one day.
-        self.emojis = {}
+        self.emojis = [] 
 
         self._viewers = []
         self._from_raw(raw)

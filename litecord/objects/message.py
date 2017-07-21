@@ -1,8 +1,11 @@
 import datetime
+import logging
 
 from .base import LitecordObject
 from ..snowflake import snowflake_time
+from ..utils import dt_to_json
 
+log = logging.getLogger(__name__)
 
 class MessageTypes:
     DEFAULT = 0
@@ -60,9 +63,13 @@ class Message(LitecordObject):
         super().__init__(server)
         self._raw = raw
 
-        self.id = int(_raw['message_id'])
-        self.author_id = int(_raw['author_id'])
-        self.type = _raw.get('type', MessageTypes.DEFAULT)
+        log.debug(raw)
+        self.id = int(raw['message_id'])
+        self.author_id = int(raw['author_id'])
+        self.channel_id = int(raw['channel_id'])
+        self.type = raw.get('type', MessageTypes.DEFAULT)
+        self.edited_at = None
+        self.embeds = []
 
         self._update(channel, author, raw)
 
@@ -102,7 +109,7 @@ class Message(LitecordObject):
 
             'content': str(self.content),
             'attachments': [],
-            'embeds': [],
+            'embeds': self.embeds,
 
             'pinned': self.pinned,
         }

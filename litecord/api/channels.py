@@ -131,8 +131,9 @@ class ChannelsEndpoint:
             return _err('no useful content provided')
 
         _data = {
-            'id': get_snowflake(),
+            'message_id': get_snowflake(),
             'author_id': user.id,
+            'channel_id': channel.id,
             'content': content,
         }
 

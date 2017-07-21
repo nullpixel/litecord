@@ -420,6 +420,8 @@ class Connection(WebsocketConnection):
             if guild_count > 2500:
                 raise StopConnection(4010, f'Shard {shard_id} is with too many guilds({guild_count} > 2500)')
 
+        log.debug('guild ids: %r', self.guild_ids)
+
         self.request_counter = self.server.request_counter[self.session_id]
         self.token = token
 
@@ -759,7 +761,7 @@ class Connection(WebsocketConnection):
 
             await self.dispatch('GUILD_SYNC', {
                 'id': str(guild_id),
-                'presences': [p.as_json for p in guild.presences],
+                'presences': [p for p in guild.presences],
                 'members': [m.as_json for m in guild.online_members],
             })
 
