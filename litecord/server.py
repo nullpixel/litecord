@@ -16,14 +16,17 @@ import litecord.api as api
 from .basics import OP
 from .utils import random_digits, _json, _err, get_random_salt, \
     pwd_hash, get, delete
+
 from .guild import GuildManager
 from .presence import PresenceManager
 from .voice.server import VoiceManager
+
 from .objects import User
 from .images import Images
 from .embedder import EmbedManager
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
+
 from .user_settings import SettingsManager
 from .relations import RelationsManager
 from .application import ApplicationManager
@@ -230,8 +233,14 @@ class LitecordServer:
         """Return the amount of connections connected to a user."""
         return len(self.connections[user_id])
 
-    def get_shards(self, user_id: int) -> 'dict[int, Connection]':
-        """Get all shards for a user"""
+    def get_shards(self, user_id: int) -> 'dict':
+        """Get all shards for a user
+        
+        Returns
+        -------
+        dict
+            Relating Shard IDs to :class:`Connection` objects.
+        """
         shards = {}
 
         for conn in self.get_connections(user_id):
@@ -479,7 +488,7 @@ class LitecordServer:
         url = f'ws://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
         return url
 
-    async def check_request(self, request) -> 'tuple(str, int)':
+    async def check_request(self, request) -> 'tuple':
         """Checks a request to the API.
 
         This function checks if a request has the required headers
@@ -489,6 +498,17 @@ class LitecordServer:
         https://discordapp.com/developers/docs/reference#authentication
 
         NOTE: This function doesn't support OAuth2 Bearer tokens.
+
+        Returns
+        -------
+        tuple
+            With the token value and the user ID that
+            the token references.
+
+        Raises
+        ------
+        :class:`RequestCheckError`
+            On any error with the request data
         """
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
@@ -548,7 +568,8 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
-    def make_options_handler(self, method) -> 'function':
+    def make_options_handler(self, method):
+        """Returns a handler for `OPTIONS`."""
         headers = {
             'Access-Control-Allow-Origin': 'http://127.0.0.1',
             'Access-Control-Allow-Methods': method,
