@@ -290,7 +290,7 @@ class Guild(LitecordObject):
 
     @property
     def as_json(self):
-        return {
+        d = {
             'id': str(self.id),
             'name': self.name,
             'icon': self.icons['icon'],
@@ -328,6 +328,11 @@ class Guild(LitecordObject):
             'channels': self.iter_json(self.channels),
             'presences': self.presences,
         }
+
+        if self.owner.bot:
+            d['application_id'] = self.owner.id
+
+        return d
 
     @property
     def as_invite(self):
