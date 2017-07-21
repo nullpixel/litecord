@@ -20,7 +20,7 @@ from voluptuous import Schema, Optional, REMOVE_EXTRA
 
 from .basics import OP, GATEWAY_VERSION
 from .server import LitecordServer
-from .utils import chunk_list, strip_user_data
+from .utils import chunk_list
 from .err import VoiceError, PayloadLengthExceeded
 from .ratelimits import ws_ratelimit
 
@@ -100,8 +100,6 @@ class Connection(WebsocketConnection):
     
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
-    raw_user: dict
-        Same as :attr:`user`, but it is a raw user object.
 
     """
     def __init__(self, ws, **kwargs):
@@ -137,7 +135,6 @@ class Connection(WebsocketConnection):
 
         # user objects, filled oncce the client is identified
         self.user = None
-        self.raw_user = None
 
         # references to objects
         self.guild_man = self.server.guild_man
@@ -306,21 +303,19 @@ class Connection(WebsocketConnection):
         tuple
             with 3 items:
             - A boolean describing the success of the operation,
-            - A raw user object(:py:meth:`None` if operation failed),
             - A :class:`User` object(:py:meth:`None` if operation failed).
         """
         token_user_id = await self.server.token_find(token)
         if token_user_id is None:
             log.warning("Token not found")
-            return False, None, None
+            return
 
-        raw_user = self.server.get_raw_user(token_user_id)
-        if raw_user is None:
-            log.warning("(token, user) pair not found")
-            return False, None, None
+        user = self.server.get_user(token_user_id)
+        if user is None:
+            log.warning('User not found')
+            return
 
-        user = self.server.get_user(raw_user['user_id'])
-        return True, raw_user, user
+        return user
 
     def check_shard(self, shard):
         """Checks the validity of the shard payload.
@@ -371,8 +366,8 @@ class Connection(WebsocketConnection):
         large = data.get('large_threshold', 50)
         self.compress_flag = data.get('compress', False)
 
-        valid, user_object, user = await self.check_token(token)
-        if not valid:
+        user = await self.check_token(token)
+        if user is None:
             raise StopConnection(4004, 'Authentication failed...')
 
         shard = data.get('shard', [0, 1])
@@ -386,7 +381,6 @@ class Connection(WebsocketConnection):
             log.warning('Failing request for sharding: %r', shard)
             raise StopConnection(4010, 'Sharding not available')
 
-        self.raw_user = user_object
         self.user = user
 
         # NOTE: When sharding, uncomment this code.
@@ -626,8 +620,8 @@ class Connection(WebsocketConnection):
 
         event_data = self.server.event_cache[session_id]
 
-        valid, raw_user, user = await self.check_token(token)
-        if not valid:
+        user = await self.check_token(token)
+        if user is None:
             log.warning('[resume] invalidated @ check_token')
             await self.invalidate(session_id=session_id)
 
@@ -684,7 +678,6 @@ class Connection(WebsocketConnection):
 
         # TODO: insert sharding
 
-        self.raw_user = raw_user
         self.user = user
 
         self.token = token

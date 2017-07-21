@@ -1,7 +1,7 @@
 import logging
 
 from .base import LitecordObject
-from ..utils import strip_user_data, dt_to_json
+from ..utils import dt_to_json
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +75,25 @@ class User(LitecordObject):
             yield guild.members[self.id]
 
     @property
+    def as_json_private(self):
+        """JSON version of the user object but with private info."""
+        return {**self.as_json, **{
+            'password': self._raw['password'],
+            'verified': self._raw['verified'],
+            'email': self._raw['email'],
+        }}
+
+    @property
     def as_json(self):
         """Remove sensitive data from `User._raw` and make it JSON serializable"""
-        return strip_user_data(self._raw)
+        return {
+            'id': str(self.id),
+            'username': self.username,
+            'discriminator': self.discriminator,
+            'avatar': self.avatar_hash,
+            'bot': self.bot,
+            'mfa_enabled': False,
+        }
 
     @property
     def connections(self):

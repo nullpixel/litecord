@@ -14,7 +14,8 @@ from itsdangerous import Signer
 
 import litecord.api as api
 from .basics import OP
-from .utils import strip_user_data, random_digits, _json, _err, get_random_salt, pwd_hash
+from .utils import random_digits, _json, _err, get_random_salt, \
+    pwd_hash, get, delete
 from .guild import GuildManager
 from .presence import PresenceManager
 from .voice.server import VoiceManager
@@ -124,6 +125,7 @@ class LitecordServer:
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
         self.litecord_db = self.mongo_client[self.flags.get('mongo_name', 'litecord')]
 
+        # jesus christ the amount of collections
         self.message_coll = self.litecord_db['messages']
         self.user_coll = self.litecord_db['users']
         self.guild_coll = self.litecord_db['gulids']
@@ -137,21 +139,19 @@ class LitecordServer:
         self.relations_coll = self.litecord_db['relations']
         self.app_coll = self.litecord_db['applications']
 
-        # cache for events
+        # cache for dispatched packets
+        # used for resuming
         self.event_cache = collections.defaultdict(empty_ev_cache)
 
-        # cache for all kinds of objects
-        self.cache = {}
+        self.users = []
+        self.raw_users = {}
 
-        self.session_dict = {}
         self.atomic_markers = {}
         self.sessions = {}
 
         self.request_counter = collections.defaultdict(dict)
         self.connections = collections.defaultdict(list)
 
-        self.presence = None
-        self.guild_man = None
         self.app = None
 
         self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
@@ -202,19 +202,16 @@ class LitecordServer:
 
         try:
             self.request_counter.pop(session_id)
-        except KeyError:
-            pass
+        except KeyError: pass
 
         try:
             conn = self.sessions.pop(session_id)
-        except KeyError:
-            return
+        except KeyError: return
 
         try:
             # not identified
             user_id = conn.user.id
-        except AttributeError:
-            return
+        except AttributeError: return
 
         log.debug(f"Removing sid={session_id} from uid={user_id}")
 
@@ -284,120 +281,92 @@ class LitecordServer:
             log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
 
     async def load_users(self):
-        """Load user collection.
-        If the raw user in the collection doesn't have a hashed
-        password in their object, a new one gets created(with a random salt)
-
-        Fills the ``'id->raw_user'`` and ``'id->user'`` caches in :attr:`LitecordServer.cache`.
+        """Load the user collection into the server's cache.
+        
+        While loading, it can generate a salt and hash for the password
+        if the data is not provided.
         """
 
-        # create cache objects
-        self.cache['id->raw_user'] = {}
-        self.cache['id->user'] = {}
+        self.users = []
+        self.raw_users = {}
 
-        # reference them
-        id_to_raw_user = self.cache['id->raw_user']
-        id_to_user = self.cache['id->user']
+        cur = self.user_coll.find()
 
-        cursor = self.user_coll.find()
-        all_users = await cursor.to_list(length=None)
+        count = 0
+        async for raw_user in cur:
+            uid = raw_user['user_id']
+            password = raw_user['password']
 
-        for raw_user in all_users:
-            pwd = raw_user['password']
+            if len(password['salt']) < 1:
+                password['salt'] = await get_random_salt()
 
-            if len(pwd['salt']) < 1:
-                pwd['salt'] = await get_random_salt()
+            # generate password if good
+            if len(password['hash']) < 1:
+                password['hash'] = pwd_hash(password['plain'], password['salt'])
+                # we are trying to be secure here ok
+                password.pop('plain')
 
-            if len(pwd['hash']) < 1 and len(pwd['salt']) > 0:
-                pwd['hash'] = pwd_hash(pwd['plain'], pwd['salt'])
-                pwd['plain'] = None
+            query = {'user_id': uid}
+            await self.user_coll.update_one(query, {'$set': {'password': password}})
 
-            # put that into the database
-            raw_user.pop('_id')
-            await self.user_coll.update_one({'user_id': raw_user['user_id']}, {'$set': raw_user})
+            # add to cache
+            self.users.append(User(self, raw_user))
+            self.raw_users[uid] = raw_user
 
-            # cache objects
-            user = User(self, raw_user)
-            id_to_raw_user[user.id] = raw_user
-            id_to_user[user.id] = user
+            count += 1
 
-        log.info(f"Loaded {len(all_users)} users")
+        log.info('Loaded %d users', count)
 
-    async def userdb_update(self):
-        """Update the server's user cache with new data from the database.
+    async def reload_user(self, user):
+        """Update the user cache with an existing user object."""
+        raw_user = await self.user_coll.find_one({'user_id': user.id})
 
-        Only updates if actually required(differences between cache and database greater than 0).
-        Dispatches USER_UPDATE events to respective clients.
-        """
-        cursor = self.user_coll.find()
-        all_users = await cursor.to_list(length=None)
-
-        updated_users = 0
-        events = 0
-
-        raw_user_cache = self.cache['id->raw_user']
-        user_cache = self.cache['id->user']
-
-        for raw_user in all_users:
-            log.debug('Getting raw %r', raw_user)
+        if raw_user is None:
+            # non-existing
+            try:
+                self.users.remove(user)
+            except ValueError: pass
 
             try:
-                raw_user.pop('_id')
-            except: pass
+                self.raw_users.pop(user.id)
+            except KeyError: pass
 
-            raw_user_id = int(raw_user['user_id'])
+            del user
+            return
 
-            cached_raw_user = raw_user_cache.get(raw_user_id)
-            if cached_raw_user is None:
-                raw_user_cache[raw_user_id] = raw_user
-                user_cache[raw_user_id] = User(self, raw_user)
-                continue
+        user._raw.update(raw_user)
+        user._update(user._raw)
+        return user
 
-            cached_raw_user = strip_user_data(cached_raw_user)
-            raw_user = strip_user_data(raw_user)
-            cached_user = user_cache[raw_user_id]
+    async def insert_user(self, raw_user):
+        old = await self.user_coll.find_one({'user_id': user.id})
+        if old is not None:
+            log.warning('Inserting an existing user')
+            return
 
-            print(raw_user, cached_raw_user)
-            differences = set(raw_user.values()) ^ set(cached_raw_user.values())
-            if len(differences) > 0:
-                user = User(self, raw_user)
+        uid = raw_user['user_id']
+        await self.user_coll.insert_one(raw_user)
+        self.raw_users[uid] = raw_user
+        self.users.append(User(self, raw_user))
+        return True
 
-                # dispatch USER_UPDATE to all online clients
-                for guild in user.guilds:
-                    events += await guild.dispatch('USER_UPDATE', user.as_json)
-
-                # update the references in internal cache
-                cached_raw_user = raw_user
-                cached_user = user
-
-                updated_users += 1
-
-        log.info(f'[userdb_update] Updated {updated_users} users, dispatched {events} events')
-
-    # helpers
     def get_raw_user(self, user_id):
         """Get a raw user object using the user's ID."""
         user_id = int(user_id)
-        users = self.cache['id->raw_user']
-        return users.get(user_id)
+        u = self.raw_users.get(user_id)
+        log.debug('[get:raw_user] %d -> %r', user_id, u)
+        return u
 
     def get_user(self, user_id):
         """Get a :class:`User` object using the user's ID."""
-        try:
-            user_id = int(user_id)
-        except:
-            return None
-        return self.cache['id->user'].get(user_id)
+        user_id = int(user_id)
+        u = get(self.users, id=user_id)
+        log.debug('[get:user] %d -> %r', user_id, u)
+        return u
 
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""
         raw_user = await self.user_coll.find_one({'email': email})
-
-        self.cache['id->raw_user'][raw_user['user_id']] = raw_user
-
-        if raw_user['user_id'] not in self.cache['id->user']:
-            self.cache['id->user'][raw_user['user_id']] = User(self, raw_user)
-
         return raw_user
 
     async def _user(self, token):
@@ -417,7 +386,6 @@ class LitecordServer:
             User ID tied to that token
         """
         user_id = str(user_id)
-
         userid_encoded = base64.urlsafe_b64encode(user_id.encode())
 
         raw_user = self.get_raw_user(user_id)
@@ -500,9 +468,7 @@ class LitecordServer:
 
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
-        log.debug(ws)
         url = f'ws://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
-        log.info('Returning %s', url)
         return url
 
     async def check_request(self, request) -> 'tuple(str, int)':
@@ -548,19 +514,21 @@ class LitecordServer:
         raw_user_list = await cursor.to_list(length=None)
         used_discrims = [raw_user['discriminator'] for raw_user in raw_user_list]
 
-        # only 8000 discrims per user
-        if len(used_discrims) >= 8000:
+        # only 9500 discrims per user
+        if len(used_discrims) >= 9500:
             return None
-
-        discrim = str(random_digits(4))
+        
+        discrim = await random_digits(4)
+        discrim = str(discrim)
 
         while True:
             try:
                 # list.index raises IndexError if the element isn't found
                 used_discrims.index(discrim)
-                discrim = str(random_digits(4))
+                discrim = await random_digits(4)
+                discrim = str(discrim)
             except ValueError:
-                log.info(f'[discrim] Generated discrim {discrim!r} for {username!r}')
+                log.info(f'[get:discrim] Generated discrim {discrim!r} for {username!r}')
                 return discrim
 
     async def make_counts(self) -> dict:
@@ -572,7 +540,7 @@ class LitecordServer:
             'presence_count': await self.presence.count_all(),
         }
 
-    def make_options_handler(self, method):
+    def make_options_handler(self, method) -> 'function':
         headers = {
             'Access-Control-Allow-Origin': 'http://127.0.0.1',
             'Access-Control-Allow-Methods': method,
@@ -685,9 +653,10 @@ class LitecordServer:
             self.add_get('version', self.h_get_version)
 
             t_end = time.monotonic()
-            delta = round((t_end - t_init) * 1000, 2)
+            delta = (t_end - t_init) * 1000
 
-            log.info(f"[server] Loaded in {delta}ms")
+            log.info('[load:server] Loaded in %.2fms', delta)
+
             self.good.set()
             return True
         except:

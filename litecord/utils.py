@@ -57,21 +57,8 @@ ERRNO_TO_HTTPERR = {
     40001: 403,
 }
 
-def strip_user_data(user):
-    """Remove unecessary fields from a raw user object"""
-    return {
-        'user_id': str(user['user_id']),
-        'username': user['username'],
-        'discriminator': str(user['discriminator']),
-        'avatar': user['avatar'],
-        'bot': user['bot'],
-        #'mfa_enabled': user['mfa_enabled'],
-        'verified': user['verified'],
-        'email': user['email'],
-    }
 
-
-def random_digits(n):
+async def random_digits(n):
     """Returns `n` random digits"""
     range_start = 10**(n-1)
     range_end = (10**n)-1

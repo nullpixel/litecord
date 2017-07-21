@@ -2,7 +2,7 @@ import logging
 import base64
 
 from aiohttp import web
-from ..utils import _err, _json, strip_user_data
+from ..utils import _err, _json
 
 log = logging.getLogger(__name__)
 

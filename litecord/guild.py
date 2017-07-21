@@ -307,7 +307,7 @@ class GuildManager:
         assert isinstance(guild, Guild)
         
         query = {'guild_id': guild.id}
-        raw_guild = await self.guild_coll.find_one()
+        raw_guild = await self.guild_coll.find_one(query)
         if raw_guild is None:
             log.info('[guild:reload] Guild not found, deleting from cache')
             try:
