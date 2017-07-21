@@ -126,6 +126,7 @@ class TextGuildChannel(BaseGuildChannel):
         super()._update(guild, raw)
         self.topic = raw['topic']
         self.pins = raw['pinned_ids']
+        self.nsfw = raw.get('nsfw', False)
 
     def get_message(self, message_id):
         """Get a single message from a channel."""
