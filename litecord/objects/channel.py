@@ -149,7 +149,7 @@ class TextGuildChannel(BaseGuildChannel):
         res = []
         cursor = self.server.message_coll.find({'channel_id': self.id}).sort('message_id')
 
-        for raw_message in reversed(await cursor.to_list(length=limit)):
+        async for raw_message in cursor:
             if len(res) > limit: break
             m_id = raw_message['message_id']
 
@@ -159,9 +159,9 @@ class TextGuildChannel(BaseGuildChannel):
             else:
                 m = Message(self.server, self, raw_message)
                 self.guild_man.messages[m_id] = m
-
                 res.append(m)
 
+        log.debug('[tx_chan:last_messages] Got %d messages', len(res))
         return res
 
     async def get_pins(self, limit=None):

@@ -60,6 +60,10 @@ def check_configuration(flags):
 def empty_ev_cache():
     """Return an empty event cache."""
     return {
+        'shard_id': 0,
+        'shard_count': 0,
+        'properties': None,
+
         'sent_seq': 0,
         'recv_seq': 0,
         'events': {},

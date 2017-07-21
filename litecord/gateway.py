@@ -434,8 +434,8 @@ class Connection(WebsocketConnection):
         self.server.add_connection(self.user.id, self)
         self.events = self.server.event_cache[self.session_id]
 
-        if self.sharded:
-            self.events['shard_id'] = self.shard_id
+        self.events['properties'] = self.properties
+        self.events['shard_id'] = self.shard_id
 
         # NOTE: Always set user presence before calculating the guild list!
         # If we set presence after sending READY, PresenceManager
@@ -615,18 +615,18 @@ class Connection(WebsocketConnection):
 
         log.info('[resume] Resuming a connection')
 
-        token = data.get('token')
-        session_id = data.get('session_id')
-        replay_seq = data.get('seq')
+        try:
+            token = data['token']
+            session_id = data['session_id']
+            replay_seq = data['seq']
+        except KeyError:
+            raise StopConnection(4001, 'Invalid resume payload')
 
-        if replay_seq is None or session_id is None or token is None:
-            raise StopConnection(4001, 'Invalid payload')
-
-        if session_id not in self.server.event_cache:
+        try:
+            event_data = self.server.event_cache[session_id]
+        except KeyError:
             log.warning('[resume] invalidated from session_id not found')
             await self.invalidate(False)
-
-        event_data = self.server.event_cache[session_id]
 
         user = await self.check_token(token)
         if user is None:
@@ -635,7 +635,6 @@ class Connection(WebsocketConnection):
 
         # man how can i resume from the future
         sent_seq = event_data['sent_seq']
-
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             await self.invalidate(True)
@@ -684,14 +683,23 @@ class Connection(WebsocketConnection):
         if len(presences) > 0:
             await self.dispatch('PRESENCES_REPLACE', presences)
 
-        # TODO: insert sharding
-
         self.user = user
-
-        self.token = token
         self.session_id = session_id
+
+        self.shard_id = event_data['shard_id']
+        self.shard_count = event_data['shard_count']
+        self.sharded = self.shard_count > 1
+
+        self.guild_ids = []
+        f = lambda g: self.guild_ids.append(g.id)
+
+        # we had to fill guild_ids, that is my way
+        res = (x for x in map(f, self.guild_man.yield_guilds(self.user.id)))
+
         self.request_counter = self.server.request_counter[self.session_id]
- 
+        self.token = token
+        self.properties = event_data['properties']
+
         self.events = self.server.event_cache[self.session_id]
         self.server.add_connection(self.user.id, self)
 
