@@ -263,5 +263,6 @@ class TextGuildChannel(BaseGuildChannel):
             'permission_overwrites': [o.as_json for o in self.perm_overwrites],
             'topic': self.topic,
             'last_message_id': str(self.last_message_id),
+            'nsfw': self.nsfw,
         }
 
