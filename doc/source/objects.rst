@@ -34,7 +34,7 @@ LitecordObject, Presence, User, Member, Channel, Guild, Invite, Message
     :members:
     :private-members:
 
-.. autoclass:: BaseGuildChanenl
+.. autoclass:: BaseGuildChannel
     :members:
     :private-members:
 
