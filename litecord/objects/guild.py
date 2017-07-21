@@ -329,7 +329,7 @@ class Guild(LitecordObject):
             'presences': self.presences,
         }
 
-        if self.owner.bot:
+        if self.owner.user.bot:
             d['application_id'] = self.owner.id
 
         return d
