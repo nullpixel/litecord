@@ -208,7 +208,7 @@ class Guild(LitecordObject):
         return [self.server.presence.get_presence(self.id, member.id).as_json \
             for member in self.online_members]
 
-    async def dispatch(self, evt_name, evt_data) -> int:
+    async def _dispatch(self, evt_name, evt_data) -> int:
         """Dispatch an event to all guild viewers.
 
         Parameters
@@ -236,6 +236,9 @@ class Guild(LitecordObject):
 
         log.debug(f'Dispatched {evt_name} to {dispatched}/{total} gulid viewers')
         return dispatched
+
+    async def dispatch(self, evt_name, evt_data):
+        return self.server.loop.create_task(self._dispatch(evt_name, evt_data))
 
     async def add_member(self, user):
         """Add a :class:`User` to a guild.

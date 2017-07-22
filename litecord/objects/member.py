@@ -83,7 +83,7 @@ class Member(LitecordObject):
         """Yield the user's connections."""
         return self.user.connections
 
-    async def dispatch(self, evt_name, evt_data):
+    async def _dispatch(self, evt_name, evt_data):
         """Dispatch an event to a member.
 
         Dispatches an event in the same way :py:meth:`User.dispatch` does.
@@ -105,6 +105,9 @@ class Member(LitecordObject):
             return await shard.dispatch(evt_name, evt_data)
         else:
             return await self.user.dispatch(evt_name, evt_data)
+
+    async def dispatch(self, evt_name, evt_data):
+        return self.server.loop.create_task(self._dispatch(evt_name, evt_data))
 
     @property
     def as_json(self):
