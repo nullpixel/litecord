@@ -216,11 +216,10 @@ class LitecordServer:
         except KeyError: return
 
         try:
-            # not identified
             user_id = conn.user.id
         except AttributeError: return
 
-        log.debug(f"Removing sid={session_id} from uid={user_id}")
+        log.debug('Removing sid=%s from uid=%d', session_id, user_id)
 
         ref = self.connections[user_id]
         for i, conn in enumerate(ref):

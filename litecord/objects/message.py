@@ -88,6 +88,9 @@ class Message(LitecordObject):
             self.edited_at = datetime.datetime.strptime(self.edited_timestamp, \
                 "%Y-%m-%dT%H:%M:%S.%f")
 
+    def __repr__(self):
+        return f'<Message id={self.id} pinned={self.pinned} author={self.author} guild={self.guild}>'
+
     def edit_content(self, new_content, timestamp=None):
         """Edit a message object"""
         if timestamp is None:
