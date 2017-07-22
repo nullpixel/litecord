@@ -12,7 +12,7 @@ import os
 import motor.motor_asyncio
 import itsdangerous
 from aiohttp import web
-from itsdangerous import Signer
+from itsdangerous import TimestampSigner
 
 import litecord.api as api
 from .basics import OP
@@ -419,7 +419,7 @@ class LitecordServer:
             log.debug(raw_user)
             raise Exception('Raw user is not a good one')
 
-        s = Signer(pwd_hash)
+        s = TimestampSigner(pwd_hash)
         return s.sign(userid_encoded).decode()
 
     async def token_find(self, token: str) -> int:
@@ -439,7 +439,7 @@ class LitecordServer:
 
         raw_user = self.get_raw_user(userid)
 
-        s = Signer(raw_user['password']['hash'])
+        s = TimestampSigner(raw_user['password']['hash'])
 
         try:
             userid_encoded_ft = s.unsign(token)
