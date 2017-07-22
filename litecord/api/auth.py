@@ -151,7 +151,7 @@ class AuthEndpoints:
 
         log.info(f"New user {new_user['username']}#{new_user['discriminator']}")
         await self.user_coll.insert_one(new_user)
-        await self.server.userdb_update()
+        await self.server.load_users()
 
         return _json({
             "code": 1,
