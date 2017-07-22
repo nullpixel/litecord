@@ -3,7 +3,7 @@ import logging
 from voluptuous import Schema, REMOVE_EXTRA, Optional
 from aiohttp import web
 
-from .snowflake import get_snowflake
+from ..snowflake import get_snowflake
 from ..utils import _err, _json, pwd_hash, get_random_salt
 from ..decorators import auth_route
 from ..enums import AppType
