@@ -57,6 +57,8 @@ def main():
     try:
         loop.run_until_complete(litecord.start_all(app))
         server = app.litecord_server
+        server.compliance()
+
         server.http_server = loop.run_until_complete(server.http_server)
         server.ws_server = loop.run_until_complete(server.ws_server)
         loop.create_task(litecord.server_sentry(server))

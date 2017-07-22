@@ -6,6 +6,8 @@ import subprocess
 import collections
 import base64
 import binascii
+import pathlib
+import os
 
 import motor.motor_asyncio
 import itsdangerous
@@ -627,6 +629,56 @@ class LitecordServer:
         for route in routes:
             _r.add_delete(route, route_handler)
             self.add_empty(route, 'DELETE')
+
+    def compliance(self):
+        """Measure compliance with the Server's routes"""
+
+        raw_data = ''
+        p = pathlib.Path(os.path.realpath(__file__))
+        folder = p.parents[0]
+        with open(f'{folder}/discord-endpoints.txt', 'r') as f:
+            raw_data = f.read()
+
+        methods = ('DELETE', 'GET', 'PATCH', 'POST', 'PUT', 'PUT/PATCH')
+        endpoints = []
+
+        for line in raw_data.split('\n'):
+            for method_find in methods:
+                method = line.find(method_find)
+                if method == -1:
+                    continue
+
+                name = line[:method].strip()
+                endpoint = line[method+len(method_find):].strip()
+
+                endpoints.append((name, method_find, endpoint))
+
+        routes = self.app.router.routes()
+        routes = list(routes)
+
+        # Yes, O(n²). I know that. Fuck you.
+        total, found = 0, 0
+        for epoint_name, epoint_method, epoint  in endpoints:
+            for route in routes:
+                if route.method != epoint_method:
+                    continue
+
+                r = route.resource
+                ri = r.get_info()
+                epoint = epoint.replace('.', '_')
+                if 'formatter' not in ri:
+                    continue
+
+                rf = ri['formatter']
+                rf = rf.replace('/api', '')
+                if epoint == rf:
+                    found += 1
+
+            total += 1
+
+        log.info('From %d endpoints, %d found, %.2f%% compliant', \
+            total, found, (found / total) * 100)
+        return
 
     async def init(self, app):
         """Initialize the server.

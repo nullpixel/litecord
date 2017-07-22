@@ -1,0 +1,87 @@
+Delete/Close Channel                   DELETE       /channels/{channel.id}
+Delete Message                         DELETE       /channels/{channel.id}/messages/{message.id}
+Delete All Reactions                   DELETE       /channels/{channel.id}/messages/{message.id}/reactions
+Delete Own Reaction                    DELETE       /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/@me
+Delete User Reaction                   DELETE       /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/{user.id}
+Delete Channel Permission              DELETE       /channels/{channel.id}/permissions/{overwrite.id}
+Delete Pinned Channel Message          DELETE       /channels/{channel.id}/pins/{message.id}
+Group DM Remove Recipient              DELETE       /channels/{channel.id}/recipients/{user.id}
+Delete Guild                           DELETE       /guilds/{guild.id}
+Remove Guild Ban                       DELETE       /guilds/{guild.id}/bans/{user.id}
+Delete Guild Integration               DELETE       /guilds/{guild.id}/integrations/{integration.id}
+Remove Guild Member                    DELETE       /guilds/{guild.id}/members/{user.id}
+Remove Guild Member Role               DELETE       /guilds/{guild.id}/members/{user.id}/roles/{role.id}
+Delete Guild Role                      DELETE       /guilds/{guild.id}/roles/{role.id}
+Delete Invite                          DELETE       /invites/{invite.code}
+Leave Guild                            DELETE       /users/@me/guilds/{guild.id}
+Delete Webhook                         DELETE       /webhooks/{webhook.id}
+Delete Webhook with Token              DELETE       /webhooks/{webhook.id}/{webhook.token}
+Get Channel                            GET          /channels/{channel.id}
+Get Channel Invites                    GET          /channels/{channel.id}/invites
+Get Channel Messages                   GET          /channels/{channel.id}/messages
+Get Channel Message                    GET          /channels/{channel.id}/messages/{message.id}
+Get Reactions                          GET          /channels/{channel.id}/messages/{message.id}/reactions/{emoji}
+Get Pinned Messages                    GET          /channels/{channel.id}/pins
+Get Channel Webhooks                   GET          /channels/{channel.id}/webhooks
+Get Gateway                            GET          /gateway
+Get Gateway Bot                        GET          /gateway/bot
+Get Guild                              GET          /guilds/{guild.id}
+Get Guild Bans                         GET          /guilds/{guild.id}/bans
+Get Guild Channels                     GET          /guilds/{guild.id}/channels
+Get Guild Embed                        GET          /guilds/{guild.id}/embed
+Get Guild Integrations                 GET          /guilds/{guild.id}/integrations
+Get Guild Invites                      GET          /guilds/{guild.id}/invites
+List Guild Members                     GET          /guilds/{guild.id}/members
+Get Guild Member                       GET          /guilds/{guild.id}/members/{user.id}
+Get Guild Prune Count                  GET          /guilds/{guild.id}/prune
+Get Guild Voice Regions                GET          /guilds/{guild.id}/regions
+Get Guild Roles                        GET          /guilds/{guild.id}/roles
+Get Guild Webhooks                     GET          /guilds/{guild.id}/webhooks
+Get Invite                             GET          /invites/{invite.code}
+Get Current Application Information    GET          /oauth2/applications/@me
+Get Current User                       GET          /users/@me
+Get User DMs                           GET          /users/@me/channels
+Get Users Connections                  GET          /users/@me/connections
+Get Current User Guilds                GET          /users/@me/guilds
+Get User                               GET          /users/{user.id}
+List Voice Regions                     GET          /voice/regions
+Get Webhook                            GET          /webhooks/{webhook.id}
+Get Webhook with Token                 GET          /webhooks/{webhook.id}/{webhook.token}
+Edit Message                           PATCH        /channels/{channel.id}/messages/{message.id}
+Modify Guild                           PATCH        /guilds/{guild.id}
+Modify Guild Channel Positions         PATCH        /guilds/{guild.id}/channels
+Modify Guild Embed                     PATCH        /guilds/{guild.id}/embed
+Modify Guild Integration               PATCH        /guilds/{guild.id}/integrations/{integration.id}
+Modify Current User's Nick             PATCH        /guilds/{guild.id}/members/@me/nick
+Modify Guild Member                    PATCH        /guilds/{guild.id}/members/{user.id}
+Modify Guild Role Positions            PATCH        /guilds/{guild.id}/roles
+Modify Guild Role                      PATCH        /guilds/{guild.id}/roles/{role.id}
+Modify Current User                    PATCH        /users/@me
+Modify Webhook                         PATCH        /webhooks/{webhook.id}
+Modify Webhook with Token              PATCH        /webhooks/{webhook.id}/{webhook.token}
+Create Channel Invite                  POST         /channels/{channel.id}/invites
+Create Message                         POST         /channels/{channel.id}/messages
+Bulk Delete Messages                   POST         /channels/{channel.id}/messages/bulk-delete
+Bulk Delete Messages (deprecated)      POST         /channels/{channel.id}/messages/bulk_delete
+Trigger Typing Indicator               POST         /channels/{channel.id}/typing
+Create Webhook                         POST         /channels/{channel.id}/webhooks
+Create Guild                           POST         /guilds
+Create Guild Channel                   POST         /guilds/{guild.id}/channels
+Create Guild Integration               POST         /guilds/{guild.id}/integrations
+Sync Guild Integration                 POST         /guilds/{guild.id}/integrations/{integration.id}/sync
+Begin Guild Prune                      POST         /guilds/{guild.id}/prune
+Create Guild Role                      POST         /guilds/{guild.id}/roles
+Accept Invite                          POST         /invites/{invite.code}
+Create DM                              POST         /users/@me/channels
+Create Group DM                        POST         /users/@me/channels
+Execute Webhook                        POST         /webhooks/{webhook.id}/{webhook.token}
+Execute GitHub-Compatible Webhook      POST         /webhooks/{webhook.id}/{webhook.token}/github
+Execute Slack-Compatible Webhook       POST         /webhooks/{webhook.id}/{webhook.token}/slack
+Create Reaction                        PUT          /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/@me
+Edit Channel Permissions               PUT          /channels/{channel.id}/permissions/{overwrite.id}
+Add Pinned Channel Message             PUT          /channels/{channel.id}/pins/{message.id}
+Group DM Add Recipient                 PUT          /channels/{channel.id}/recipients/{user.id}
+Create Guild Ban                       PUT          /guilds/{guild.id}/bans/{user.id}
+Add Guild Member                       PUT          /guilds/{guild.id}/members/{user.id}
+Add Guild Member Role                  PUT          /guilds/{guild.id}/members/{user.id}/roles/{role.id}
+Modify Channel                         PUT/PATCH    /channels/{channel.id}
