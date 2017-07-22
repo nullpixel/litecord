@@ -632,17 +632,11 @@ class LitecordServer:
 
     def compliance(self):
         """Measure compliance with the Server's routes"""
-
-        raw_data = ''
-        p = pathlib.Path(os.path.realpath(__file__))
-        folder = p.parents[0]
-        with open(f'{folder}/discord-endpoints.txt', 'r') as f:
-            raw_data = f.read()
-
         methods = ('DELETE', 'GET', 'PATCH', 'POST', 'PUT', 'PUT/PATCH')
         endpoints = []
 
-        for line in raw_data.split('\n'):
+        raw = (pathlib.Path(__file__).resolve().parents[0] / 'discord-endpoints.txt').read_text()
+        for line in raw.split('\n'):
             for method_find in methods:
                 method = line.find(method_find)
                 if method == -1:
