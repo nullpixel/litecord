@@ -2,6 +2,7 @@ import datetime
 import logging
 
 from .base import LitecordObject
+from .member import Member
 from ..snowflake import snowflake_time
 from ..utils import dt_to_json
 
@@ -63,7 +64,6 @@ class Message(LitecordObject):
         super().__init__(server)
         self._raw = raw
 
-        log.debug(raw)
         self.id = int(raw['message_id'])
         self.author_id = int(raw['author_id'])
         self.channel_id = int(raw['channel_id'])
@@ -74,6 +74,8 @@ class Message(LitecordObject):
         self._update(channel, author, raw)
 
     def _update(self, channel, author, raw):
+        assert isinstance(author, Member)
+
         self.channel = channel
         self.author = author
         self.guild = channel.guild
@@ -133,7 +135,7 @@ class Message(LitecordObject):
             'id': str(self.id),
             'channel_id': str(self.channel_id),
 
-            'author': self.author.as_json,
+            'author': self.author.user.as_json,
             'content': self.content,
             'timestamp': dt_to_json(self.created_at),
             'edited_timestamp': dt_to_json(self.edited_at),

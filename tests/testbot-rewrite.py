@@ -14,6 +14,11 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     #await client.ws.close(4000)
     #await asyncio.sleep(3)
+    chan = client.get_channel(150501171201)
+    print(chan)
+
+    async for message in chan.history():
+        print(message)
 
 @client.event
 async def on_message(message):

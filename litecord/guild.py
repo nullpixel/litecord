@@ -202,7 +202,7 @@ class GuildManager:
             message = self.messages[raw_message['message_id']]
             yield message
 
-    async def new_message(self, channel, author, raw):
+    async def new_message(self, channel, author_user, raw):
         """Create a new message and put it in the database.
 
         Dispatches MESSAGE_CREATE events to respective clients.
@@ -222,6 +222,7 @@ class GuildManager:
             The created message.
         """
 
+        author = channel.guild.members.get(author_user.id)
         message = Message(self.server, channel, author, raw)
         result = await self.message_coll.insert_one(raw)
         self.messages.append(message)
