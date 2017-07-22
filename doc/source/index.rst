@@ -8,16 +8,16 @@ Welcome to Litecord
 
 .. _Atomic-Discord: https://git.memework.org/heatingdevice/atomic-discord
 
-Litecord is an implementation of Discord's backend.
+Litecord is a server that (tries) to comply with Discord's Gateway and REST APIs.
 
 **DISCLAIMER: LITECORD IS NOT DISCORD. WE DON'T PLAN TO BE 100% DISCORD.
 THIS IS AN EXPERIMENT IN LEARNING HOW DISCORD WORKS. PLS DON'T SUE US**
 
 Features:
  - Websocket + REST API
- - MongoDB for storage (is that an actual feature? 🤔)
- - Presence management
+ - MongoDB for storage
  - Admin users and routes
+ - Selfbot and Bot User support
 
 Limitations:
  - You can't use the official discord client with it, use Atomic-Discord_ instead.
