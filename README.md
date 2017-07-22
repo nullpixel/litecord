@@ -1,5 +1,6 @@
 # Litecord
-An implementation of Discord's backend.
+An open-source, (tries to be) functional implementation of a server that follows
+the Discord API.
 
 This has real shitty code, good luck
 

@@ -44,7 +44,6 @@ BOILERPLATES = {
 
 API_PREFIXES = [
     '/api',
-    '/api/v5',
     '/api/v6',
     '/api/v7'
 ]
