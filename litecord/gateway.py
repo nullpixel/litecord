@@ -668,6 +668,9 @@ class Connection(WebsocketConnection):
                     presences.append(evt.get('d'))
                 else:
                     await self.send(evt)
+        except:
+            log.error('Error while resuming', exc_info=True)
+            await self.invalidate(True)
         finally:
             self.dispatch_lock.release()
 
@@ -705,7 +708,6 @@ class Connection(WebsocketConnection):
         self.identified = True
 
         await self.presence.global_update(self)
-
         await self.dispatch('RESUMED', {
             '_trace': self.get_identifiers('resume')
         })
