@@ -139,13 +139,15 @@ class LitecordServer:
         self.guild_coll = self.litecord_db['gulids']
         self.channel_coll = self.litecord_db['channels']
         self.role_coll = self.litecord_db['roles']
-        self.token_coll = self.litecord_db['tokens']
         self.invite_coll = self.litecord_db['invites']
         self.member_coll = self.litecord_db['members']
         self.presence_coll = self.litecord_db['presences']
+
         self.settings_coll = self.litecord_db['settings']
         self.relations_coll = self.litecord_db['relations']
+
         self.app_coll = self.litecord_db['applications']
+        self.webhook_coll = self.litecord_db['webhooks']
 
         # cache for dispatched packets
         # used for resuming
@@ -726,6 +728,7 @@ class LitecordServer:
             self.admins_endpoint = api.AdminEndpoints(self)
             self.auth_endpoint = api.AuthEndpoints(self)
             self.voice_endpoint = api.VoiceEndpoint(self)
+            self.webhook_endp = api.WebhookEndpoints(self)
 
             self.add_get('version', self.h_get_version)
 
