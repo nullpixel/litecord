@@ -246,12 +246,12 @@ class AuthEndpoints:
         if not authorize:
             return _err('401: Unauthorized')
 
-        inviter = guild.members.get(user.id)
-        if not inviter.has(Permissions.MANAGE_SERVER):
-            return _err('401: Not enough permissions')
+        #inviter = guild.members.get(user.id)
+        #if not inviter.has(Permissions.MANAGE_SERVER):
+        #    return _err('401: Not enough permissions')
 
         bot_user = self.get_user(app.id)
-        #bot_role = await guild.add_role(bot_user.name, bot_perm, managed=True)
+        #bot_role = await guild.create_role(bot_user.name, bot_perm, managed=True)
         bot_member = await guild.add_member(bot_user)
         #await bot_member.add_role(bot_member, bot_role)
         return web.Response(status=200, text='authorized')

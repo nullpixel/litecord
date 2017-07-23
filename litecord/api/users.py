@@ -24,7 +24,12 @@ class UsersEndpoint:
         self.server.add_patch('users/@me', self.h_patch_me)
         self.server.add_get('users/@me/settings', self.h_get_me_settings)
         self.server.add_get('users/@me/guilds', self.h_users_me_guild)
-        self.server.add_delete('api/users/@me/guilds/{guild_id}', self.h_leave_guild)
+
+        self.server.add_delete('users/@me/guilds/{guild_id}', self.h_leave_guild)
+        
+        # dm when
+        #self.server.add_get('users/@me/channels', self.h_get_dm)
+        #self.server.add_post('users/@me/channels', self.h_open_dm)
 
     @auth_route
     async def h_users(self, request, user):
@@ -58,10 +63,7 @@ class UsersEndpoint:
         Returns the new user object.
         """
 
-        try:
-            payload = await request.json()
-        except:
-            return _err("error parsing")
+        payload = await request.json()
 
         new_raw_user = {}
 
@@ -74,7 +76,7 @@ class UsersEndpoint:
         new_avatar_hash = await self.server.images.avatar_register(payload.get('avatar'))
         new_raw_user['avatar'] = new_avatar_hash or user._data['avatar']
 
-        await self.server.user_db.update_one({'id': str(user.id)}, {'$set': new_raw_user})
+        await self.server.user_db.update_one({'user_id': str(user.id)}, {'$set': new_raw_user})
         await self.server.userdb_update()
 
         return _json(user.as_json)
@@ -96,8 +98,7 @@ class UsersEndpoint:
         TODO: before, after, limit parameters
         """
 
-        user_guilds = [m.user_guild for m in user.members]
-        return _json(user_guilds)
+        return _json([g.as_user(user.id) for g in user.guilds])
 
     @auth_route
     async def h_leave_guild(self, request, user):

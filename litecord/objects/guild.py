@@ -346,3 +346,12 @@ class Guild(LitecordObject):
             'splash': self.icons['splash'],
         }
 
+    def user_guild(self, uid):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'icon': self.icons['icon'],
+            'owner': self.owner_id == uid,
+            'permissions': self.members.get(uid).perm,
+        }
+
