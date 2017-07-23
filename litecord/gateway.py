@@ -637,7 +637,6 @@ class Connection(WebsocketConnection):
         sent_seq = event_data['sent_seq']
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
-            await self.invalidate(True)
             raise StopConnection(4007, 'Invalid sequence')
 
         # if the session lost more than RESUME_MAX_EVENTS
