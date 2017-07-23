@@ -5,18 +5,9 @@ from .base import LitecordObject
 from .member import Member
 from ..snowflake import snowflake_time
 from ..utils import dt_to_json
+from ..enums import MessageType
 
 log = logging.getLogger(__name__)
-
-class MessageTypes:
-    DEFAULT = 0
-    RECIPIENT_ADD = 1
-    RECIPIENT_REMOVE = 2
-    CALL = 3
-    CHANNEL_NAME_CHANGE = 4
-    CHANNEL_ICON_CHANGE = 5
-    CHANNEL_PINNED_MESSAGE = 6
-    GUILD_MEMBER_JOIN = 7
 
 
 class Message(LitecordObject):
@@ -67,7 +58,7 @@ class Message(LitecordObject):
         self.id = int(raw['message_id'])
         self.author_id = int(raw['author_id'])
         self.channel_id = int(raw['channel_id'])
-        self.type = raw.get('type', MessageTypes.DEFAULT)
+        self.type = raw.get('type', MessageType.DEFAULT)
         self.edited_at = None
         self.embeds = []
 
