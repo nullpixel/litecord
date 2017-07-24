@@ -377,7 +377,7 @@ class GuildsEndpoint:
             return _err(errno=10004)
 
         payload = await request.json()
-        raw_channel = self.channel_create_schema(_payload)
+        raw_channel = self.channel_create_schema(payload)
 
         raw_channel['type'] = raw_channel.get('type', 'text')
         if raw_channel['type'] == 'voice':
