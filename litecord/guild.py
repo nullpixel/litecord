@@ -808,6 +808,7 @@ class GuildManager:
 
         raw_channel = {**payload, **{
             'channel_id': get_snowflake(),
+            'guild_id': guild.id,
             'topic': '',
             'position': len(guild.channels) + 1
         }}
@@ -815,7 +816,7 @@ class GuildManager:
         result = await self.channel_coll.insert_one(raw_channel)
 
         # I'm proud of this stuff.
-        guild._raw['channel_ids'].append(raw_channel['id'])
+        guild._raw['channel_ids'].append(raw_channel['channel_id'])
 
         result = await self.guild_coll.update_one({'guild_id': guild.id}, \
             {'$set': {'channel_ids': guild._raw['channel_ids']}})

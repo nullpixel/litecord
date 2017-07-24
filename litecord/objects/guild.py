@@ -78,6 +78,7 @@ class Guild(LitecordObject):
         self._raw = raw
         self.id = int(raw['guild_id'])
         self.created_at = self.to_timestamp(self.id)
+        self._needs_update = False
 
         self.members = {}
         self.roles = {}
@@ -91,8 +92,15 @@ class Guild(LitecordObject):
         self._from_raw(raw)
 
     def _update_caches(self, raw):
-        for channel_id in self.channel_ids:
+        for channel_id in list(self.channel_ids):
             channel = self.guild_man.get_channel(channel_id)
+
+            if channel is None:
+                log.info('Channel %d not found, requesting update', channel_id)
+                self.channel_ids.remove(channel_id)
+                self._needs_update = True
+                continue
+
             channel.guild = self
             self.channels[channel.id] = channel
 
@@ -110,8 +118,15 @@ class Guild(LitecordObject):
             member = Member(self.server, self, user, raw_member)
             self.members[member.id] = member
         
-        for role_id in self.role_ids:
+        for role_id in list(self.role_ids):
             role = self.guild_man.get_role(role_id)
+            
+            if role is None:
+                log.info('Role %d not found, requesting update', role_id)
+                self.role_ids.remove(role_id)
+                self._needs_update = True
+                continue
+            
             role.guild = self
             self.roles[role.id] = role
 

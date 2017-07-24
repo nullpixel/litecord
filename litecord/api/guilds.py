@@ -4,6 +4,7 @@ from voluptuous import Schema, All, Any, Length, Optional, REMOVE_EXTRA
 from aiohttp import web
 from ..utils import _err, _json
 from ..decorators import auth_route
+from ..enums import ChannelType
 
 log = logging.getLogger(__name__)
 
@@ -380,9 +381,16 @@ class GuildsEndpoint:
         raw_channel = self.channel_create_schema(payload)
 
         raw_channel['type'] = raw_channel.get('type', 'text')
-        if raw_channel['type'] == 'voice':
+        t = raw_channel['type']
+        if t == 'voice':
             raw_channel['bitrate'] = raw_channel.get('bitrate', 69)
             raw_channel['user_limit'] = raw_channel.get('user_limit', 0)
+
+        t = raw_channel.get('type')
+        if t == 'text':
+            raw_channel['type'] = ChannelType.GUILD_TEXT
+        elif t == 'voice':
+            raw_channel['type'] = ChannelType.GUILD_VOICE
 
         raw_channel['permission_overwrites'] = raw_channel.get('permission_overwrites', [])
 
