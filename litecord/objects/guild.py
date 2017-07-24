@@ -89,7 +89,7 @@ class Guild(LitecordObject):
         self.emojis = [] 
 
         self._viewers = []
-        self._from_raw(raw)
+        self._update(raw)
 
     def _update_caches(self, raw):
         for channel_id in list(self.channel_ids):
@@ -130,7 +130,7 @@ class Guild(LitecordObject):
             role.guild = self
             self.roles[role.id] = role
 
-    def _from_raw(self, raw):
+    def _update(self, raw):
         self.name = raw['name']
         self.icons['icon'] = raw['icon']
         self.owner_id = int(raw['owner_id'])

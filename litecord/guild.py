@@ -806,11 +806,22 @@ class GuildManager:
         if payload['type'] not in ['text', 'voice']:
             raise Exception('Invalid channel type')
 
+        t = payload.get('type')
+        if t == 'text':
+            payload['type'] = ChannelType.GUILD_TEXT
+        elif t == 'voice':
+            payload['type'] = ChannelType.GUILD_VOICE
+
         raw_channel = {**payload, **{
             'channel_id': get_snowflake(),
             'guild_id': guild.id,
+
+            'position': len(guild.channels) + 1,
+
+            # text channel specific
             'topic': '',
-            'position': len(guild.channels) + 1
+            'pinned_ids': [],
+            'nsfw': False,
         }}
 
         result = await self.channel_coll.insert_one(raw_channel)
@@ -822,7 +833,12 @@ class GuildManager:
             {'$set': {'channel_ids': guild._raw['channel_ids']}})
         log.info('Updated %d guilds', result.modified_count)
 
-        channel = Channel(self.server, guild, raw_channel)
+        ch_type = raw_channel['type']
+        if ch_type == ChannelType.GUILD_TEXT:
+            channel = TextGuildChannel(self.server, raw_channel, guild)
+        elif ch_type == ChannelType.GUILD_VOICE:
+            channel = VoiceGuildChannel(self.server, raw_channel, guild)
+
         self.channels.append(channel)
 
         guild = await self.reload_guild(guild)
@@ -1157,6 +1173,11 @@ class GuildManager:
                 log.debug('Inserting raw member gid=%r uid=%r', guild_id, user_id)
 
             guild = Guild(self.server, raw_guild)
+            if guild._needs_update:
+                r = await self.guild_coll.update_one({'guild_id': guild.id}, \
+                    {'$set': guild._raw})
+                log.info('Updated %d from guild request', r.modified_count)
+
             self.guilds.append(guild)
 
             guild_count += 1
@@ -1185,8 +1206,18 @@ class GuildManager:
         cursor = self.message_coll.find().sort('message_id')
         message_count = 0
 
-        for raw_message in reversed(await cursor.to_list(length=200)):
+        async for raw_message in cursor:
             channel = self.get_channel(raw_message['channel_id'])
+            if channel is None:
+                log.info('mid=%d has no channel cid=%d found', \
+                    raw_message['message_id'], raw_message['channel_id'])
+
+                # We delete all messages referencing the non-existant channel
+                # to be faster than deleting all per ID
+                r = await self.message_coll.delete_many({'channel_id': raw_message['channel_id']})
+                log.info('Deleted %d messages from channel not found', r.deleted_count)
+                continue
+
             author = channel.guild.members.get(raw_message['author_id'])
 
             m = Message(self.server, channel, author, raw_message)

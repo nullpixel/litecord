@@ -20,6 +20,7 @@ class ChannelsEndpoint:
     """Handle channel/message related endpoints."""
     def __init__(self, server):
         self.server = server
+        self.guild_man = server.guild_man
 
         self.channel_edit_base = Schema({
             'name': All(str, Length(min=2, max=100)),
@@ -67,7 +68,7 @@ class ChannelsEndpoint:
 
         channel_id = request.match_info['channel_id']
 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
 
@@ -88,7 +89,7 @@ class ChannelsEndpoint:
 
         channel_id = request.match_info['channel_id']
 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
 
@@ -107,7 +108,7 @@ class ChannelsEndpoint:
         """
 
         channel_id = request.match_info['channel_id']
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
 
         if channel is None:
             return _err(errno=10003)
@@ -137,7 +138,7 @@ class ChannelsEndpoint:
             'content': content,
         }
 
-        new_message = await self.server.guild_man.new_message(channel, user, _data)
+        new_message = await self.guild_man.new_message(channel, user, _data)
         return _json(new_message.as_json)
 
     @auth_route
@@ -150,7 +151,7 @@ class ChannelsEndpoint:
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
 
         if channel is None:
             return _err(errno=10003)
@@ -172,7 +173,7 @@ class ChannelsEndpoint:
         """
 
         channel_id = request.match_info['channel_id'] 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
 
         if channel is None:
             return _err(errno=10003)
@@ -228,7 +229,7 @@ class ChannelsEndpoint:
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
 
         if channel is None:
             return _err(errno=10003)
@@ -243,7 +244,7 @@ class ChannelsEndpoint:
         if user.id != message.author.id:
             return _err(errno=40001)
 
-        await self.server.guild_man.delete_message(message)
+        await self.guild_man.delete_message(message)
         return web.Response(status=204)
 
     @auth_route
@@ -256,7 +257,7 @@ class ChannelsEndpoint:
         channel_id = request.match_info['channel_id']
         message_id = request.match_info['message_id']
 
-        channel = self.server.guild_man.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
 
         if channel is None:
             return _err(errno=10003)
@@ -283,7 +284,7 @@ class ChannelsEndpoint:
         if _data['content'] is None:
             return _err('Erroneous payload')
 
-        await self.server.guild_man.edit_message(message, _data)
+        await self.guild_man.edit_message(message, _data)
         return _json(message.as_json)
 
     @auth_route
@@ -294,7 +295,7 @@ class ChannelsEndpoint:
         Returns 204 empty response on success, fires mutiple MESSAGE_DELETEs.
         """
         channel_id = request.match_info['channel_id']
-        channel = self.server.get_channel(channel_id)
+        channel = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
 
@@ -327,7 +328,7 @@ class ChannelsEndpoint:
         Edit a channel. Receives a JSON payload.
         """
         channel_id = request.match_info['channel_id']
-        chan = self.server.get_channel(channel_id)
+        chan = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
         
@@ -353,7 +354,7 @@ class ChannelsEndpoint:
         Fires CHANNEL_DELETE events to respective clients.
         """
         channel_id = request.match_info['channel_id']
-        chan = self.server.get_channel(channel_id)
+        chan = self.guild_man.get_channel(channel_id)
         if channel is None:
             return _err(errno=10003)
 

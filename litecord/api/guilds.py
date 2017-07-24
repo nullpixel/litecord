@@ -386,12 +386,6 @@ class GuildsEndpoint:
             raw_channel['bitrate'] = raw_channel.get('bitrate', 69)
             raw_channel['user_limit'] = raw_channel.get('user_limit', 0)
 
-        t = raw_channel.get('type')
-        if t == 'text':
-            raw_channel['type'] = ChannelType.GUILD_TEXT
-        elif t == 'voice':
-            raw_channel['type'] = ChannelType.GUILD_VOICE
-
         raw_channel['permission_overwrites'] = raw_channel.get('permission_overwrites', [])
 
         channel = await guild.create_channel(raw_channel)
