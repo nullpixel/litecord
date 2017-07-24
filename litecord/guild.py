@@ -807,13 +807,12 @@ class GuildManager:
             raise Exception('Invalid channel type')
 
         raw_channel = {**payload, **{
-            'id': get_snowflake(),
+            'channel_id': get_snowflake(),
             'topic': '',
             'position': len(guild.channels) + 1
         }}
 
         result = await self.channel_coll.insert_one(raw_channel)
-        log.info('Added %d channels', result.inserted_count)
 
         # I'm proud of this stuff.
         guild._raw['channel_ids'].append(raw_channel['id'])

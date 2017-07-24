@@ -8,6 +8,7 @@ import base64
 import binascii
 import pathlib
 import os
+import pprint
 
 import motor.motor_asyncio
 import itsdangerous
@@ -667,7 +668,12 @@ class LitecordServer:
         # Yes, O(n²). I know that. Fuck you.
         found = []
         for epoint_name, epoint_method, epoint in endpoints:
+            _flag = False
+
             for route in routes:
+                if _flag:
+                    continue
+
                 if route.method != epoint_method:
                     continue
 
@@ -685,6 +691,10 @@ class LitecordServer:
                 if epoint == rf:
                     found_scopes[scope] += 1
                     found.append(rf)
+                    _flag = True
+
+        not_found = set([t[2] for t in endpoints]) ^ set(found)
+        log.debug('Endpoints not found: %s', pprint.pformat(not_found))
 
         for scope, count in scopes.most_common():
             found_count = found_scopes[scope]
