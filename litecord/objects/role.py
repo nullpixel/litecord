@@ -1,5 +1,7 @@
+import discord
 from .base import LitecordObject
 
+Permissions = discord.Permissions
 
 class Role(LitecordObject):
     """A role object.
@@ -57,8 +59,11 @@ class Role(LitecordObject):
         self.color = rg('color', 0)
         self.hoist = rg('hoisted', False)
         self.position = rg('position', 0)
-        self.permissions = rg('permissions', 0)
-        self.managed = False
+
+        self.permissions = Permissions(rg('permissions', 0))
+        self.perms = self.permissions
+
+        self.managed = rg('managed', False)
         self.mentionable = rg('mentionable', False)
 
     def __repr__(self):
