@@ -202,7 +202,7 @@ class Presence:
             # we are lazy, so we send the same user object you'd receive in other normal events :^)
             'user': self.user.as_json,
             'guild_id': str(self.guild.id),
-            'roles': [],
+            'roles': [r.id for r in self.guild.members.get(self.user.id).roles],
             'game': {
                 'type': self.game.get('type'),
                 'name': self.game.get('name'),

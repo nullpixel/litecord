@@ -32,8 +32,10 @@ class Role(LitecordObject):
         in the member list.
     position: int
         Role's position.
-    permissions: int
-        Role's permission number.
+    permissions: ``discord.Permissions``
+        Role permissions.
+    perms: ``discord.Permissions``
+        Same as :meth:`Role.permissions`
     managed: bool
         If this role is managed by a bot application, should be ``False``.
     mentionable: bool
@@ -82,7 +84,7 @@ class Role(LitecordObject):
             'color': self.color,
             'hoist': self.hoist,
             'position': self.position,
-            'permissions': self.permissions,
+            'permissions': self.permissions.value,
             'managed': self.managed,
             'mentionable': self.mentionable,
         }
