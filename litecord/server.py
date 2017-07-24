@@ -119,6 +119,7 @@ class LitecordServer:
         self.flags = flags
         check_configuration(flags)
         self.accept_clients = True
+        self.endpoints = 0
         self.good = asyncio.Event()
 
         self.rest_ratelimits = {}
@@ -595,6 +596,7 @@ class LitecordServer:
     def add_get(self, route_path, route_handler):
         _r = self.app.router
 
+        self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_get(route, route_handler)
@@ -603,6 +605,7 @@ class LitecordServer:
     def add_post(self, route_path, route_handler):
         _r = self.app.router
 
+        self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_post(route, route_handler)
@@ -611,6 +614,7 @@ class LitecordServer:
     def add_put(self, route_path, route_handler):
         _r = self.app.router
 
+        self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_put(route, route_handler)
@@ -619,6 +623,7 @@ class LitecordServer:
     def add_patch(self, route_path, route_handler):
         _r = self.app.router
 
+        self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_patch(route, route_handler)
@@ -627,6 +632,7 @@ class LitecordServer:
     def add_delete(self, route_path, route_handler):
         _r = self.app.router
 
+        self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
         for route in routes:
             _r.add_delete(route, route_handler)
@@ -636,6 +642,9 @@ class LitecordServer:
         """Measure compliance with the Server's routes"""
         methods = ('DELETE', 'GET', 'PATCH', 'POST', 'PUT', 'PUT/PATCH')
         endpoints = []
+
+        scopes = collections.Counter()
+        found_scopes = collections.Counter()
 
         raw = (pathlib.Path(__file__).resolve().parents[0] / 'discord-endpoints.txt').read_text()
         for line in raw.split('\n'):
@@ -649,31 +658,44 @@ class LitecordServer:
 
                 endpoints.append((name, method_find, endpoint))
 
+                scope = endpoint.split('/')[1]
+                scopes[scope] += 1
+
         routes = self.app.router.routes()
         routes = list(routes)
 
         # Yes, O(n²). I know that. Fuck you.
-        total, found = 0, 0
-        for epoint_name, epoint_method, epoint  in endpoints:
+        found = []
+        for epoint_name, epoint_method, epoint in endpoints:
             for route in routes:
                 if route.method != epoint_method:
                     continue
 
                 r = route.resource
                 ri = r.get_info()
-                epoint = epoint.replace('.', '_')
                 if 'formatter' not in ri:
                     continue
 
+                epoint = epoint.replace('.', '_')
                 rf = ri['formatter']
                 rf = rf.replace('/api', '')
+
+                scope = rf.split('/')[1]
+
                 if epoint == rf:
-                    found += 1
+                    found_scopes[scope] += 1
+                    found.append(rf)
 
-            total += 1
+        for scope, count in scopes.most_common():
+            found_count = found_scopes[scope]
 
-        log.info('From %d endpoints, %d found, %.2f%% compliant', \
-            total, found, (found / total) * 100)
+            log.info('scope %s: %d total, %d found', \
+                scope, count, found_count)
+
+        total = len(endpoints)
+        found_count = len(found)
+        log.info('From %d listed endpoints, %d total, %d found, %.2f%% compliant', \
+            total, self.endpoints, found_count, (found_count / total) * 100)
         return
 
     async def init(self, app):
@@ -720,14 +742,14 @@ class LitecordServer:
 
             log.debug('[init] endpoints')
             self.gw_endpoint = api.GatewayEndpoint(self)
-            self.users_endpoint = api.UsersEndpoint(self)
-            self.guilds_endpoint = api.guilds.GuildsEndpoint(self)
-            self.channels_endpoint = api.ChannelsEndpoint(self)
-            self.invites_endpoint = api.InvitesEndpoint(self)
-            self.images_endpoint = api.ImageEndpoint(self)
-            self.admins_endpoint = api.AdminEndpoints(self)
-            self.auth_endpoint = api.AuthEndpoints(self)
-            self.voice_endpoint = api.VoiceEndpoint(self)
+            self.users_endp = api.UsersEndpoint(self)
+            self.guilds_endp = api.guilds.GuildsEndpoint(self)
+            self.channels_endp = api.ChannelsEndpoint(self)
+            self.invites_endp = api.InvitesEndpoint(self)
+            self.images_endp = api.ImageEndpoint(self)
+            self.admins_endp = api.AdminEndpoints(self)
+            self.auth_endp = api.AuthEndpoints(self)
+            self.voice_endp = api.VoiceEndpoint(self)
             self.webhook_endp = api.WebhookEndpoints(self)
 
             self.add_get('version', self.h_get_version)

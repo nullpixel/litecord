@@ -84,4 +84,4 @@ Group DM Add Recipient                 PUT          /channels/{channel.id}/recip
 Create Guild Ban                       PUT          /guilds/{guild.id}/bans/{user.id}
 Add Guild Member                       PUT          /guilds/{guild.id}/members/{user.id}
 Add Guild Member Role                  PUT          /guilds/{guild.id}/members/{user.id}/roles/{role.id}
-Modify Channel                         PUT/PATCH    /channels/{channel.id}
+Modify Channel                         PATCH        /channels/{channel.id}
