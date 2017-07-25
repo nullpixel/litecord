@@ -1,4 +1,4 @@
-.. currentmodule:: litecord
+.. currentmodule:: litecord.enums
 
 ``LitecordServer`` object
 ==========================
