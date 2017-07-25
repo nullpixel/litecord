@@ -24,6 +24,11 @@ class GatewayEndpoint:
         self.server.add_get('gateway/bot', self.h_gateway_bot)
 
     async def h_gateway(self, request):
+        """`GET:/gateway`.
+        
+        Get the gateway URL.
+        This endpoint doesn't require authentication.
+        """
         if not self.server.good.is_set():
             return self.gw_starting()
 
@@ -35,6 +40,13 @@ class GatewayEndpoint:
 
     @auth_route
     async def h_gateway_bot(self, request, user):
+        """`GET:/gateway/bot`.
+        
+        Get the gateway URL and a recommended number of shards
+        to start with.
+
+        This endpoint requires authentication with a bot token.
+        """
         if not self.server.good.is_set():
             return self.gw_starting()
 
