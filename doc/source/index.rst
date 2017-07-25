@@ -8,23 +8,28 @@ Welcome to Litecord
 
 .. _Atomic-Discord: https://git.memework.org/heatingdevice/atomic-discord
 
-Litecord is a server that (tries) to comply with Discord's Gateway and REST APIs.
+Litecord is an async server that (tries) to comply with Discord's Gateway and REST APIs.
 
 **DISCLAIMER: LITECORD IS NOT DISCORD. WE DON'T PLAN TO BE 100% DISCORD.
 THIS IS AN EXPERIMENT IN LEARNING HOW DISCORD WORKS. PLS DON'T SUE US**
 
 Features:
- - Websocket + REST API
+ - Implemented APIs
+   - REST (30% implemented)
+    - OAuth2, Bearer tokens (0% implemented)
+   - Gateway (90% implemented)
  - MongoDB for storage
- - Admin users and routes
- - Selfbot and Bot User support
+ - Admin users for server operation in runtime
 
 Limitations:
- - You can't use the official discord client with it, use Atomic-Discord_ instead.
- - No module reloading.
- - Not very good code, expect the unexpected when running your server or accessing one.
- - Voice doesn't work nor is planned to be implemented into Litecord.
- - Litecord is made using Python and it wasn't made to be resilient, don't DDoS a Litecord server
+ - Use the Atomic-Discord_ client to access a litecord server.
+   - It isn't recommended to use the official client, because that requires
+     modification to the client source code, which is against Discord's ToS. don't do it
+
+ - No hot reloading or whatever you call it.
+ - Don't expect good code, expect the unexpected when running your server or accessing one.
+ - A bare voice implementation is planned, but no "actual" working voice is planned.
+ - Litecord is made using Python and it wasn't designed to be resilient, **don't DDoS a Litecord server**
  - Ratelimits doesn't exist, yet.
 
 .. toctree::
