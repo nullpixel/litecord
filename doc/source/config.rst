@@ -15,7 +15,7 @@ You can see an example configuration file at ``litecord_config.json``.
  - ``"ratelimits"``
    - Defines how Litecord will handle ratelimitng
      - If they are enabled, and what rate of requests will be allowed on them
-     - Currently, there isn't a way to define the specific ratelimits(like the one on `IDENTIFY` or `PRESENCE_UPDATE`).
+     - Currently, there isn't a way to define the specific ratelimits(like the ones in `IDENTIFY` and `PRESENCE_UPDATE`).
  - ``"boilerplate.update"``
    - Says if Litecord will overwrite existing user/guild data with the boilerplate user/guild data.
 
