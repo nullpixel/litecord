@@ -1,6 +1,6 @@
 .. currentmodule:: litecord.enums
 
-``LitecordServer`` object
+Enums
 ==========================
 
 .. autoclass:: AppType
