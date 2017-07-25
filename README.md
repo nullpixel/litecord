@@ -23,8 +23,8 @@ cd litecord
 
 # Create a virtual enviroment and install dependencies in it
 # Make sure your python is 3.6+
-python3 -m venv py_litecord/
-py_litecord/bin/python3 -m pip install -r requirements.txt
+python3 -m venv env/
+env/bin/python3 -m pip install -r requirements.txt
 ```
 
 Then you just run `./run_litecord.sh`, simple.
@@ -66,5 +66,5 @@ That's it! Just make sure to restart `litecord.py` when you're done!
  * `/utils` has utilities to use with a litecord server.
  * `/docs` has documentation on how the server actually does its stuff.
  * `/boilerplate_data`, [read this](https://git.memework.org/lnmds/litecord/src/master/boilerplate_data/README.md)
- * Depending on your installation, you might have a `/py_litecord` directory,
+ * Depending on your installation, you might have a `/env` directory,
  **DON'T MESS WITH IT.**, don't install other libraries unless otherwise specified(pls don't break your server instance).
