@@ -97,8 +97,9 @@ class Member(LitecordObject):
             wanted_shard = self.guild_man.get_shard(self.guild.id)
             shards = self.server.get_shards(self.user)
 
-            shard = shards.get(wanted_shard)
-            if shard is None:
+            try:
+                shard = shards[wanted_shard]
+            except KeyError:
                 log.warning('[member:dispatch] Shard %d not found', wanted_id)
                 return
 
