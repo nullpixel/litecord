@@ -44,6 +44,8 @@ Limitations:
    objects
    config
    embeds
+   enums
+   ws
 
 Indices and tables
 ==================

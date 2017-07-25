@@ -3,6 +3,6 @@
 Voice
 =====================================
 
-.. autoclass:: litecord.api.admin.VoiceEndpoint
+.. autoclass:: litecord.api.voice.VoiceEndpoint
    :members:
    :private-members:

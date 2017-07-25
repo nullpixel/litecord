@@ -8,8 +8,11 @@ Litecord API
 
    auth
    admin
+   gateway
    users
    guilds
    channels
    images
    invites
+   webhook
+   voice

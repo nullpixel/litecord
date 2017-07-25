@@ -3,7 +3,7 @@
 Gateway
 =====================================
 
-.. autoclass:: litecord.api.admin.GatewayEndpoint
+.. autoclass:: litecord.api.gateway.GatewayEndpoint
    :members:
    :private-members:
    :undoc-members:

@@ -3,6 +3,6 @@
 Webhook
 =====================================
 
-.. autoclass:: litecord.api.admin.WebhookEndpoints
+.. autoclass:: litecord.api.webhook.WebhookEndpoints
    :members:
    :private-members:
