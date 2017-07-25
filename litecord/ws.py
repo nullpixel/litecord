@@ -45,8 +45,56 @@ class Handler:
     async def run(self, conn, payload):
         await self.func(conn, payload)
 
+
 def handler(op):
     return Handler(op)
+
+
+async def decode_dict(data):
+    """Decode a dictionary that all strings are in `bytes` type.
+    
+    Returns
+    -------
+    dict
+        The decoded dictionary with all strings in UTF-8.
+    """
+    if isinstance(data, bytes):
+        return str(data, 'utf-8')
+    elif isinstance(data, dict):
+        _copy = dict(data)
+        for key in _copy:
+            data[await decode_dict(key)] = await decode_dict(data[key])
+        return data
+    else:
+        return data
+
+
+async def json_encoder(obj):
+    return json.dumps(obj)
+
+async def json_decoder(raw_data):
+    return json.loads(raw_data)
+
+async def etf_encoder(obj):
+    return earl.pack(obj)
+
+async def etf_decoder(raw_data):
+    data = earl.unpack(raw_data)
+
+    # Earl makes all keys and values bytes object.
+    # We convert them into UTF-8
+    if isinstance(data, dict):
+        data = await decode_dict(data)
+
+    return data
+
+
+def get_data_handlers(name):
+    if name == 'json':
+        return json_encoder, json_decoder
+    elif name == 'etf':
+        return etf_encoder, etf_decoder
+
 
 class WebsocketConnection:
     def __init__(self, ws):
@@ -187,47 +235,4 @@ class WebsocketConnection:
         await self._run()
 
 
-async def decode_dict(data):
-    """Decode a dictionary that all strings are in `bytes` type.
-    
-    Returns
-    -------
-    dict
-        The decoded dictionary with all strings in UTF-8.
-    """
-    if isinstance(data, bytes):
-        return str(data, 'utf-8')
-    elif isinstance(data, dict):
-        _copy = dict(data)
-        for key in _copy:
-            data[await decode_dict(key)] = await decode_dict(data[key])
-        return data
-    else:
-        return data
-
-
-async def json_encoder(obj):
-    return json.dumps(obj)
-
-async def json_decoder(raw_data):
-    return json.loads(raw_data)
-
-async def etf_encoder(obj):
-    return earl.pack(obj)
-
-async def etf_decoder(raw_data):
-    data = earl.unpack(raw_data)
-
-    # Earl makes all keys and values bytes object.
-    # We convert them into UTF-8
-    if isinstance(data, dict):
-        data = await decode_dict(data)
-
-    return data
-
-def get_data_handlers(name):
-    if name == 'json':
-        return json_encoder, json_decoder
-    elif name == 'etf':
-        return etf_encoder, etf_decoder
 

@@ -86,30 +86,55 @@ class LitecordServer:
 
     Attributes
     ----------
-    flags : dict
+    flags: dict
         Server configuration.
-    loop : event loop
+    loop: event loop
         asyncio event loop.
-    mongo_client : `AsyncIOMotorClient`_
+    accept_clients: bool
+        If the server accepts new clients through REST or the Gateway.
+    endpoints: int
+        Amount of declared endpoints on the server(:meth:`Litecord.compliance` fills it)
+    good: `asyncio.Event`
+        Set when the server has a "good" cache, if it is filled
+        with all the information from the collections it needs.
+
+    mongo_client: `AsyncIOMotorClient`_
         MongoDB Client.
-    event_cache : dict
+    event_cache: dict
         Relates user IDs to the last events they received. Used for resuming.
-    cache : dict
-        Relates IDs to objects/raw objects.
-    valid_tokens: list
-        List of valid tokens(strings).
-        A valid token is a token that was used in a connection and it is still,
-        being used in that connection.
+    
+    users: list[:class:`User`]
+        Cache of user objects.
+    raw_users: dict
+        Cache of raw user objects.
+
+    atomic_markers: dict
+        Relates session IDs to bools representing
+        if that session comes from Atomic Discord.
     sessions: dict
         Relates session IDs to their respective :class:`Connection` object.
+    connections: dict
+        Relates user IDs to a list of :class:`Connection` objects tied to them.
+
+    images: :class:`Images`
+        Image manager instance.
     guild_man: :class:`GuildManager`
         Guild manager instance.
     presence: :class:`PresenceManager`
         Presence manager instance.
+    embed: :class:`EmbedManager`
+        Embed manager instance.
+    voice: :class:`VoiceManager`
+        Voice manager instance.
+    settings: :class:`SettingsManager`
+        Settings manager instance.
+    relations: :class:`RelationsManager`
+        Relationship manager instance.
+    apps: :class:`ApplicationManager`
+        Application manager instance.
+
     request_counter: `collections.defaultdict(dict)`
         Manages request counts for all identified connections.
-    connections: `collections.defaultdict(list)`
-        List of all connections that are linked to a User ID.
     buckets: dict
         Ratelimit bucket objects.
     """
@@ -392,6 +417,7 @@ class LitecordServer:
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""
         raw_user = await self.user_coll.find_one({'email': email})
+        log.debug('[get:raw_user:email] %r -> %r', email, raw_user.keys())
         return raw_user
 
     async def _user(self, token):
@@ -399,6 +425,7 @@ class LitecordServer:
 
         This is a helper function to save lines of code in endpoint objects.
         """
+        # TODO: delet this
         user_id = await self.token_find(token)
         return self.get_user(user_id)
 
@@ -469,8 +496,8 @@ class LitecordServer:
         mongo_ping_msec = round((t2 - t1) * 1000, 4)
         report['mongo_ping'] = mongo_ping_msec
 
-        # dude the mongodb is local 7ms would be alarming
-        if mongo_ping_msec > 7:
+        # dude the mongodb is local 10ms would be alarming
+        if mongo_ping_msec > 10:
             report['good'] = False
 
         return report
@@ -520,10 +547,10 @@ class LitecordServer:
         """
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
-            raise RequestCheckError(_err('No token provided', status_code=401))
+            raise RequestCheckError(_err('No header provided', status_code=401))
 
         if len(auth_header) < 1:
-            raise RequestCheckError(_err('malformed header', status_code=401))
+            raise RequestCheckError(_err('Malformed header', status_code=401))
 
         try:
             token_type, token_value = auth_header.split()
@@ -551,18 +578,16 @@ class LitecordServer:
         used_discrims = [raw_user['discriminator'] for raw_user in raw_user_list]
 
         # only 9500 discrims per user
+        # because I want to.
         if len(used_discrims) >= 9500:
             return None
-        
-        discrim = await random_digits(4)
-        discrim = str(discrim)
+
+        discrim = str(await random_digits(4))
 
         while True:
             try:
-                # list.index raises IndexError if the element isn't found
                 used_discrims.index(discrim)
-                discrim = await random_digits(4)
-                discrim = str(discrim)
+                discrim = str(await random_digits(4))
             except ValueError:
                 log.info(f'[get:discrim] Generated discrim {discrim!r} for {username!r}')
                 return discrim
@@ -665,7 +690,6 @@ class LitecordServer:
         routes = self.app.router.routes()
         routes = list(routes)
 
-        # Yes, O(n²). I know that. Fuck you.
         found = []
         for epoint_name, epoint_method, epoint in endpoints:
             _flag = False
