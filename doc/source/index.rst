@@ -14,17 +14,17 @@ Litecord is an async server that (tries) to comply with Discord's Gateway and RE
 THIS IS AN EXPERIMENT IN LEARNING HOW DISCORD WORKS. PLS DON'T SUE US**
 
 Features:
- - Implemented APIs
-   - REST (30% implemented)
-    - OAuth2, Bearer tokens (0% implemented)
-   - Gateway (90% implemented)
+ - Implemented APIs:
+    - REST (30% implemented)
+      - OAuth2, Bearer tokens (0% implemented)
+    - Gateway (90% implemented)
  - MongoDB for storage
  - Admin users for server operation in runtime
 
 Limitations:
  - Use the Atomic-Discord_ client to access a litecord server.
    - It isn't recommended to use the official client, because that requires
-     modification to the client source code, which is against Discord's ToS. don't do it
+      modification to the client source code, which is against Discord's ToS. don't do it
 
  - No hot reloading or whatever you call it.
  - Don't expect good code, expect the unexpected when running your server or accessing one.
