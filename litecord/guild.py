@@ -468,10 +468,6 @@ class GuildManager:
             log.warning("User not connected through WS to do this action.")
             return None
 
-        if True:
-            log.warning('THIS DOES NOT WORK')
-            return None
-
         # For this to work:
         #  - Create a raw guild
         #  - Create two default channels
@@ -479,41 +475,60 @@ class GuildManager:
         #  - Create the default role, "@everyone"
         #  - Create raw member object for the owner
 
-        payload['owner_id'] = owner.id
-        payload['guild_id'] = get_snowflake()
-        payload['features'] = []
-        payload['roles'] = []
-        payload['channels'] = [{
-            'id': payload['id'],
-            'guild_id': payload['id'],
+        guild_id = get_snowflake()
+        raw_guild = {
+            'guild_id': guild_id,
+            'name': payload['name'],
+            'owner_id': owner.id,
+            'region': 'local',
+            'features': [],
+            'icon': '',
+            'channel_ids': [guild_id],
+            'role_ids': [guild_id],
+            'member_ids': [owner.id],
+            'bans': [],
+        }
+
+        raw_default_channel = {
+            'channel_id': guild_id,
             'name': 'general',
-            'type': 'text',
+            'type': ChannelType.GUILD_TEXT,
             'position': 0,
             'topic': '',
-        }]
+        }
 
-        for raw_channel in payload['channels']:
-            raw_channel['guild_id'] = payload['id']
+        raw_default_role = {
+            'role_id': guild_id,
+            'guild_id': guild_id,
+            'permissions': 104188929,
+            'position': 0,
+        }
 
-        # A GIANT HACK
         raw_member_owner = {
-            'guild_id': payload['id'],
-            'user_id': str(owner.id),
+            'guild_id': guild_id,
+            'user_id': owner.id,
             'nick': '',
             'joined': datetime.datetime.now().isoformat(),
             'deaf': False,
             'mute': False,
         }
 
+        bg = BareGuild(guild_id)
+
         await self.member_coll.insert_one(raw_member_owner)
-        self.raw_members[payload['guild_id']][owner.id] = raw_member_owner
+        self.raw_members[guild_id]][owner.id] = raw_member_owner
 
-        guild = Guild(self.server, payload)
-        await self.guild_coll.insert_one(guild._raw)
+        default_role = Role(self.server, bg, raw_default_role)
+        await self.role_coll.insert_one(raw_default_role)
+        self.roles.append(default_role)
+
+        default_channel = TextGuildChannel(self.server, raw_channel, bg)
+        await self.channel_coll.insert_one(raw_channel)
+        self.channels.append(default_channel)
+
+        guild = Guild(self.server, raw_guild)
+        await self.guild_coll.insert_one(raw_guild)
         self.guilds.append(guild)
-
-        for channel in guild.all_channels():
-            self.channels[channel.id] = channel
 
         await self.server.presence.status_update(guild, owner)
         await guild.dispatch('GUILD_CREATE', guild.as_json)
