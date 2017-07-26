@@ -482,7 +482,7 @@ class GuildManager:
             'owner_id': owner.id,
             'region': 'local',
             'features': [],
-            'icon': '',
+            'icon': payload['icon'],
             'channel_ids': [guild_id],
             'role_ids': [guild_id],
             'member_ids': [owner.id],
