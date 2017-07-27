@@ -570,6 +570,7 @@ class GuildManager:
         -------
         None
         """
+        guild_id = guild.id
         res = await self.guild_coll.delete_many({'guild_id': guild_id})
 
         if res.deleted_count < 1:
@@ -585,7 +586,7 @@ class GuildManager:
         del self.raw_guilds[guild_id]
 
         await guild.dispatch('GUILD_DELETE', {
-            'id': str(guild.id),
+            'id': str(guild_id),
             'unavailable': False
         })
 
@@ -689,11 +690,11 @@ class GuildManager:
         user: :class:`User`
             User to remove from the guild.
         """
-
-        user_id = str(user.id)
-
         raw_guild = guild._raw
-        raw_guild['member_ids'].remove(user_id)
+        try:
+            raw_guild['member_ids'].remove(user_id)
+        except ValueError:
+            raise Exception('Member not found')
 
         await self.guild_coll.update_one({'guild_id': guild.id}, {'$set': raw_guild})
 
@@ -897,7 +898,6 @@ class GuildManager:
         -------
         None
         """
-        
         guild = channel.guild
         guild._raw['channel_ids'].remmove(channel.id)
         new_channel_ids = guild._raw['channel_ids']
@@ -906,9 +906,7 @@ class GuildManager:
             {'$set': {'channel_ids': guild._raw['channel_ids']}})
 
         await self.channel_coll.delete_many({'channel_id': channel.id})
-
         await self.reload_channel(channel)
-
         await guild.dispatch('CHANNEL_DELETE', channel.as_json)
         del channel
 
@@ -1062,10 +1060,7 @@ class GuildManager:
         res = await self.invite_coll.delete_one({'code': invite.code})
         log.info(f"Removed {res.deleted_count} invites")
 
-        try:
-            self.invites.pop(invite.code)
-        except:
-            pass
+        return await self.reload_invite(invite)
 
     async def guild_count(self, user) -> int:
         """Get the guild count for a user"""
