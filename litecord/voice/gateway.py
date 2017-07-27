@@ -5,7 +5,7 @@ voice/gateway.py - voice websocket implementaiton
     that runs in a specific endpoint.
 """
 
-from ..basics import VOICE_OP
+from ..enums import VOICE_OP
 from ..ws import WebsocketConnection, handler, StopConnection
 
 class VoiceConnection(WebsocketConnection):

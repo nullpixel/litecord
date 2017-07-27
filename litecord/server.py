@@ -18,7 +18,7 @@ from itsdangerous import TimestampSigner
 import litecord.api as api
 import litecord.managers as managers
 
-from .basics import OP
+from .enums import OP
 from .utils import random_digits, _json, _err, get_random_salt, \
     pwd_hash, get, delete
 
