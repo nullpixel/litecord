@@ -4,12 +4,10 @@ gateway.py - Manages a websocket connection
     This file is considered one of the most important, since it loads
     LitecordServer and tells it to initialize the databases.
 """
-import json
 import logging
 import asyncio
 import uuid
 import random
-import zlib
 import hashlib
 import collections
 import urllib.parse as urlparse
@@ -22,7 +20,7 @@ from .basics import GATEWAY_VERSION
 from .enums import OP
 from .server import LitecordServer
 from .utils import chunk_list
-from .err import VoiceError, PayloadLengthExceeded
+from .err import VoiceError
 from .ratelimits import ws_ratelimit
 
 from .ws import WebsocketConnection, handler, StopConnection, get_data_handlers
@@ -39,11 +37,6 @@ HB_MAX_MSEC = 42000
 RESUME_MAX_EVENTS = 60
 
 log = logging.getLogger(__name__)
-
-try:
-    import earl
-except ImportError:
-    log.warning(f"Earl-ETF not found, ETF support won't work")
 
 SERVERS = {
     'hello': [f'litecord-hello-{random.randint(1, 99)}'],
@@ -229,10 +222,10 @@ class Connection(WebsocketConnection):
 
         try:
             sent_seq = self.events['sent_seq']
-        except:
+        except TypeError:
             log.warning("[dispatch] can't dispatch event to unidentified connection")
             self.dispatch_lock.release()
-            return 0
+            return -1
 
         sent_seq += 1
 
@@ -333,7 +326,7 @@ class Connection(WebsocketConnection):
             raise StopConnection(4010, 'Invalid shard payload(int).')
 
         if len(shard) != 2:
-            raise StopConncetion(4010, 'Invalid shard payload(length).')
+            raise StopConnection(4010, 'Invalid shard payload(length).')
 
         shard_id, shard_count = shard
         if shard_count < 1:
@@ -397,8 +390,9 @@ class Connection(WebsocketConnection):
             #  > client identifies
             #  > gateway closes with 4009 
             #  > client reconnects
+
+            #await self.invalidate(False)
             raise StopConnection(4009, 'Session timeout')
-            return
 
         guild_count = await self.guild_man.guild_count(self.user)
         if guild_count > 2500 and self.user.bot and (not self.sharded):
@@ -563,7 +557,7 @@ class Connection(WebsocketConnection):
 
         # NOTE: this is inneficient as hell
         # but that's life I guess..
-        if len(query) > 0:
+        if query is not None:
             for member in all_members:
                 if member.user.username.startswith(query):
                     member_list.append(member)
@@ -604,8 +598,8 @@ class Connection(WebsocketConnection):
                 # since discord sends you OP 9 + ws close
                 if flag is None:
                     raise StopConnection(4000, 'Invalidated session')
-            except:
-                pass
+            except Exception:
+                log.warning('Failed to invalidate session', exc_info=True)
 
     @handler(OP.RESUME)
     async def resume_handler(self, data):
@@ -669,7 +663,7 @@ class Connection(WebsocketConnection):
                     presences.append(evt.get('d'))
                 else:
                     await self.send(evt)
-        except:
+        except Exception:
             log.error('Error while resuming', exc_info=True)
             await self.invalidate(True)
         finally:
@@ -697,7 +691,8 @@ class Connection(WebsocketConnection):
         f = lambda g: self.guild_ids.append(g.id)
 
         # we had to fill guild_ids, that is my way
-        res = (x for x in map(f, self.guild_man.yield_guilds(self.user.id)))
+        for guild in self.guild_man.yield_guilds(self.user.id):
+            f(guild)
 
         self.request_counter = self.server.request_counter[self.session_id]
         self.token = token
@@ -810,12 +805,12 @@ class Connection(WebsocketConnection):
 
         # We request a VoiceState from the voice manager
         try:
-            v_state = await channel.voice_request(self)
+            v_state = await channel.voice_request(self, self_mute, self_deaf)
         except VoiceError:
             log.error('error while requesting VoiceState', exc_info=True)
             return
 
-        log.info(f"{self.user!r} => voice => {channel!r} => {channel_vstate!r}")
+        log.info(f"{self.user!r} => voice => {channel!r} => {v_state!r}")
 
         await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
         await self.dispatch('VOICE_SERVER_UPDATE', v_state.server_as_json)
@@ -823,8 +818,7 @@ class Connection(WebsocketConnection):
     @handler(OP.VOICE_SERVER_PING)
     async def v_ping_handler(self, data):
         """Handle OP 5 Voice Server Ping."""
-        log.info("Received OP5 VOICE_SERVER_PING what do i do")
-        return
+        log.info(f'VOICE_SERVER_PING with {data!r}')
 
     @ws_ratelimit('all')
     async def process(self, payload):
@@ -857,7 +851,7 @@ class Connection(WebsocketConnection):
         self.identified = False
         try:
             self.hb_wait_task.cancel()
-        except:
+        except AttributeError:
             pass
 
         if self.ws.open:
@@ -867,8 +861,8 @@ class Connection(WebsocketConnection):
             try:
                 self.server.remove_connection(self.session_id)
                 log.debug(f'Success cleaning up sid={self.session_id!r}')
-            except:
-                log.warning("Error while detaching the connection.")
+            except Exception:
+                log.warning('Error while detaching the connection.', exc_info=True)
 
             # client is only offline if there's no connections attached to it
             amount_conns = self.server.count_connections(self.user.id)
@@ -890,7 +884,7 @@ def _stop(loop):
         gathered.cancel()
         loop.run_until_complete(gathered)
         gathered.exception()
-    except:
+    except Exception:
         pass
 
 async def server_sentry(server):
@@ -912,7 +906,7 @@ async def server_sentry(server):
             await asyncio.sleep(10)
     except asyncio.CancelledError:
         pass
-    except:
+    except Exception:
         log.error('fug', exc_info=True)
 
 
@@ -954,7 +948,7 @@ async def on_connection(server, ws, path):
         await ws.close(4000, f'encoding not supported: {encoding!r}')
         return
 
-    if gw_version != 6:
+    if gw_version != GATEWAY_VERSION:
         await ws.close(4000, f'gw version not supported: {gw_version}')
         return
 
