@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
-from ..objects import Embed
+from .objects import Embed
 from .utils import _json, _err
 
 log = logging.getLogger(__name__)

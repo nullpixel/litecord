@@ -18,6 +18,5 @@ from .ratelimits import ratelimit, ws_ratelimit
 from .decorators import admin_endpoint
 from .server import LitecordServer
 from .snowflake import get_snowflake
-from .embeds import *
 from .embedder import EmbedManager
 from .ws import *

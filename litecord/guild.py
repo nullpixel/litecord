@@ -516,7 +516,7 @@ class GuildManager:
         bg = BareGuild(guild_id)
 
         await self.member_coll.insert_one(raw_member_owner)
-        self.raw_members[guild_id]][owner.id] = raw_member_owner
+        self.raw_members[guild_id][owner.id] = raw_member_owner
 
         default_role = Role(self.server, bg, raw_default_role)
         await self.role_coll.insert_one(raw_default_role)
