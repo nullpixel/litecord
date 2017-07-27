@@ -2,7 +2,7 @@ import logging
 import base64
 import hashlib
 
-from .err import ImageError
+from ..err import ImageError
 
 log = logging.getLogger(__name__)
 

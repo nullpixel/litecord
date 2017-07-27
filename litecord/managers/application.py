@@ -1,9 +1,9 @@
 import logging
 
-from .utils import get_random_salt, pwd_hash
-from .objects import Application, User
-from .snowflake import get_snowflake
-from .enums import AppType
+from ..utils import get_random_salt, pwd_hash
+from ..objects import Application, User
+from ..snowflake import get_snowflake
+from ..enums import AppType
 
 log = logging.getLogger(__name__)
 

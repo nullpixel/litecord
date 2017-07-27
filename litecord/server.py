@@ -16,23 +16,18 @@ from aiohttp import web
 from itsdangerous import TimestampSigner
 
 import litecord.api as api
+import litecord.managers as managers
+
 from .basics import OP
 from .utils import random_digits, _json, _err, get_random_salt, \
     pwd_hash, get, delete
 
-from .guild import GuildManager
-from .presence import PresenceManager
 from .voice.server import VoiceManager
 
 from .objects import User
-from .images import Images
-from .embedder import EmbedManager
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
 
-from .user_settings import SettingsManager
-from .relations import RelationsManager
-from .application import ApplicationManager
 
 log = logging.getLogger(__name__)
 
@@ -749,30 +744,30 @@ class LitecordServer:
             await self.load_users()
 
             log.debug('[load] Images')
-            self.images = Images(self, self.flags.get('images', {}))
+            self.images = managers.Images(self, self.flags.get('images', {}))
 
             log.debug('[init] GuildManager')
-            self.guild_man = GuildManager(self)
+            self.guild_man = managers.GuildManager(self)
             await self.guild_man.init()
 
             log.debug('[init] PresenceManager')
-            self.presence = PresenceManager(self)
+            self.presence = managers.PresenceManager(self)
 
             log.debug('[init] EmbedManager')
-            self.embed = EmbedManager(self) 
+            self.embed = managers.EmbedManager(self) 
 
             log.debug('[init] VoiceManager')
             self.voice = VoiceManager(self)
             self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
 
             log.debug('[init] SettingsManager')
-            self.settings = SettingsManager(self)
+            self.settings = managers.SettingsManager(self)
 
             log.debug('[init] RelationsManager')
-            self.relations = RelationsManager(self)
+            self.relations = managers.RelationsManager(self)
 
             log.debug('[init] ApplicationManager')
-            self.apps = ApplicationManager(self)
+            self.apps = managers.ApplicationManager(self)
 
             log.debug('[init] endpoints')
             self.gw_endpoint = api.GatewayEndpoint(self)

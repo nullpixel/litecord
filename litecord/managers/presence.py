@@ -11,9 +11,9 @@ import time
 
 import websockets
 
-from .objects import Presence, User
-from .ext.op import OP
-from .ext.conn import JSONConnection
+from ..objects import Presence, User
+from ..ext.op import OP
+from ..ext.conn import JSONConnection
 
 log = logging.getLogger(__name__)
 

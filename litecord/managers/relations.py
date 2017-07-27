@@ -1,6 +1,6 @@
 import logging
 
-from .snowflake import get_snowflake
+from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
