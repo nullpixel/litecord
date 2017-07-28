@@ -17,7 +17,7 @@ import websockets
 from voluptuous import Schema, Optional, REMOVE_EXTRA
 
 from .basics import GATEWAY_VERSION
-from .enums import OP
+from .enums import OP, CloseCodes
 from .server import LitecordServer
 from .utils import chunk_list
 from .err import VoiceError
@@ -263,8 +263,7 @@ class Connection(WebsocketConnection):
             log.debug(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
             log.info(f'Heartbeat expired for sid=%s', self.session_id)
-            #raise StopConnection(4000, 'Heartbeat expired')
-            await self.ws.close(4000, 'Heartbeat expired')
+            raise StopConnection(CloseCodes.UNKNOWN_ERROR, 'Heartbeat expired')
         except asyncio.CancelledError:
             log.debug("[heartbeat_wait] cancelled")
 
@@ -320,20 +319,22 @@ class Connection(WebsocketConnection):
             With error code 4001 and a reason for the error.
         """
 
+        ccs = CloseCodes.INVALID_SHARD
+
         try:
             shard = list(map(int, shard))
         except ValueError:
-            raise StopConnection(4010, 'Invalid shard payload(int).')
+            raise StopConnection(ccs, 'Invalid shard payload(int).')
 
         if len(shard) != 2:
-            raise StopConnection(4010, 'Invalid shard payload(length).')
+            raise StopConnection(ccs, 'Invalid shard payload(length).')
 
         shard_id, shard_count = shard
         if shard_count < 1:
-            raise StopConnection(4010, 'Invalid shard payload(shard_count=0).')
+            raise StopConnection(ccs, 'Invalid shard payload(shard_count=0).')
 
         if shard_id > shard_count:
-            raise StopConnection(4010, 'Invalid shard payload(id > count).')
+            raise StopConnection(ccs, 'Invalid shard payload(id > count).')
 
     @handler(OP.IDENTIFY)
     @ws_ratelimit('identify')
@@ -354,7 +355,7 @@ class Connection(WebsocketConnection):
             data = self.identify_schema(data)
         except Exception as err:
             log.warning(f'Erroneous IDENTIFY: {err!r}')
-            raise StopConnection(4001, f'Erroneous IDENTIFY: {err!r}')
+            raise StopConnection(CloseCodes.DECODE_ERROR, f'Erroneous IDENTIFY: {err!r}')
 
         token, prop = data['token'], data['properties']
         large = data.get('large_threshold', 50)
@@ -362,7 +363,7 @@ class Connection(WebsocketConnection):
 
         user = await self.check_token(token)
         if user is None:
-            raise StopConnection(4004, 'Authentication failed...')
+            raise StopConnection(CloseCodes.AUTH_FAILED, 'Authentication failed...')
 
         shard = data.get('shard', [0, 1])
         self.check_shard(shard)
@@ -373,7 +374,7 @@ class Connection(WebsocketConnection):
         # NOTE: If we ever implement sharding, remove this piece of code
         if self.shard_count > 1:
             log.warning('Failing request for sharding: %r', shard)
-            raise StopConnection(4010, 'Sharding not available')
+            raise StopConnection(CloseCodes.INVALID_SHARD, 'Sharding not available')
 
         self.user = user
 
@@ -392,11 +393,11 @@ class Connection(WebsocketConnection):
             #  > client reconnects
 
             #await self.invalidate(False)
-            raise StopConnection(4009, 'Session timeout')
+            raise StopConnection(CloseCodes.SESSION_TIMEOUT)
 
         guild_count = await self.guild_man.guild_count(self.user)
         if guild_count > 2500 and self.user.bot and (not self.sharded):
-            raise StopConnection(4011, 'Sharding required')
+            raise StopConnection(CloseCodes.SHARDING_REQUIRED, 'Sharding required')
 
         # check if current shard is with too many guilds
         gm = self.guild_man
@@ -413,7 +414,7 @@ class Connection(WebsocketConnection):
             if shard_id != self.shard_id: continue
 
             if guild_count > 2500:
-                raise StopConnection(4010, f'Shard {shard_id} is with too many guilds({guild_count} > 2500)')
+                raise StopConnection(CloseCodes.INVALID_SHARD, f'Shard {shard_id} is with too many guilds({guild_count} > 2500)')
 
         log.debug('guild ids: %r', self.guild_ids)
 
@@ -536,14 +537,14 @@ class Connection(WebsocketConnection):
         Dispatches GUILD_MEMBERS_CHUNK (https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
         """
         if not self.identified:
-            raise StopConnection(4003, 'Not identified to do operation.')
+            raise StopConnection(CloseCodes.NOT_AUTH, 'Not identified to do operation.')
 
         guild_id = data.get('guild_id')
         query = data.get('query')
         limit = data.get('limit')
 
         if guild_id is None or query is None or limit is None:
-            raise StopConnection(4001, 'Invalid payload')
+            raise StopConnection(CloseCodes.DECODE_ERROR, 'Invalid payload')
 
         if limit > 1000: limit = 1000
         if limit <= 0: limit = 1000
@@ -557,7 +558,7 @@ class Connection(WebsocketConnection):
 
         # NOTE: this is inneficient as hell
         # but that's life I guess..
-        if query is not None:
+        if len(query) < 1:
             for member in all_members:
                 if member.user.username.startswith(query):
                     member_list.append(member)
@@ -597,7 +598,7 @@ class Connection(WebsocketConnection):
                 # TODO: Make this work with ratelimits
                 # since discord sends you OP 9 + ws close
                 if flag is None:
-                    raise StopConnection(4000, 'Invalidated session')
+                    raise StopConnection(CloseCodes.UNKNOWN_ERROR, 'Invalidated session')
             except Exception:
                 log.warning('Failed to invalidate session', exc_info=True)
 
@@ -615,7 +616,7 @@ class Connection(WebsocketConnection):
             session_id = data['session_id']
             replay_seq = data['seq']
         except KeyError:
-            raise StopConnection(4001, 'Invalid resume payload')
+            raise StopConnection(CloseCodes.DECODE_ERROR)
 
         try:
             event_data = self.server.event_cache[session_id]
@@ -632,7 +633,7 @@ class Connection(WebsocketConnection):
         sent_seq = event_data['sent_seq']
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
-            raise StopConnection(4007, 'Invalid sequence')
+            raise StopConnection(CloseCodes.INVALID_SEQ)
 
         # if the session lost more than RESUME_MAX_EVENTS
         # events while it was offline, invalidate it.
@@ -714,7 +715,7 @@ class Connection(WebsocketConnection):
         """Handle OP 3 Status Update."""
 
         if not self.identified:
-            raise StopConnection(4003, 'Not Identified')
+            raise StopConnection(CloseCodes.NOT_AUTH, 'Not Identified')
 
         try:
             status = data['status']
@@ -746,7 +747,7 @@ class Connection(WebsocketConnection):
         """
 
         if not self.identified:
-            raise StopConnection(4003, 'Not identified')
+            raise StopConnection(CloseCodes.NOT_AUTH, 'Not identified')
 
         if not isinstance(data, list):
             log.warning('[gateway:guild_sync] Invalid data type')
