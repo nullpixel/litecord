@@ -82,7 +82,7 @@ class Message(LitecordObject):
                 "%Y-%m-%dT%H:%M:%S.%f")
 
     def __repr__(self):
-        return f'<Message id={self.id} pinned={self.pinned} author={self.author} guild={self.guild}>'
+        return f'<Message id={self.id} pinned={self.pinned} author={self.author}>'
 
     def edit_content(self, new_content, timestamp=None):
         """Edit a message object"""

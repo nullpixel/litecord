@@ -72,7 +72,7 @@ class Member(LitecordObject):
         self.voice_mute = False
 
     def __repr__(self):
-        return f'<Member user_str={self.user.username}#{self.user.discriminator} guild={self.guild!r}>'
+        return f'<Member user={self.user!s} guild={self.guild!r}>'
 
     def update(self, new_data):
         """Update a member object based on new data."""
