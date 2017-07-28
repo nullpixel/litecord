@@ -10,7 +10,7 @@ import asyncio
 
 import websockets
 
-from ..enums import VOICE_OP
+from ..enums import VoiceOP
 from ..objects import LitecordObject
 from ..err import VoiceError
 from ..objects import VoiceGuildChannel, User, VoiceRegion

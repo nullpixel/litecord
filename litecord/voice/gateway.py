@@ -5,7 +5,7 @@ voice/gateway.py - voice websocket implementaiton
     that runs in a specific endpoint.
 """
 
-from ..enums import VOICE_OP
+from ..enums import VoiceOP
 from ..ws import WebsocketConnection, handler, StopConnection
 
 class VoiceConnection(WebsocketConnection):
@@ -32,7 +32,7 @@ class VoiceConnection(WebsocketConnection):
 
         self.udp_port = 1234
 
-    @handler(VOICE_OP.SELECT_PROTOCOL)
+    @handler(VoiceOP.SELECT_PROTOCOL)
     async def v_select_proto_handler(self, data):
         """Handle OP 1 Select Protocol.
 
@@ -59,9 +59,9 @@ class VoiceConnection(WebsocketConnection):
         except KeyError:
             raise StopConnection(4001, 'Invalid protocol data')
 
-        await self.send_op(VOICE_OP.SESSION_DESCRIPTION, {})
+        await self.send_op(VoiceOP.SESSION_DESCRIPTION, {})
 
-    @handler(VOICE_OP.IDENTIFY)
+    @handler(VoiceOP.IDENTIFY)
     async def v_identify_handler(self, data):
         """Handle OP 0 Identify.
 
@@ -79,7 +79,7 @@ class VoiceConnection(WebsocketConnection):
         #self.ssrc = self.get_ssrc()
         self.ssrc = 49134
 
-        await self.send_op(VOICE_OP.READY, {
+        await self.send_op(VoiceOP.READY, {
             'ssrc': self.ssrc,
             'port': self.udp_port,
             'modes': ["plain"],
