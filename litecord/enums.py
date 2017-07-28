@@ -44,11 +44,13 @@ class VoiceOP:
     IDENTIFY = 0
     SELECT_PROTOCOL = 1
     READY = 2
+
     HEARTBEAT = 3
     SESSION_DESCRIPTION = 4
     SPEAKING = 5
     HEARTBEAT_ACK = 6
     RESUME = 7
+
     HELLO = 8
     RESUMED = 9
     CLIENT_DISCONNECT = 13
@@ -70,9 +72,11 @@ class VoiceWSCloseCodes:
     UNKNOWN_ENC_MODE = 4016
 
 class AppType:
+    """Application Type."""
     BOT = 0
 
 class ChannelType:
+    """Channel Type."""
     GUILD_TEXT = 0
     DM = 1
     GUILD_VOICE = 2
@@ -80,6 +84,11 @@ class ChannelType:
     GUILD_CATEGORY = 4
 
 class MessageType:
+    """Message Type.
+    
+    ``DEFAULT`` is the one that users can usually send.
+    The rest are system messages.
+    """
     DEFAULT = 0
     RECIPIENT_ADD = 1
     RECIPIENT_REMOVE = 2
