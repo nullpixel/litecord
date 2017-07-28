@@ -16,12 +16,27 @@ class OP:
     REQUEST_GUILD_MEMBERS = 8
     INVALID_SESSION = 9
     HELLO = 10
-    HEARTBEAT_ACK = 11
 
-    # Undocumented OP code
+    HEARTBEAT_ACK = 11
     GUILD_SYNC = 12
 
-class VOICE_OP:
+class CloseCodes:
+    """Websocket close codes used by the gateway."""
+    UNKNOWN_ERROR = 4000
+    UNKNOWN_OP = 4001
+    DECODE_ERROR = 4002
+
+    NOT_AUTH = 4003
+    AUTH_FAILED = 4004
+    ALREADY_AUTH = 4005
+    INVALID_SEQ = 4007
+    RATE_LIMITED = 4008
+    SESSION_TIMEOUT = 4009
+
+    INVALID_SHARD = 4010
+    SHARDING_REQUIRED = 4011
+
+class VoiceOP:
     """Voice OP codes.
     
     These OP codes are used in the Voice Websocket.
@@ -32,6 +47,28 @@ class VOICE_OP:
     HEARTBEAT = 3
     SESSION_DESCRIPTION = 4
     SPEAKING = 5
+    HEARTBEAT_ACK = 6
+    RESUME = 7
+    HELLO = 8
+    RESUMED = 9
+    CLIENT_DISCONNECT = 13
+
+class VoiceWSCloseCodes:
+    """Close codes used by the Voice WebSocket."""
+    UNKNOWN_OP = 4001
+    NOT_AUTH = 4003
+    AUTH_FAILED = 4004
+    ALREADY_AUTH = 4005
+    INVALID_SESSION = 4006
+    SESSION_TIMEOUT = 4009
+
+    SERVER_NOT_FOUND = 4011
+    UNKNOWN_PROTOCOL = 4012
+    DISCONNECTED = 4014
+    SERVER_CRASH = 4015
+    UNKNOWN_ENC_MODE = 4016
+    HEARTBEAT_TIMEOUT = 4800
+    UNRESUMABLE = 4801
 
 class AppType:
     BOT = 0
