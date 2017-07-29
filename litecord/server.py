@@ -189,9 +189,6 @@ class LitecordServer:
 
         self.app = None
 
-        self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
-            shell=True).decode('utf-8').strip()
-
         default = [120, 60]
         rtl_config = flags['ratelimits']
 
