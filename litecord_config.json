@@ -20,5 +20,10 @@
         "channel": false,
         "role": false
     },
-    "mongo_name": "litecord"
+    "mongo_name": "litecord",
+    "ssl": {
+        "on": false,
+        "certfile": "",
+        "keyfile": ""
+    }
 }

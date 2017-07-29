@@ -11,6 +11,7 @@ import random
 import hashlib
 import collections
 import urllib.parse as urlparse
+import ssl
 
 import websockets
 
@@ -969,17 +970,46 @@ async def start_all(app):
     async def henlo(ws, path):
         return await on_connection(server, ws, path)
 
+    # we gotta get that SSL right
+    # or else we are doomed
+    context = None
+    f_ssl = flags['ssl']
+    ssl_on = f_ssl['on']
+    if ssl_on:
+        log.info('[ssl] creating context')
+
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        cert = f_ssl['certfile']
+        keyfile = f_ssl['keyfile']
+        context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
+        log.info('[ssl] done, cert_store=%r', context.cert_store_stats())
+    else:
+        log.info('[ssl] context not enabled')
+
     # start HTTP
     http = server.flags['server']['http']
 
     handler = app.make_handler()
-    server.http_server = app.loop.create_server(handler, http[0], http[1])
+    if ssl_on:
+        server.http_server = app.loop.create_server(handler, host=http[0], \
+            port=http[1], ssl_context=context)
+    else:
+        server.http_server = app.loop.create_server(handler, \
+            host=http[0], port=http[1])
+
     log.info(f'[http] http://{http[0]}:{http[1]}')
 
     # start ws
     ws = flags['server']['ws']
 
-    server.ws_server = websockets.serve(henlo, host=ws[0], port=ws[1])
+    if ssl_on:
+        server.ws_server = websockets.serve(henlo, host=ws[0], \
+            port=ws[1], ssl=context)
+    else:
+        server.ws_server = websockets.serve(henlo, \
+            host=ws[0], port=ws[1])
+
     log.info(f'[ws] ws://{ws[0]}:{ws[1]} {f"-> ws://{ws[2]}:{ws[1]}" if len(ws) > 2 else ""}')
 
     return True
