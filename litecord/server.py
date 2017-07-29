@@ -280,6 +280,27 @@ class LitecordServer:
 
         return shards
 
+    async def fill_boilerplate(self, key, data, b_flags):
+        coll = getattr(self, f'{key}_coll')
+        tot = 0
+        k_field = f'{key}_id'
+        for element in data:
+            query = {k_field: int(element[k_field])}
+
+            existing = await coll.find_one(query)
+            if (existing is not None) and not (b_flags.get(key)):
+                continue
+
+            for k in element:
+                if 'id' in k:
+                    try:
+                        element[k] = int(element[k])
+                    except ValueError: log.debug('[boilerplate] failed to convert field %r to int', k)
+            await coll.replace_one(query, element, True)
+            tot += 1
+
+        log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
+
     async def boilerplate_init(self):
         """Load boilerplate data.
         
@@ -297,28 +318,8 @@ class LitecordServer:
                     data = json.load(f)
                 except Exception:
                     log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
-
-            coll = getattr(self, f'{key}_coll')
-
-            tot = 0
-
-            k_field = f'{key}_id'
-            for element in data:
-                query = {k_field: int(element[k_field])}
-
-                existing = await coll.find_one(query)
-                if (existing is not None) and not (b_flags.get(key)):
-                    continue
-
-                for k in element:
-                    if 'id' in k:
-                        try:
-                            element[k] = int(element[k])
-                        except ValueError: log.debug('failed to convert field %r to int in boilerplate object', k)
-                await coll.replace_one(query, element, True)
-                tot += 1
-
-            log.info(f"[boilerplate] Replaced {tot} elements in {key!r}")
+            
+            await self.fill_boilerplate(key, data, b_flags)
 
     async def load_users(self):
         """Load the user collection into the server's cache.
@@ -511,22 +512,6 @@ class LitecordServer:
             report['good'] = False
 
         return report
-
-    async def h_get_version(self, request):
-        """`GET /version`.
-
-        Get the server's git revision.
-        This endpoint doesn't require authentication.
-
-        Returns
-        -------
-        dict:
-            With a `version` key
-        """
-
-        return _json({
-            'version': self.litecord_version,
-        })
 
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
@@ -796,8 +781,6 @@ class LitecordServer:
             self.auth_endp = api.AuthEndpoints(self)
             self.voice_endp = api.VoiceEndpoint(self)
             self.webhook_endp = api.WebhookEndpoints(self)
-
-            self.add_get('version', self.h_get_version)
 
             t_end = time.monotonic()
             delta = (t_end - t_init) * 1000

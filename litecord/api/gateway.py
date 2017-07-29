@@ -17,15 +17,25 @@ class GatewayEndpoint:
         self.gw_down = lambda: web.Response(status=404, text='Gateway it not accepting any new clients.')
         self.gw_Starting = lambda: web.Response(status=503, text='Gateway is still starting')
 
+        self.litecord_version = #
+
         self.register()
 
     def register(self):
         self.server.add_get('gateway', self.h_gateway)
         self.server.add_get('gateway/bot', self.h_gateway_bot)
+        self.server.add_get('version', self.h_version)
+
+    async def h_version(self, request):
+        """`GET:/version`.
+        
+        Get the server's Git commit hash.
+        """
+        return _json({'version': self.litecord_version})
 
     async def h_gateway(self, request):
         """`GET:/gateway`.
-        
+
         Get the gateway URL.
         This endpoint doesn't require authentication.
         """
