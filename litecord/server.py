@@ -7,7 +7,6 @@ import collections
 import base64
 import binascii
 import pathlib
-import os
 import pprint
 
 import motor.motor_asyncio
@@ -296,7 +295,7 @@ class LitecordServer:
             with open(path, 'r') as f:
                 try:
                     data = json.load(f)
-                except Exception as err:
+                except Exception:
                     log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
 
             coll = getattr(self, f'{key}_coll')
@@ -315,7 +314,7 @@ class LitecordServer:
                     if 'id' in k:
                         try:
                             element[k] = int(element[k])
-                        except: log.debug('failed to convert field %r to int in boilerplate object', k)
+                        except ValueError log.debug('failed to convert field %r to int in boilerplate object', k)
                 await coll.replace_one(query, element, True)
                 tot += 1
 
@@ -382,12 +381,13 @@ class LitecordServer:
         return user
 
     async def insert_user(self, raw_user):
-        old = await self.user_coll.find_one({'user_id': user.id})
+        uid = raw_user['user_id']
+
+        old = await self.user_coll.find_one({'user_id': uid})
         if old is not None:
             log.warning('Inserting an existing user, ignoring')
             return
 
-        uid = raw_user['user_id']
         await self.user_coll.insert_one(raw_user)
         self.raw_users[uid] = raw_user
         self.users.append(User(self, raw_user))
@@ -401,9 +401,14 @@ class LitecordServer:
         # no one should use the _id field tbh
         try:
             u.pop('_id')
-        except: pass
+        except KeyError: pass
 
-        log.debug('[get:raw_user] %d -> %r', user_id, u.keys())
+        try:
+            keys = u.keys()
+        except AttributeError:
+            keys = None
+
+        log.debug('[get:raw_user] %d -> %r', user_id, keys)
         return u
 
     def get_user(self, user_id):
@@ -416,10 +421,12 @@ class LitecordServer:
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""
         raw_user = await self.user_coll.find_one({'email': email})
+
         try:
             keys = raw_user.keys()
-        except:
+        except AttributeError:
             keys = None
+
         log.debug('[get:raw_user:email] %r -> %r', email, keys)
         return raw_user
 
@@ -558,7 +565,7 @@ class LitecordServer:
 
         try:
             token_type, token_value = auth_header.split()
-        except:
+        except ValueError:
             token_type = 'Bot'
             token_value = auth_header
 
