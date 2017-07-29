@@ -492,6 +492,7 @@ class GuildManager:
             'type': ChannelType.GUILD_TEXT,
             'position': 0,
             'topic': '',
+            'pinned_ids': [],
         }
 
         raw_default_role = {
