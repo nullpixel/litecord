@@ -17,53 +17,54 @@ Make sure you have [MongoDB](https://www.mongodb.com/) installed and running.
 
 ```bash
 # Clone the repo
-git clone ssh://git@git.memework.org:2222/lnmds/litecord.git
-# Open the freshly cloned copy
+git clone https://github.com/lnmds/litecord.git
 cd litecord
 
 # Create a virtual enviroment and install dependencies in it
 # Make sure your python is 3.6+
 python3 -m venv env/
 env/bin/python3 -m pip install -r requirements.txt
+
+# start the server
+./run_litecord.sh
 ```
 
-Then you just run `./run_litecord.sh`, simple.
+## Discord libraries
 
-## Libraries that are known to work with Litecord
+### Libraries that are known to work with Litecord
  - `discord.js`, used by Atomic Discord.
  - `discord.py`, both the `async` and `rewrite` branches.
   - Tip: edit `discord.http.Route.BASE` in `rewrite` to your litecord instance.
+  - Example `discord.http.Route.BASE = 'http://0.0.0.0:8000/api'`
  - `Discordie`
   - Tip: `lib/Constants.js`, around lines 814 for API base,
     line 816 for cdn endpoint(`/images`)
  - `Eris`
   - Tip: `node_modules/eris/lib/rest/RequestHandler.js`, line 133
 
-## Libraries that are known to not work with Litecord
+### Libraries that are known to not work with Litecord
  - `discord.io`
 
 ## Usage
-When you run `litecord.py` it will fire up 2 servers, a REST one and a WS one:
- * REST runs at `http://0.0.0.0:8000`
- * WS runs at `ws://0.0.0.0:12000`
-
-You'll need to change the "base URL" or whatever it is called in your preffered Discord library.
-
-Check [this](https://git.memework.org/lnmds/litecord/issues/2) for the list of implemented things in `litecord`
-Also, don't create an issue for `"there is no voice"`. There won't be.
+When you start litecord it will fire up 3 servers by the default configuration:
+ * Websocket used by the gateway at `:8000`
+ * Websocket used by the voice gateway at `:6969`
+ * A HTTP at `:8000`
 
 ## Updating
+~~If you're braindead or smth~~
 ```bash
-# Fetch changes
-git fetch
-# Merge the changes from origin
+# pull
 git pull
+# profit
 ```
-That's it! Just make sure to restart `litecord.py` when you're done!
+
+Restart the server to apply the changes. There isn't any way
+of hot reloading.
 
 ## Folder structure
  * `/litecord` contains the actual litecord server code.
- * `/utils` has utilities to use with a litecord server.
+ * `/utils` has utilities to use within litecord code.
  * `/docs` has documentation on how the server actually does its stuff.
  * `/boilerplate_data`, [read this](https://git.memework.org/lnmds/litecord/src/master/boilerplate_data/README.md)
  * Depending on your installation, you might have a `/env` directory,
