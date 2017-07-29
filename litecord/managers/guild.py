@@ -100,42 +100,6 @@ class GuildManager:
         log.debug('[get_message] %d -> %r', message_id, m)
         return m
 
-    def yield_guilds(self, user_id: int) -> AsyncIteratorWrapper:
-        """Yield all guilds the user is in asynchronously.
-        
-        Parameters
-        ----------
-        user_id: int
-            User ID to search.
-
-        Yields
-        ------
-        :class:`Guild`
-            A guild this user is in.
-        """
-        guilds = filter(lambda g: user_id in g.member_ids, self.guilds)
-        return AsyncIteratorWrapper(guilds)
-
-    async def get_guilds(self, user_id: int) -> list:
-        """Get a list of all guilds a user is on.
-
-        Parameters
-        ----------
-        user_id: int
-            The user ID we want to get the guilds from.
-
-        Returns
-        -------
-        List[:class:`Guild`]
-        """
-        raise DeprecationWarning('get_guilds is deprecated, use yield_guilds instead')
-        res = []
-
-        async for guild in self.yield_guilds(user_id):
-            res.append(guild)
-
-        return res
-
     def get_invite(self, invite_code: str):
         """Get an :class:`Invite` object.
         
@@ -178,6 +142,22 @@ class GuildManager:
             return raw_guild_members[user_id]
         except:
             return
+
+    def yield_guilds(self, user_id: int) -> AsyncIteratorWrapper:
+        """Yield all guilds the user is in asynchronously.
+        
+        Parameters
+        ----------
+        user_id: int
+            User ID to search.
+
+        Yields
+        ------
+        :class:`Guild`
+            A guild this user is in.
+        """
+        guilds = filter(lambda g: user_id in g.member_ids, self.guilds)
+        return AsyncIteratorWrapper(guilds)
 
     def all_guilds(self):
         """Yield all available guilds."""
