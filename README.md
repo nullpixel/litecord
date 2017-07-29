@@ -47,7 +47,7 @@ env/bin/python3 -m pip install -r requirements.txt
 
 ## Usage
 When you start litecord it will fire up 3 servers by the default configuration:
- * Websocket used by the gateway at `:8000`
+ * Websocket used by the gateway at `:12000`
  * Websocket used by the voice gateway at `:6969`
  * A HTTP at `:8000`
 
