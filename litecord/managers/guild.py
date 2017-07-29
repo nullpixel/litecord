@@ -491,6 +491,7 @@ class GuildManager:
 
         raw_default_channel = {
             'channel_id': guild_id,
+            'guild_id': guild_id,
             'name': 'general',
             'type': ChannelType.GUILD_TEXT,
             'position': 0,
