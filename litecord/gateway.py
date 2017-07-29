@@ -693,7 +693,7 @@ class Connection(WebsocketConnection):
         f = lambda g: self.guild_ids.append(g.id)
 
         # we had to fill guild_ids, that is my way
-        for guild in self.guild_man.yield_guilds(self.user.id):
+        async for guild in self.guild_man.yield_guilds(self.user.id):
             f(guild)
 
         self.request_counter = self.server.request_counter[self.session_id]
