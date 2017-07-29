@@ -48,7 +48,11 @@ API_PREFIXES = [
 
 
 def check_configuration(flags):
-    required_fields = ['server', 'ratelimits', 'images', 'boilerplate.update']
+    required_fields = [
+        'server', 'ratelimits', 'images',
+        'boilerplate.update', 'mongo_name',
+        'ssl',
+    ]
     for field in required_fields:
         if field not in flags:
             raise ConfigError(f"Field {field!r} not found in configuration")
