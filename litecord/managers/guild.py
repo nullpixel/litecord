@@ -50,8 +50,6 @@ class GuildManager:
         self.invites = []
         self.messages = []
 
-        self.invi_janitor_task = self.server.loop.create_task(self.invite_janitor)
-
     def get_guild(self, guild_id):
         """Get a :class:`Guild` object by its ID."""
         try:
@@ -1057,22 +1055,14 @@ class GuildManager:
         MAGIC = 0
         return (guild_id << MAGIC) % shard_count
 
-    async def init(self):
-        """Initialize the GuildManager.
-
-        Loads, in order:
-         - Members
-         - Roles
-         - Channels
-         - Guilds
-         - Invites
-         - Messages
+    async def init_members(self):
+        """Load member data from the member collection into
+        :class:`GuildManager`
         """
 
-        # raw member loading
         cursor = self.member_coll.find()
         member_count = 0
-        for raw_member in await cursor.to_list(length=None):
+        async for raw_member in cursor:
             raw_member.pop('_id')
             self.raw_members[raw_member['guild_id']][raw_member['user_id']] = raw_member
             member_count += 1
@@ -1080,11 +1070,12 @@ class GuildManager:
         log.info('[guild] loaded %d members', member_count)
         log.debug('raw_members: %r', self.raw_members)
 
-        # role loading
+    async def init_roles(self):
+        """Load role data into the :class:`GuildManager`"""
+
         cursor = self.role_coll.find()
         role_count = 0
-
-        for raw_role in (await cursor.to_list(length=None)):
+        async for raw_role in cursor:
             bg = BareGuild(raw_role['guild_id'])
             log.debug(f'[role:load] Loading role {raw_role["role_id"]}')
             role = Role(self.server, bg, raw_role)
@@ -1093,11 +1084,12 @@ class GuildManager:
 
         log.info('[guild] loaded %d roles', role_count)
 
-        # channel loading
+    async def init_channels(self):
+        """Load channel data into the :class:`GuildManager`"""
+
         cursor = self.channel_coll.find()
         chan_count = 0
-
-        for raw_channel in (await cursor.to_list(length=None)):
+        async for raw_channel in cursor:
             ch_type = raw_channel['type']
             channel = None
 
@@ -1117,11 +1109,12 @@ class GuildManager:
 
         log.info('[guild] loaded %d channels', chan_count)
 
-        # guild loading
+    async def init_guilds(self):
+        """Load guild data into the :class:`GuildManager`."""
+
         cursor = self.guild_coll.find()
         guild_count = 0
-
-        for raw_guild in reversed(await cursor.to_list(length=None)):
+        async for raw_guild in cursor:
             guild_id = raw_guild['guild_id']
 
             log.debug(f'[guild:load] Loading guild {guild_id}')
@@ -1158,6 +1151,9 @@ class GuildManager:
 
         log.info('[guild] Loaded %d guilds', guild_count)
 
+    async def init_invites(self):
+        """Load invite data into the :class:`GuildManager`."""
+
         cursor = self.invite_coll.find()
         invite_count, valid_invites = 0, 0
 
@@ -1175,7 +1171,8 @@ class GuildManager:
 
         log.info('[guild] %d valid out of %d invites', valid_invites, invite_count)
 
-        # load messages from database
+    async def init_messages(self):
+        """Load message data into the :class:`GuildManager`."""
 
         cursor = self.message_coll.find().sort('message_id')
         message_count = 0
@@ -1199,3 +1196,23 @@ class GuildManager:
             message_count += 1
 
         log.info(f'[guild] Loaded %d messages', message_count)
+
+    async def init(self):
+        """Initialize the GuildManager.
+
+        Loads, in order:
+         - Members
+         - Roles
+         - Channels
+         - Guilds
+         - Invites
+         - Messages
+        """
+
+        await self.init_members()
+        await self.init_roles()
+        await self.init_channels()
+        await self.init_guilds()
+        await self.init_invites()
+        await self.init_messages()
+
