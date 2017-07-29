@@ -464,10 +464,6 @@ class GuildManager:
         :class:`Guild`
         """
 
-        if not owner.online:
-            log.warning("User not connected through WS to do this action.")
-            return None
-
         # For this to work:
         #  - Create a raw guild
         #  - Create two default channels

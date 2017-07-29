@@ -146,15 +146,10 @@ class GuildsEndpoint:
         Create a guild.
         """
 
-        try:
-            _payload = await request.json()
-        except:
-            return _err('error parsing')
+        _payload = await request.json()
 
-        # we ignore anything else client sends.
         payload = self.guild_create_schema(_payload)
         payload['region'] = 'local'
-        payload['members'] = [str(user.id)]
 
         guild = await self.guild_man.new_guild(user, payload)
         return _json(guild.as_json)
