@@ -520,6 +520,7 @@ class LitecordServer:
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
         url = f'ws://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
+        log.debug('Giving gateway URL: %r', url)
         return url
 
     async def check_request(self, request) -> 'tuple':
