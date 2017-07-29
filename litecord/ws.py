@@ -213,7 +213,12 @@ class WebsocketConnection:
             await self.ws.close(1006, 'Task was cancelled')
         except StopConnection as sc:
             log.info('[ws] StopConncection: %r', sc)
-            await self.ws.close(sc.args[0], sc.args[1])
+
+            sc_args = sc.args
+            if len(sc_args) == 1:
+                await self.ws.close(sc.args[0])
+            elif len(sc_args) == 2:
+                await self.ws.close(sc.args[0], sc.args[1])
         except websockets.ConnectionClosed as err:
             log.info('[ws] Closed with %d, %r', err.code, err.reason)
         except Exception as err:
