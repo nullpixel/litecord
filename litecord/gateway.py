@@ -404,11 +404,11 @@ class Connection(WebsocketConnection):
         gm = self.guild_man
 
         self.guild_ids = []
-        def f(guild):
-            self.guild_ids.append(guild.id)
-            return gm.get_shard(guild.id, self.shard_count)
+        shard_guild = []
 
-        shard_guild = map(f, gm.yield_guilds(self.user.id))
+        async for guild in gm.yield_guilds(self.user.id):
+            self.guild_ids.append(guild.id)
+            shard_guild.append(gm.get_shard(guild.id, self.shard_count))
 
         count = collections.Counter(shard_guild)
         for shard_id, guild_count in count.most_common():
@@ -449,7 +449,7 @@ class Connection(WebsocketConnection):
         # the actual list of guilds to be sent to the client
         guild_list = []
 
-        for guild in self.guild_man.yield_guilds(self.user.id):
+        async for guild in gm.yield_guilds(self.user.id):
             if not self.is_atomic:
                 guild.mark_watcher(self.user.id)
 

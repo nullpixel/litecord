@@ -100,7 +100,7 @@ class GuildManager:
         log.debug('[get_message] %d -> %r', message_id, m)
         return m
 
-    async def yield_guilds(self, user_id: int) -> AsyncIteratorWrapper:
+    def yield_guilds(self, user_id: int) -> AsyncIteratorWrapper:
         """Yield all guilds the user is in asynchronously.
         
         Parameters

@@ -13,6 +13,7 @@ class SettingsManager:
     """
     def __init__(self, server):
         self.server = server
+        self.guild_man = server.guild_man
 
         self.settings_coll = self.server.settings_coll
 
@@ -55,7 +56,7 @@ class SettingsManager:
             'channel_overrides': [],
         }
 
-        for guild in self.server.guild_man.yield_guilds(user_id):
+        async for guild in self.guild_man.yield_guilds(user_id):
             res.append({**default_gsetting, **{'guild_id': str(guild.id)}})
 
         return res
