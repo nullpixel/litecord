@@ -10,6 +10,7 @@ from ..objects import Guild, TextGuildChannel, VoiceGuildChannel, \
 from ..snowflake import get_snowflake, get_invite_code
 from ..utils import get
 from ..enums import ChannelType
+from ..iterators import AsyncIteratorWrapper
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class GuildManager:
         self.invite_coll = server.invite_coll
         self.message_coll = server.message_coll
         self.member_coll = server.member_coll
-        
+
         self.raw_members = defaultdict(dict)
         self.roles = []
         self.channels = []
@@ -99,31 +100,23 @@ class GuildManager:
         log.debug('[get_message] %d -> %r', message_id, m)
         return m
 
-    def yield_guilds(self, user_id: int):
-        """Yield all :class:`Guild` a user is in.
+    async def yield_guilds(self, user_id: int) -> AsyncIteratorWrapper:
+        """Yield all guilds the user is in asynchronously.
         
         Parameters
         ----------
         user_id: int
-            User ID we want to get the guilds from
+            User ID to search.
 
         Yields
         ------
         :class:`Guild`
+            A guild this user is in.
         """
-        try:
-            user_id = int(user_id)
-        except ValueError: return
+        guilds = filter(lambda g: user_id in g.member_ids, self.guilds)
+        return AsyncIteratorWrapper(guilds)
 
-        if self.server.get_user(user_id) is None:
-            return
-
-        # TODO: maybe change this to an async iterator?
-        for guild in self.guilds:
-            if user_id in guild.member_ids:
-                yield guild
-
-    def get_guilds(self, user_id: int) -> list:
+    async def get_guilds(self, user_id: int) -> list:
         """Get a list of all guilds a user is on.
 
         Parameters
@@ -133,14 +126,15 @@ class GuildManager:
 
         Returns
         -------
-        List of :class:`Guild`
+        List[:class:`Guild`]
         """
-        try:
-            user_id = int(user_id)
-        except:
-            return None
-        
-        return list(self.yield_guilds(user_id))
+        raise DeprecationWarning('get_guilds is deprecated, use yield_guilds instead')
+        res = []
+
+        async for guild in self.yield_guilds(user_id):
+            res.append(guild)
+
+        return res
 
     def get_invite(self, invite_code: str):
         """Get an :class:`Invite` object.
@@ -173,30 +167,22 @@ class GuildManager:
             guild_id = int(guild_id)
             user_id = int(user_id)
         except:
-            return None
+            return
 
         try:
             raw_guild_members = self.raw_members[guild_id]
         except:
-            return None
+            return
 
         try:
             return raw_guild_members[user_id]
         except:
-            return None
+            return
 
     def all_guilds(self):
         """Yield all available guilds."""
         for guild in self.guilds:
             yield guild
-
-    async def all_messages_(self, limit=500):
-        """Yield `limit` messages, with the 1st being the most recent one."""
-        cursor = self.message_coll.find().sort('message_id')
-
-        for raw_message in reversed(await cursor.to_list(length=limit)):
-            message = self.messages[raw_message['message_id']]
-            yield message
 
     async def new_message(self, channel, author_user, raw):
         """Create a new message and put it in the database.
@@ -572,7 +558,7 @@ class GuildManager:
         guild_id = guild.id
         res = await self.guild_coll.delete_many({'guild_id': guild_id})
 
-        if res.deleted_count < 1:
+        if res.deleted_count == 0:
             log.warning('[guild_delete] Something went weird (deleted_doc == 0)')
             return
 
