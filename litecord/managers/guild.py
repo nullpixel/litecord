@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import datetime
+import time
 
 from collections import defaultdict
 
@@ -55,20 +56,18 @@ class GuildManager:
         """Get a :class:`Guild` object by its ID."""
         try:
             guild_id = int(guild_id)
-        except:
-            return None
+        except ValueError: return
         return get(self.guilds, id=guild_id)
 
     def get_channel(self, channel_id):
         """Get a :class:`Channel` object by its ID."""
         try:
             channel_id = int(channel_id)
-        except:
-            return None
+        except ValueError: return
 
         channel = get(self.channels, id=channel_id)
         if channel is None:
-            return None
+            return
 
         async def _updater():
             if not isinstance(channel, BaseTextChannel):
@@ -88,7 +87,7 @@ class GuildManager:
         """Get a :class:`Role` by its ID."""
         try:
             role_id = int(role_id)
-        except: return
+        except ValueError: return
         r = get(self.roles, id=role_id)
         log.debug('[get_role] %d -> %r', role_id, r)
         return r
@@ -97,7 +96,7 @@ class GuildManager:
         """Get a :class:`Message` object by its ID."""
         try:
             message_id = int(message_id)
-        except: return
+        except ValueError: return
         m = get(self.messages, id=message_id)
         log.debug('[get_message] %d -> %r', message_id, m)
         return m
@@ -116,8 +115,7 @@ class GuildManager:
         """
         try:
             user_id = int(user_id)
-        except:
-            return
+        except ValueError: return
 
         if self.server.get_user(user_id) is None:
             return
@@ -225,6 +223,9 @@ class GuildManager:
         author = channel.guild.members.get(author_user.id)
         message = Message(self.server, channel, author, raw)
         result = await self.message_coll.insert_one(raw)
+        if not result.acknowledged:
+            log.warning('[mcoll:insert] not acknowledged')
+
         self.messages.append(message)
         log.info(f'Adding message with id {message.id}')
 
@@ -691,6 +692,7 @@ class GuildManager:
             User to remove from the guild.
         """
         raw_guild = guild._raw
+        user_id = user.id
         try:
             raw_guild['member_ids'].remove(user_id)
         except ValueError:
@@ -749,7 +751,7 @@ class GuildManager:
         await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': bans}})
 
-        guild = await reload_guild(guild)
+        guild = await self.reload_guild(guild)
 
         await guild.dispatch('GUILD_BAN_ADD',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
@@ -777,7 +779,7 @@ class GuildManager:
         await self.guild_coll.update_one({'guild_id': guild.id},
                                         {'$set': {'bans': guild.banned_ids}})
 
-        guild = await reload_guild(guild)
+        guild = await self.reload_guild(guild)
         await guild.dispatch('GUILD_BAN_REMOVE',
                             {**user.as_json, **{'guild_id': str(guild.id)}})
 
@@ -886,7 +888,7 @@ class GuildManager:
             {'$set': channel._raw})
 
         channel = await self.reload_channel(channel)
-        await guild.dispatch('CHANNEL_UPDATE', channel.as_json)
+        await channel.guild.dispatch('CHANNEL_UPDATE', channel.as_json)
         return channel
 
     async def delete_channel(self, channel):
@@ -1155,7 +1157,7 @@ class GuildManager:
 
         # guild loading
         cursor = self.guild_coll.find()
-        channel_count, guild_count = 0, 0
+        guild_count = 0
 
         for raw_guild in reversed(await cursor.to_list(length=None)):
             guild_id = raw_guild['guild_id']
