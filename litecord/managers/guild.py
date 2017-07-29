@@ -522,13 +522,15 @@ class GuildManager:
         await self.role_coll.insert_one(raw_default_role)
         self.roles.append(default_role)
 
-        default_channel = TextGuildChannel(self.server, raw_channel, bg)
-        await self.channel_coll.insert_one(raw_channel)
+        default_channel = TextGuildChannel(self.server, raw_default_channel, bg)
+        await self.channel_coll.insert_one(raw_default_channel)
         self.channels.append(default_channel)
 
         guild = Guild(self.server, raw_guild)
         await self.guild_coll.insert_one(raw_guild)
         self.guilds.append(guild)
+
+        log.info('[new_guild] Created guild %r', guild)
 
         await self.server.presence.status_update(guild, owner)
         await guild.dispatch('GUILD_CREATE', guild.as_json)

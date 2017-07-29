@@ -156,12 +156,8 @@ class GuildsEndpoint:
         payload['region'] = 'local'
         payload['members'] = [str(user.id)]
 
-        try:
-            new_guild = await self.guild_man.new_guild(user, payload)
-            return _json(new_guild.as_json)
-        except:
-            log.error('error creating guild', exc_info=True)
-            return _err('error creating guild')
+        guild = await self.guild_man.new_guild(user, payload)
+        return _json(guild.as_json)
 
     @auth_route
     async def h_leave_guild(self, request, user):
