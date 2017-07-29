@@ -914,44 +914,6 @@ class GuildManager:
 
         return
 
-    async def invite_janitor(self):
-        """Janitor task for invites.
-
-        This checks every 30 minutes for expired invites and removes them from
-        the database.
-        """
-
-        try:
-            while True:
-                cursor = self.invite_coll.find()
-                now = datetime.datetime.now()
-
-                deleted, total = 0, 0
-
-                for raw_invite in (await cursor.to_list(length=None)):
-                    timestamp = raw_invite.get('timestamp', None)
-
-                    if timestamp is not None:
-                        invite_timestamp = datetime.datetime.strptime(self.iso_timestamp, \
-                            "%Y-%m-%dT%H:%M:%S")
-
-                        if now > invite_timestamp:
-                            await self.invite.db.delete_one({'code': raw_invite['code']})
-                            try:
-                                self.invites.pop({'code': raw_invite['code']})
-                            except:
-                                pass
-
-                            deleted += 1
-                    total += 1
-
-                log.info("Deleted {deleted}/{total} invites")
-
-                # 30 minutes until next cycle
-                await asyncio.sleep(1800)
-        except asyncio.CancelledError:
-            pass
-
     async def make_invite_code(self):
         """Generate an unique invite code.
 
