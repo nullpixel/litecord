@@ -412,7 +412,11 @@ class LitecordServer:
     async def get_raw_user_email(self, email):
         """Get a raw user object from a user's email."""
         raw_user = await self.user_coll.find_one({'email': email})
-        log.debug('[get:raw_user:email] %r -> %r', email, raw_user.keys())
+        try:
+            keys = raw_user.keys()
+        except:
+            keys = None
+        log.debug('[get:raw_user:email] %r -> %r', email, keys)
         return raw_user
 
     async def _user(self, token):
