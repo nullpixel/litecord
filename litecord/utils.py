@@ -1,6 +1,6 @@
 import json
 import logging
-
+import asyncio
 import base64
 import os
 import hashlib
@@ -155,3 +155,10 @@ def delete(lst, **kwargs):
             res = getattr(element, attr)
             if res == val:
                 del lst[idx]
+
+async def maybe_coroutine(func):
+    if asyncio.iscoroutine(func):
+        return await func
+    else:
+        return func()
+

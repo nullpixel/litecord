@@ -19,7 +19,7 @@ import litecord.managers as managers
 
 from .enums import OP
 from .utils import random_digits, _json, _err, get_random_salt, \
-    pwd_hash, get, delete
+    pwd_hash, get, delete, maybe_coroutine
 
 from .voice.server import VoiceManager
 
@@ -725,6 +725,45 @@ class LitecordServer:
             total, self.endpoints, found_count, (found_count / total) * 100)
         return
 
+    async def load_manager(self, manager):
+        classname, attribute = manager
+
+        manager_class = getattr(managers, f'{classname}Manager', None)
+        if manager_class is None:
+            try:
+                manager_class = getattr(managers, classname)
+            except AttributeError:
+                raise RuntimeError('Manager not found')
+
+        log.info('[init] %s', classname)
+        manager = manager_class(self)
+        load_hook = getattr(manager, '_load', None)
+        setattr(self, attribute, manager)
+
+        if load_hook is None:
+            log.warning('[load_manager] load hook not found')
+        else:
+            await maybe_coroutine(load_hook())
+
+
+    async def load_managers(self):
+        _managers = [
+            ('Images', 'images'),
+            ('Guild', 'guild_man'),
+            ('Presence', 'presence'),
+            ('Embed', 'embed'),
+            ('Settings', 'settings'),
+            ('Relations', 'relations'),
+            ('Application', 'apps'),
+        ]
+
+        for manager in _managers:
+            if manager[0] == 'Voice':
+                # VoiceManager is in the voice scope, not in managers
+                self.voice = VoiceManager(self)
+            else:
+                await self.load_manager(manager)
+
     async def init(self, app):
         """Initialize the server.
 
@@ -738,34 +777,10 @@ class LitecordServer:
             log.debug("[load] boilerplate data")
             await self.boilerplate_init()
 
-            log.debug('[load] user database')
+            log.debug('[load] user cache')
             await self.load_users()
 
-            log.debug('[load] Images')
-            self.images = managers.Images(self, self.flags.get('images', {}))
-
-            log.debug('[init] GuildManager')
-            self.guild_man = managers.GuildManager(self)
-            await self.guild_man.init()
-
-            log.debug('[init] PresenceManager')
-            self.presence = managers.PresenceManager(self)
-
-            log.debug('[init] EmbedManager')
-            self.embed = managers.EmbedManager(self) 
-
-            log.debug('[init] VoiceManager')
-            self.voice = VoiceManager(self)
-            self.voice_task = self.loop.create_task(self.voice.init_task(self.flags))
-
-            log.debug('[init] SettingsManager')
-            self.settings = managers.SettingsManager(self)
-
-            log.debug('[init] RelationsManager')
-            self.relations = managers.RelationsManager(self)
-
-            log.debug('[init] ApplicationManager')
-            self.apps = managers.ApplicationManager(self)
+            await self.load_managers()
 
             log.debug('[init] endpoints')
             self.gw_endpoint = api.GatewayEndpoint(self)

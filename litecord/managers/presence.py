@@ -112,6 +112,13 @@ class PresenceManager:
         if len(differences) > 0:
             user_presence.game.update(new_status)
             log.info(f'[presence] {guild!r} -> {user_presence!r}, updating')
+
+            # We use _dispatch instead of dispatch here
+            # because when using disptch, it creates a task
+            # for _dispatch, and that happens very quickly.
+            # and the guild watch state is updated before properly
+            # executing the task, making this event be sent
+            # before READY
             await guild._dispatch('PRESENCE_UPDATE', user_presence.as_json)
 
     async def global_update(self, conn, new_status=None):

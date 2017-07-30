@@ -51,6 +51,9 @@ class GuildManager:
         self.invites = []
         self.messages = []
 
+    async def _load(self):
+        await self.init()
+
     def get_guild(self, guild_id):
         """Get a :class:`Guild` object by its ID."""
         try:

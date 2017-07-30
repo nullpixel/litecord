@@ -30,15 +30,17 @@ class Images:
 
     `Images` manages profile pictures and message attachments.
     """
-    def __init__(self, server, config):
+    def __init__(self, server):
         self.server = server
-        self.config = config
 
         self.image_db = server.litecord_db['images']
         self.attach_db = server.litecord_db['attachments']
 
-        # NOTE: we could use that cache for image retrieval you know
-        #self.cache = {}
+    async def _load(self):
+        self.cache = {}
+
+    async def _unload(self):
+        del self.cache
 
     async def raw_add_image(self, data, img_type='avatar'):
         """Add an image.
