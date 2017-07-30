@@ -8,6 +8,7 @@ import base64
 import binascii
 import pathlib
 import pprint
+import inspect
 
 import motor.motor_asyncio
 import itsdangerous
@@ -144,6 +145,7 @@ class LitecordServer:
         check_configuration(flags)
         self.accept_clients = True
         self.endpoints = 0
+        self.endpoint_objs = []
         self.good = asyncio.Event()
 
         self.rest_ratelimits = {}
@@ -757,12 +759,31 @@ class LitecordServer:
             ('Application', 'apps'),
         ]
 
+        loaded = 0
         for manager in _managers:
             if manager[0] == 'Voice':
                 # VoiceManager is in the voice scope, not in managers
                 self.voice = VoiceManager(self)
             else:
                 await self.load_manager(manager)
+                loaded += 1
+        log.info('Loaded %d managers', loaded)
+
+    def load_endpoints(self):
+        """Load all endpoint objects into :attr:`LitecordServer.endpoint_objs`"""
+        loaded = 0
+        for attr in dir(api):
+            if 'ndpoint' not in attr:
+                continue
+
+            class_ = getattr(api, attr)
+            if inspect.isclass(class_):
+                log.debug(class_)
+                inst = class_(self)
+                self.endpoint_objs.append(inst)
+                loaded += 1
+
+        log.info('[load_endpoints] Loaded %d endpoint objects', loaded)
 
     async def init(self, app):
         """Initialize the server.
@@ -781,18 +802,7 @@ class LitecordServer:
             await self.load_users()
 
             await self.load_managers()
-
-            log.debug('[init] endpoints')
-            self.gw_endpoint = api.GatewayEndpoint(self)
-            self.users_endp = api.UsersEndpoint(self)
-            self.guilds_endp = api.guilds.GuildsEndpoint(self)
-            self.channels_endp = api.ChannelsEndpoint(self)
-            self.invites_endp = api.InvitesEndpoint(self)
-            self.images_endp = api.ImageEndpoint(self)
-            self.admins_endp = api.AdminEndpoints(self)
-            self.auth_endp = api.AuthEndpoints(self)
-            self.voice_endp = api.VoiceEndpoint(self)
-            self.webhook_endp = api.WebhookEndpoints(self)
+            self.load_endpoints()
 
             t_end = time.monotonic()
             delta = (t_end - t_init) * 1000
