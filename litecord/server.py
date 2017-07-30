@@ -294,7 +294,8 @@ class LitecordServer:
                 if 'id' in k:
                     try:
                         element[k] = int(element[k])
-                    except ValueError: log.debug('[boilerplate] failed to convert field %r to int', k)
+                    except (TypeError, ValueError):
+                        log.debug('[boilerplate] failed to convert field %r to int', k)
             await coll.replace_one(query, element, True)
             tot += 1
 
