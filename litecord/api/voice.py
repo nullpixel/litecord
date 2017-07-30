@@ -21,5 +21,4 @@ class VoiceEndpoint:
         Get available voice region objects through
         :meth:`VoiceManager.get_all_regions`
         """
-        regions = self.server.voice.get_all_regions()
-        return _json([vr.as_json for vr in regions])
+        return _json([vr.as_json for vr in self.server.voice.voice_regions])

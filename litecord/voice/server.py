@@ -139,18 +139,30 @@ class VoiceManager:
 
         self.vg_managers = []
 
-        for guild in self.guild_man.all_guilds():
+    async def __load(self):
+        async for guild in self.guild_man.all_guilds():
             self.vg_managers.append(VoiceGuildManager(self, guild))
+
+    async def kill_voice(self, vg):
+        vcs_count = 0
+        for vcs in vg.vc_states:
+            try:
+                await vcs.kill()
+                vcs_count += 1
+            except:
+                log.error('Error shutting down %r', vcs, exc_info=True)
+
+        log.info('Shutted down %d voice servers', vcs_count)
+
+    async def __unload(self):
+        for vg in self.vg_managers:
+            await self.kill_voice(vg)
 
     def get_vgmanager(self, guild_id: int):
         for vg_manager in self.vg_managers:
             if vg_manager.guild.id == guild_id:
                 return vg_manager
         return None
-
-    def get_all_regions(self):
-        """Get a list of all available :meth:`VoiceRegion` objects."""
-        return self.voice_regions
 
     async def connect(self, channel, conn):
         """Create a :meth:`VoiceState` object for a connection
