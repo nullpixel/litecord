@@ -428,12 +428,6 @@ class Connection(WebsocketConnection):
         prop['large'] = large
         self.properties = prop
 
-        self.server.add_connection(self.user.id, self)
-        self.events = self.server.event_cache[self.session_id]
-
-        self.events['properties'] = self.properties
-        self.events['shard_id'] = self.shard_id
-
         # NOTE: Always set user presence before calculating the guild list!
         # If we set presence after sending READY, PresenceManager
         # falls apart because it tries to get presence data(for READY)
@@ -441,7 +435,13 @@ class Connection(WebsocketConnection):
 
         # TODO: maybe store presences between client logon/logoff
         # like idle and dnd?
-        await self.presence.global_update(self)
+        await asyncio.wait_for(self.presence.global_update(self), timeout=None)
+
+        self.server.add_connection(self.user.id, self)
+        self.events = self.server.event_cache[self.session_id]
+
+        self.events['properties'] = self.properties
+        self.events['shard_id'] = self.shard_id
 
         # I'm happy :)
         self.identified = True
@@ -451,6 +451,7 @@ class Connection(WebsocketConnection):
 
         async for guild in gm.yield_guilds(self.user.id):
             if not self.is_atomic:
+                log.info('marking from being atomic')
                 guild.mark_watcher(self.user.id)
 
             jguild = guild.as_json
@@ -618,6 +619,11 @@ class Connection(WebsocketConnection):
             replay_seq = data['seq']
         except KeyError:
             raise StopConnection(CloseCodes.DECODE_ERROR)
+
+        try:
+            replay_seq = int(replay_seq)
+        except (ValueError, TypeError):
+            await self.invalidate(False)
 
         try:
             event_data = self.server.event_cache[session_id]
