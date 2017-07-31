@@ -21,7 +21,7 @@ from .basics import GATEWAY_VERSION
 from .enums import OP, CloseCodes
 from .server import LitecordServer
 from .utils import chunk_list
-from .err import VoiceError
+from .err import VoiceError, InvalidateSession
 from .ratelimits import ws_ratelimit
 
 from .ws import WebsocketConnection, handler, StopConnection, get_data_handlers

@@ -18,6 +18,8 @@ import zlib
 import websockets
 import earl
 
+from .err import InvalidateSession
+
 log = logging.getLogger(__name__)
 
 class StopConnection(Exception):
@@ -207,7 +209,7 @@ class WebsocketConnection:
                 payload = await self.recv()
                 await self.process(payload)
         except (PayloadLengthExceeded, earl.DecodeError, json.JSONDecodeError):
-            await self.ws.close(4002, 'Decoding Error')
+            await self.ws.close(CloseCodes.DECODE_ERROR, 'Decoding Error')
         except asyncio.CancelledError:
             log.info('[ws] Run task was cancelled')
             await self.ws.close(1006, 'Task was cancelled')
@@ -223,6 +225,11 @@ class WebsocketConnection:
 
         except websockets.ConnectionClosed as err:
             log.info('[ws] Closed with %d, %r', err.code, err.reason)
+        except InvalidateSession as err:
+            resumable = err.args[0]
+            if not resumable:
+                await self._clean()
+            pass
         except Exception as err:
             log.error('Error while running', exc_info=True)
             await self.ws.close(4000, f'Unexpected error: {err!r}')
@@ -233,7 +240,7 @@ class WebsocketConnection:
         if self.ws.open:
             await self.ws.close(1000)
 
-    def clean(self):
+    async def clean(self):
         log.debug('cleaning')
 
     async def run(self):
