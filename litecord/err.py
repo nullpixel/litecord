@@ -14,5 +14,5 @@ class PayloadLengthExceeded(Exception):
 class RequestCheckError(Exception):
     pass
 
-class SessionInvalidate(Exception):
+class InvalidateSession(Exception):
     pass
