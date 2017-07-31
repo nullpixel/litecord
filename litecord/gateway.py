@@ -967,6 +967,7 @@ async def start_all(app):
         cert = f_ssl['certfile']
         keyfile = f_ssl['keyfile']
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+        server.ssl_cxt = context
 
         log.info('[ssl] done, cert_store=%r', context.cert_store_stats())
     else:

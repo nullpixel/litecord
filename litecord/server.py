@@ -96,6 +96,8 @@ class LitecordServer:
     good: `asyncio.Event`
         Set when the server has a "good" cache, if it is filled
         with all the information from the collections it needs.
+    ssl_cxt: `ssl.SSLContext`
+        SSL context instance to make https and wss work.
 
     mongo_client: `AsyncIOMotorClient`_
         MongoDB Client.
@@ -147,6 +149,7 @@ class LitecordServer:
         self.endpoints = 0
         self.endpoint_objs = []
         self.good = asyncio.Event()
+        self.ssl_cxt = None
 
         self.rest_ratelimits = {}
         self.ws_ratelimits = {}
@@ -515,7 +518,12 @@ class LitecordServer:
 
     def get_gateway_url(self):
         ws = self.flags['server']['ws']
-        url = f'ws://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
+
+        proto = 'ws'
+        if self.ssl_cxt is not None:
+            proto = 'wss'
+
+        url = f'{proto}://{ws[2] if len(ws) == 3 else ws[0]}:{ws[1]}'
         log.debug('Giving gateway URL: %r', url)
         return url
 
