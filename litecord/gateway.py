@@ -342,11 +342,10 @@ class Connection(WebsocketConnection):
         if shard_id > shard_count:
             raise StopConnection(ccs, 'Invalid shard payload(id > count).')
 
-
     async def make_guild_list(self):
         """Generate the guild list to be sent over the READY event.
         
-        Return type
+        Returns
         -----------
         List[dict]
             List of raw guild objects.
@@ -423,12 +422,10 @@ class Connection(WebsocketConnection):
         f = lambda r: self.presence.get_global_presence(r.u_to.uid)
         friend_presences = list(map(f, self.relationships))
 
-        '''
-        friend_presences = []
-        async for rel_entry in self.user.relationships:
-            presence = self.presence.get_glpresence(rel_entry.u_to.id)
-            friend_presences.append(presence)
-        '''
+        #friend_presences = []
+        #async for rel_entry in self.user.relationships:
+        #    presence = self.presence.get_glpresence(rel_entry.u_to.id)
+        #    friend_presences.append(presence)
 
         return {
             # the following fields are for user accounts
@@ -560,7 +557,7 @@ class Connection(WebsocketConnection):
         ready_packet = self.ready_payload(guild_list)
 
         if not self.user.bot:
-            user_payload = self.user_ready_payload(user_relationships)
+            user_payload = self.user_ready_payload()
             ready_packet = {**ready_packet, **user_payload}
 
         await self.dispatch_ready(ready_packet, guild_list)
@@ -639,53 +636,13 @@ class Connection(WebsocketConnection):
 
         raise InvalidateSession(flag)
 
-    @handler(OP.RESUME)
-    async def resume_handler(self, data):
-        """Handler for OP 6 Resume.
-
-        This replays events to the connection.
+    async def _resume(self, event_data, seqs_to_replay):
+        """Send all missing events to the connection.
+        Blocks any other events from being dispatched.
+        
+        Used for resuming.
         """
 
-        log.info('[resume] Resuming a connection')
-
-        try:
-            data = self.resume_schema(data)
-        except Exception:
-            log.warning('Invalid payload, invalidating session', exc_info=True)
-            await self.invalidate(False)
-
-        token = data['token']
-        session_id = data['session_id']
-        replay_seq = data['seq']
-
-        try:
-            event_data = self.server.event_cache[session_id]
-        except KeyError:
-            log.warning('[resume] invalidated from session_id not found')
-            await self.invalidate(False)
-
-        user = await self.check_token(token)
-        if user is None:
-            log.warning('[resume] invalidated @ check_token')
-            await self.invalidate(session_id=session_id)
-
-        sent_seq = event_data['sent_seq']
-        if replay_seq > sent_seq:
-            log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
-            raise StopConnection(CloseCodes.INVALID_SEQ)
-
-        if abs(sent_seq - replay_seq) > RESUME_MAX_EVENTS:
-            log.warning('[resume] invalidated from seq delta')
-            await self.invalidate(False, session_id=session_id)
-
-        seqs_to_replay = range(replay_seq, sent_seq + 1)
-        total_seqs = len(seqs_to_replay)
-        log.info(f'Replaying {total_seqs} events to {user!r}')
-
-        # NOTE: DON'T CALL self.dispatch in this try block. DON'T. EVER.
-        # it will actually hang the dispatch call indefinetly
-        # because the dispatch_lock is well... locked
-        # and self.dispatch waits for the lock to be released.
         await self.dispatch_lock
         try:
             presences = []
@@ -718,22 +675,67 @@ class Connection(WebsocketConnection):
         if len(presences) > 0:
             await self.dispatch('PRESENCES_REPLACE', presences)
 
-        self.user = user
+    @handler(OP.RESUME)
+    async def resume_handler(self, data):
+        """Handler for OP 6 Resume.
+
+        This replays events to the connection.
+        """
+
+        log.info('[resume] Resuming a connection')
+
+        try:
+            data = self.resume_schema(data)
+        except Exception:
+            log.warning('Invalid payload, invalidating session', exc_info=True)
+            await self.invalidate(False)
+
+        self.token = data['token']
+        session_id = data['session_id']
+        replay_seq = data['seq']
+
+        try:
+            event_data = self.server.event_cache[session_id]
+        except KeyError:
+            log.warning('[resume] invalidated from session_id not found')
+            await self.invalidate(False)
+
         self.session_id = session_id
+
+        self.user = await self.check_token(self.token)
+        if self.user is None:
+            log.warning('[resume] invalidated @ check_token')
+            await self.invalidate(session_id=session_id)
+
+        sent_seq = event_data['sent_seq']
+        if replay_seq > sent_seq:
+            log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
+            raise StopConnection(CloseCodes.INVALID_SEQ)
+
+        seqs_to_replay = range(replay_seq, sent_seq + 1)
+        total_seqs = len(seqs_to_replay)
+
+        if total_seqs > RESUME_MAX_EVENTS:
+            log.warning('[resume] invalidated from seq delta')
+            await self.invalidate(False, session_id=session_id)
+
+        log.info(f'Replaying {total_seqs} events to {self.user!r}')
+
+        # NOTE: DON'T CALL self.dispatch in this try block. DON'T. EVER.
+        # it will actually hang the dispatch call indefinetly
+        # because the dispatch_lock is well... locked
+        # and self.dispatch waits for the lock to be released.
+        await self._resume(event_data, seqs_to_replay)
 
         self.shard_id = event_data['shard_id']
         self.shard_count = event_data['shard_count']
         self.sharded = self.shard_count > 1
 
         self.guild_ids = []
-        f = lambda g: self.guild_ids.append(g.id)
-
-        # we had to fill guild_ids, that is my way
         async for guild in self.guild_man.yield_guilds(self.user.id):
-            f(guild)
+            self.guild_ids.append(guild.id)
 
         self.request_counter = self.server.request_counter[self.session_id]
-        self.token = token
         self.properties = event_data['properties']
 
         self.events = self.server.event_cache[self.session_id]
