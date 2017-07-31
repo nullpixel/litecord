@@ -36,6 +36,18 @@ class CloseCodes:
     INVALID_SHARD = 4010
     SHARDING_REQUIRED = 4011
 
+CloseReasons = {
+    CloseCodes.UNKNOWN_OP: 'Unknown OP code',
+    CloseCodes.NOT_AUTH: 'Not authenticated',
+    CloseCodes.AUTH_FAILED: 'Failed to authenticate',
+    CloseCodes.ALREADY_AUTH: 'Already identified',
+    CloseCodes.INVALID_SEQ: 'Invalid sequence',
+    CloseCodes.RATE_LIMITED: 'Rate limited',
+    CloseCodes.SESSION_TIMEOUT: 'Session timed out',
+    CloseCodes.INVALID_SHARD: 'Invalid Shard',
+    CloseCodes.SHARDING_REQUIRED: 'Sharding required',
+}
+
 class VoiceOP:
     """Voice OP codes.
     

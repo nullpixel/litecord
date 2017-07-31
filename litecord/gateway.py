@@ -349,8 +349,7 @@ class Connection(WebsocketConnection):
         https://discordapp.com/developers/docs/topics/gateway#gateway-identify
         """
         if self.identified:
-            await self.ws.close(4005, 'Already authenticated')
-            return
+            raise StopConnection(CloseCodes.ALREADY_AUTH)
 
         try:
             data = self.identify_schema(data)
@@ -910,7 +909,7 @@ def init_server(app, flags, loop=None):
     except Exception:
         log.error('Error while loading server', exc_info=True)
 
-    success = asyncio.ensure_future(server.init(app))
+    asyncio.ensure_future(server.init(app))
     app.litecord_server = server
     return True
 

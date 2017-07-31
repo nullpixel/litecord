@@ -215,10 +215,12 @@ class WebsocketConnection:
             log.info('[ws] StopConncection: %r', sc)
 
             sc_args = sc.args
+            c_code = sc.args[0]
             if len(sc_args) == 1:
-                await self.ws.close(sc.args[0])
+                await self.ws.close(c_code, reason=CloseReasons.get(c_code))
             elif len(sc_args) == 2:
-                await self.ws.close(sc.args[0], sc.args[1])
+                await self.ws.close(c_code, reason=sc.args[1])
+
         except websockets.ConnectionClosed as err:
             log.info('[ws] Closed with %d, %r', err.code, err.reason)
         except Exception as err:
