@@ -137,7 +137,6 @@ class Connection(WebsocketConnection):
         self.relations = self.server.relations
         self.settings = self.server.settings
 
-        # identify schema
         _o = Optional
         self.identify_schema = Schema({
             'token': str,
@@ -147,10 +146,16 @@ class Connection(WebsocketConnection):
             'shard': list,
         }, extra=REMOVE_EXTRA)
 
+        self.resume_schema = Schema({
+            'token': str,
+            'session_id': str,
+            'seq': int
+        }, extra=REMOVE_EXTRA)
+
     def __repr__(self):
         if getattr(self, 'session_id', None) is None:
-            return f'Connection()'
-        return f'Connection(sid={self.session_id} u={self.user!r})'
+            return f'<Connection identified={self.identified}>'
+        return f'<Connection sid={self.esssion_id} u={self.user!r}>'
 
     def get_identifiers(self, module):
         return SERVERS.get(module, ['litecord-general-1'])
@@ -475,7 +480,7 @@ class Connection(WebsocketConnection):
             data = self.identify_schema(data)
         except Exception as err:
             log.warning(f'Erroneous IDENTIFY: {err!r}')
-            raise StopConnection(CloseCodes.DECODE_ERROR, f'Erroneous IDENTIFY: {err!r}')
+            raise StopConnection(CloseCodes.DECODE_ERROR)
 
         token, prop = data['token'], data['properties']
         large = data.get('large_threshold', 50)
@@ -632,6 +637,8 @@ class Connection(WebsocketConnection):
             except Exception:
                 log.warning('Failed to invalidate session', exc_info=True)
 
+        raise InvalidateSession(flag)
+
     @handler(OP.RESUME)
     async def resume_handler(self, data):
         """Handler for OP 6 Resume.
@@ -642,16 +649,14 @@ class Connection(WebsocketConnection):
         log.info('[resume] Resuming a connection')
 
         try:
-            token = data['token']
-            session_id = data['session_id']
-            replay_seq = data['seq']
-        except KeyError:
-            raise StopConnection(CloseCodes.DECODE_ERROR)
-
-        try:
-            replay_seq = int(replay_seq)
-        except (ValueError, TypeError):
+            data = self.resume_schema(data)
+        except Exception:
+            log.warning('Invalid payload, invalidating session', exc_info=True)
             await self.invalidate(False)
+
+        token = data['token']
+        session_id = data['session_id']
+        replay_seq = data['seq']
 
         try:
             event_data = self.server.event_cache[session_id]
@@ -664,15 +669,12 @@ class Connection(WebsocketConnection):
             log.warning('[resume] invalidated @ check_token')
             await self.invalidate(session_id=session_id)
 
-        # man how can i resume from the future
         sent_seq = event_data['sent_seq']
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             raise StopConnection(CloseCodes.INVALID_SEQ)
 
-        # if the session lost more than RESUME_MAX_EVENTS
-        # events while it was offline, invalidate it.
-        if abs(replay_seq - sent_seq) > RESUME_MAX_EVENTS:
+        if abs(sent_seq - replay_seq) > RESUME_MAX_EVENTS:
             log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
 
