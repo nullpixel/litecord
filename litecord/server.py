@@ -791,30 +791,25 @@ class LitecordServer:
 
         Loads databases, managers and endpoint objects.
         """
-        try:
-            t_init = time.monotonic()
+        t_init = time.monotonic()
 
-            self.app = app
+        self.app = app
 
-            log.debug("[load] boilerplate data")
-            await self.boilerplate_init()
+        log.debug("[load] boilerplate data")
+        await self.boilerplate_init()
 
-            log.debug('[load] user cache')
-            await self.load_users()
+        log.debug('[load] user cache')
+        await self.load_users()
 
-            await self.load_managers()
-            self.load_endpoints()
+        await self.load_managers()
+        self.load_endpoints()
 
-            t_end = time.monotonic()
-            delta = (t_end - t_init) * 1000
+        t_end = time.monotonic()
+        delta = (t_end - t_init) * 1000
 
-            log.info('[load:server] Loaded in %.2fms', delta)
+        log.info('[load:server] Loaded in %.2fms', delta)
 
-            self.good.set()
-            return True
-        except:
-            log.error('Error when initializing LitecordServer', exc_info=True)
-            return False
+        self.good.set()
 
     async def shutdown_conn(self, conn):
         """Shutdown a connection.

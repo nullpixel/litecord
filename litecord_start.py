@@ -51,9 +51,6 @@ def main():
 
     litecord.init_server(app, flags, loop)
 
-    #loop.create_task(litecord.gateway_server(app))
-    #loop.create_task(litecord.http_server(app))
-
     try:
         loop.run_until_complete(litecord.start_all(app))
         server = app.litecord_server

@@ -907,15 +907,10 @@ def init_server(app, flags, loop=None):
 
     try:
         server = LitecordServer(flags, loop)
-    except Exception as err:
-        log.error(f'We had an error loading the litecord server. {err!r}')
-        raise err # bump
+    except Exception:
+        log.error('Error while loading server', exc_info=True)
 
     success = asyncio.ensure_future(server.init(app))
-    if not success:
-        log.error('We had an error initializing the Litecord Server.')
-        raise Exception('Error initializing LitecordServer')
-
     app.litecord_server = server
     return True
 
