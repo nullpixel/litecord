@@ -66,7 +66,6 @@ class BaseGuildChannel(BaseChannel):
         self.guild_id = raw['guild_id']
         self.position = raw['position']
         self.perm_overwrites = raw.get('perm_overwrites', [])
-        self.is_default = self.id == self.guild_id
 
     @property
     def watchers(self):
