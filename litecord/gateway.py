@@ -778,8 +778,6 @@ class Connection(WebsocketConnection):
                 'members': [m.as_json for m in guild.online_members],
             })
 
-        return True
-
     @handler(OP.VOICE_STATE_UPDATE)
     async def v_state_update_handler(self, data):
         """Handle OP 4 Voice State Update.
@@ -880,20 +878,6 @@ class Connection(WebsocketConnection):
 
             self.token = None
 
-
-_load_lock = asyncio.Lock()
-
-# Modification of
-# https://github.com/Rapptz/discord.py/blob/bed2e90e825f9cf90fc1ecbae3f49472de05ad3c/discord/client.py#L520
-def _stop(loop):
-    pending = asyncio.Task.all_tasks(loop=loop)
-    gathered = asyncio.gather(*pending, loop=loop)
-    try:
-        gathered.cancel()
-        loop.run_until_complete(gathered)
-        gathered.exception()
-    except Exception:
-        pass
 
 async def server_sentry(server):
     log.info('Starting sentry')
