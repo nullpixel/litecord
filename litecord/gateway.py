@@ -964,7 +964,7 @@ async def start_all(app):
         log.info('[ssl] creating context')
 
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        cert = f_ssl['certfile']
+        certfile = f_ssl['certfile']
         keyfile = f_ssl['keyfile']
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
         server.ssl_cxt = context
