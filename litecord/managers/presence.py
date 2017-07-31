@@ -12,8 +12,6 @@ import time
 import websockets
 
 from ..objects import Presence, User
-from ..ext.op import OP
-from ..ext.conn import JSONConnection
 
 log = logging.getLogger(__name__)
 
@@ -160,86 +158,3 @@ class PresenceManager:
             'timestamp': typing_timestamp,
         })
 
-class ExternalPresenceManager:
-    """An external presence manager, running on another computer in the network
-    
-    This class has the same methods as :class:`PresenceManager`, but they route
-    packets to the external machine running the ``presence_maanager`` node.
-
-    NOTE: This is incomplete.
-    """
-    def __init__(self, server):
-        self.server = server
-        self.local_presence = PresenceManager(server)
-
-    async def status_update(self, guild, user, new_status=None):
-        if new_status is None:
-            new_status = {}
-
-        user_id = user.id
-        guild_id = guild.id
-
-        guild_presences = await self.get_presences(guild_id)
-
-        if user_id not in guild_presences:
-            await self.set_presence(guild_id, user_id, new_status)
-
-        user_presence = await self.get_presence(guild_id, user_id)
-
-        # Dispatching follows the same strategy as PresenceManager
-        differences = set(user_presence.game.values()) ^ set(new_status.values())
-        log.debug(f"presence for {user!r} has {len(differences)} diffs")
-
-        if len(differences) > 0:
-            user_presence.game.update(new_status)
-            await self.set_presence(guild_id, user_id, user_presence.game)
-
-            log.info(f'[presence] {guild!r} -> {user!s} -> {user_presence!r}, updating')
-            await guild.dispatch('PRESENCE_UPDATE', user_presence.as_json)
-
-    async def typing_start(self, user_id: int, channel_id: int):
-        return await self.local_presence.typing_start(user_id, channel_id)
-
-class PresenceManagerNode:
-    """A presence manager node
-    
-    This is incomplete.
-    """
-    def __init__(self):
-        self.handlers = {
-            'SET_PRESENCE': self.set_presence,
-            'GET_PRESENCE': self.get_presence,
-        }
-        self.presence
-
-    async def set_presence(self, conn, data):
-        try:
-            user_id = data['user_id']
-            guild_id = data['guild_id']
-            game = data['game']
-        except KeyError:
-            await conn.ws.close(4001)
-            return
-
-    async def new_connection(self, websocket, path):
-        conn = JSONConnection(websocket)
-
-        await conn.handshake()
-
-        while True:
-            j = await conn.recv()
-
-            op = j['op']
-            if op == OP.CALL:
-                evt_name = j['t']
-                await self.handlers.get(evt_name, lambda x: x)(conn, j['d'])
-
-    def run(self, config, loop=None):
-        """Starts the node"""
-        if loop is None:
-            loop = asyncio.get_event_loop()
-
-        ws_server = websockets.server(self.new_connection, '', )
-        loop.run_until_complete(ws_server)
-        log.info('[node:presence] starting loop')
-        loop.run_forever()
