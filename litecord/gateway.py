@@ -337,6 +337,126 @@ class Connection(WebsocketConnection):
         if shard_id > shard_count:
             raise StopConnection(ccs, 'Invalid shard payload(id > count).')
 
+
+    async def make_guild_list(self):
+        """Generate the guild list to be sent over the READY event.
+        
+        Return type
+        -----------
+        List[dict]
+            List of raw guild objects.
+        """
+        gm = self.guild_man
+        guild_list = []
+
+        async for guild in gm.yield_guilds(self.user.id):
+            if not self.is_atomic:
+                guild.mark_watcher(self.user.id)
+
+            jguild = guild.as_json
+
+            if guild.member_count > large:
+                jguild['members'] = [m.as_json for m in guild.online_members]
+
+            guild_list.append(jguild)
+
+        return guild_list
+
+    async def chk_shard_amount(self):
+        """Check for the amount of guilds each shard is """
+        gm = self.guild_man
+        self.guild_ids = []
+        shard_guild = []
+
+        async for guild in gm.yield_guilds(self.user.id):
+            self.guild_ids.append(guild.id)
+            shard_guild.append(gm.get_shard(guild.id, self.shard_count))
+
+        count = collections.Counter(shard_guild)
+        for shard_id, guild_count in count.most_common():
+            if shard_id != self.shard_id: continue
+            if guild_count > 2500:
+                raise StopConnection(CloseCodes.INVALID_SHARD, f'shard {shard_id} is with {guild_count} shards, too many')
+
+    async def dispatch_ready(self, ready_packet, guild_list):
+        """Dispatch the `READY` event to a client.
+        
+        If the connection is from a bot, and not a selfbot(user),
+        this makes guild streaming, which is overwriting the guild data in `READY`
+        for unavailable guilds and dispatching ``GUILD_CREATE``
+        for every guild the bot is.
+        """
+        if self.user.bot:
+            f = lambda raw_guild: {'id': raw_guild['id'], 'unavailable': True}
+            ready_packet['guilds'] = list(map(f, guild_list))
+
+            await self.dispatch('READY', ready_packet)
+            for raw_guild in guild_list:
+                await self.dispatch('GUILD_CREATE', raw_guild)
+        else:
+            await self.dispatch('READY', ready_packet)
+
+    def ready_payload(self, guild_list):
+        return {
+            '_trace': self.get_identifiers('ready'),
+            'v': self.options[0],
+
+            'user': self.user.as_json,
+            'private_channels': [],
+
+            'guilds': guild_list,
+            'session_id': self.session_id,
+        }
+
+    async def user_ready_payload(self):
+        """Get a dictionary with keys that are only
+        used in user `READY` payloads.
+        """
+        if self.user.bot:
+            raise RuntimeError('Bot requesting a user ready')
+
+        f = lambda r: self.presence.get_global_presence(r.u_to.uid)
+        friend_presences = list(map(f, self.relationships))
+
+        '''
+        friend_presences = []
+        async for rel_entry in self.user.relationships:
+            presence = self.presence.get_glpresence(rel_entry.u_to.id)
+            friend_presences.append(presence)
+        '''
+
+        return {
+            # the following fields are for user accounts
+            # and user accounts only.
+            'relationships': self.relationships,
+            'user_settings': self.settings,
+            'user_guild_settings': self.guild_settings,
+
+            # I don't think we are going to have
+            # Youtube/Twitch/whatever connections
+            'connected_accounts': [],
+
+            # Only you can access those
+            # They are handled under another endpoint
+            'notes': [],
+            'friend_suggestion_count': 0,
+
+            # Assuming this is used for relationships
+            # so you get presences for your friends on READY
+            # (notice Discord opens your friend list on startup)
+            'presences': friend_presences,
+
+            # This might relate with /channels/:id/ack, somehow.
+            # I don't know
+            'read_state': [],
+
+            # ??????
+            'analytics_token': 'insert a token here',
+            'experiments': [],
+            'guild_experiments': [],
+            'required_action': 'do something',
+        }
+
     @handler(OP.IDENTIFY)
     @ws_ratelimit('identify')
     async def identify_handler(self, data):
@@ -371,16 +491,10 @@ class Connection(WebsocketConnection):
         self.shard_id, self.shard_count = shard
         self.sharded = self.shard_count > 1
 
-        # NOTE: If we ever implement sharding, remove this piece of code
-        if self.shard_count > 1:
-            log.warning('Failing request for sharding: %r', shard)
-            raise StopConnection(CloseCodes.INVALID_SHARD, 'Sharding not available')
-
         self.user = user
 
-        # NOTE: When sharding, uncomment this code.
-        #if self.sharded and (not self.user.bot):
-        #    raise StopConnection(4010, 'Sharding not allowed for user accounts.')
+        if self.sharded and (not self.user.bot):
+            raise StopConnection(CloseCodes.INVALID_SHARD, 'User accounts cannot shard.')
 
         self.session_id = self.gen_sessid()
         if self.session_id is None:
@@ -399,23 +513,7 @@ class Connection(WebsocketConnection):
         if guild_count > 2500 and self.user.bot and (not self.sharded):
             raise StopConnection(CloseCodes.SHARDING_REQUIRED, 'Sharding required')
 
-        # check if current shard is with too many guilds
-        gm = self.guild_man
-
-        self.guild_ids = []
-        shard_guild = []
-
-        async for guild in gm.yield_guilds(self.user.id):
-            self.guild_ids.append(guild.id)
-            shard_guild.append(gm.get_shard(guild.id, self.shard_count))
-
-        count = collections.Counter(shard_guild)
-        for shard_id, guild_count in count.most_common():
-            if shard_id != self.shard_id: continue
-
-            if guild_count > 2500:
-                raise StopConnection(CloseCodes.INVALID_SHARD, f'Shard {shard_id} is with too many guilds({guild_count} > 2500)')
-
+        await self.chk_shard_amount()
         log.debug('guild ids: %r', self.guild_ids)
 
         self.request_counter = self.server.request_counter[self.session_id]
@@ -434,7 +532,7 @@ class Connection(WebsocketConnection):
 
         # TODO: maybe store presences between client logon/logoff
         # like idle and dnd?
-        await asyncio.wait_for(self.presence.global_update(self), timeout=None)
+        await self.presence.global_update(self)
 
         self.server.add_connection(self.user.id, self)
         self.events = self.server.event_cache[self.session_id]
@@ -442,94 +540,25 @@ class Connection(WebsocketConnection):
         self.events['properties'] = self.properties
         self.events['shard_id'] = self.shard_id
 
-        # I'm happy :)
+        # At this point, the client can receive events
+        # and subscribe to guilds through OP 12 Guild Sync
         self.identified = True
 
-        # the actual list of guilds to be sent to the client
-        guild_list = []
-
-        async for guild in gm.yield_guilds(self.user.id):
-            if not self.is_atomic:
-                log.info('marking from being atomic')
-                guild.mark_watcher(self.user.id)
-
-            jguild = guild.as_json
-
-            if guild.member_count > large:
-                jguild['members'] = [m.as_json for m in guild.online_members]
-
-            guild_list.append(jguild)
+        guild_list = await self.make_guild_list()
 
         log.info('[ready:new_session] sid=%s, len_guilds=%d', self.session_id, len(guild_list)) 
 
-        user_settings = await self.settings.get_settings(self.user.id)
-        user_relationships = await self.relations.get_relationships(self.user.id)
-        user_guild_settings = await self.settings.get_guild_settings(self.user.id)
+        self.settings = await self.settings.get_settings(self.user)
+        self.relationships = await self.relations.get_relationships(self.user)
+        self.guild_settings = await self.settings.get_guild_settings(self.user)
 
-        # Everyone gets this one.
-        ready_packet = {
-            '_trace': self.get_identifiers('ready'),
-            'v': self.options[0],
-
-            'user': self.user.as_json,
-            'private_channels': [],
-
-            'guilds': guild_list,
-            'session_id': self.session_id,
-        }
+        ready_packet = self.ready_payload(guild_list)
 
         if not self.user.bot:
-            friend_presences = [self.presence.get_global_presence(r.u_to.uid) \
-                for r in user_relationships]
+            user_payload = self.user_ready_payload(user_relationships)
+            ready_packet = {**ready_packet, **user_payload)}
 
-            user_ready = {
-                # the following fields are for user accounts
-                # and user accounts only.
-                # but I give them regardless of you're a bot or not
-                # because I'm lazy.
-
-                'relationships': user_relationships,
-                'user_settings': user_settings,
-                'user_guild_settings': user_guild_settings,
-
-                # I don't think we are going to have
-                # Youtube/Twitch/whatever connections
-                'connected_accounts': [],
-
-                # Only you can access those
-                # They are handled under another endpoint
-                'notes': [],
-                'friend_suggestion_count': 0,
-
-                # Assuming this is used for relationships
-                # so you get presences for your friends on READY
-                # (notice Discord opens your friend list on startup)
-                'presences': friend_presences,
-
-                # This might relate with /channels/:id/ack, somehow.
-                # I don't know
-                'read_state': [],
-            
-                # ??????
-                'analytics_token': 'insert a token here',
-                'experiments': [],
-                'guild_experiments': [],
-                'required_action': 'do something',
-            }
-
-            ready_packet.update(user_ready)
-
-        # If its a real bot(non selfbot), we do guild streaming
-        # which is sending unavailable guild objects in READY and then
-        # dispatching GUILD_CREATE events for all guilds
-        if self.user.bot:
-            ready_packet['guilds'] =  [{'id': jguild['id'], 'unavailable': True} for jguild in guild_list]
-
-            await self.dispatch('READY', ready_packet)
-            for raw_guild in guild_list:
-                await self.dispatch('GUILD_CREATE', raw_guild)
-        else:
-            await self.dispatch('READY', ready_packet)
+        await self.dispatch_ready(ready_packet, guild_list)
 
     @handler(OP.REQUEST_GUILD_MEMBERS)
     async def req_guild_handler(self, data):
@@ -538,7 +567,7 @@ class Connection(WebsocketConnection):
         Dispatches GUILD_MEMBERS_CHUNK (https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
         """
         if not self.identified:
-            raise StopConnection(CloseCodes.NOT_AUTH, 'Not identified to do operation.')
+            raise StopConnection(CloseCodes.NOT_AUTH)
 
         guild_id = data.get('guild_id')
         query = data.get('query')

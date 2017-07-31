@@ -17,26 +17,29 @@ class SettingsManager:
 
         self.settings_coll = self.server.settings_coll
 
-    async def get_settings(self, user_id: int):
+    async def get_settings(self, user):
         """Get a settings object from a User ID.
         
         Parameters
         ----------
-        user_id: int
+        user_id: :class:`User`
             User ID to be get settings from.
         """
-        settings = await self.settings_coll.find_one({'user_id': user_id})
+        if user.bot:
+            return {}
+
+        settings = await self.settings_coll.find_one({'user_id': user.id})
         if settings is None:
             settings = {}
         return settings
 
-    async def get_guild_settings(self, user_id: int):
+    async def get_guild_settings(self, user):
         """Get a User Guild Settings object to be used
         in READY payloads.
         
         Parameters
         ----------
-        user_id: int
+        user_id: :class:`User`
             User ID to get User Guild Settings payload for.
 
         Returns
@@ -44,9 +47,10 @@ class SettingsManager:
         list
             The User Guild Settings payload.
         """
+        if user.bot:
+            return []
 
         res = []
-
         default_gsetting = {
             'suppress_everyone': False,
             'muted': False,

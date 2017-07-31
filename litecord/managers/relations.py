@@ -18,7 +18,9 @@ class RelationsManager:
         self.relations_coll = server.relations_coll
         self.relationships = {}
 
-    async def get_relationships(self, user_id: int):
+    async def get_relationships(self, user):
+        if user.bot:
+            return []
         return []
 
     async def add_relation(self, user, other, raw_relation):
