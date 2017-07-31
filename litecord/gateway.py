@@ -979,7 +979,7 @@ async def start_all(app):
     handler = app.make_handler()
     if ssl_on:
         server.http_server = app.loop.create_server(handler, host=http[0], \
-            port=http[1], ssl_context=context)
+            port=http[1], ssl=context)
     else:
         server.http_server = app.loop.create_server(handler, \
             host=http[0], port=http[1])
