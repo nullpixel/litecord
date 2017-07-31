@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-import subprocess
 import collections
 import base64
 import binascii
@@ -19,7 +18,7 @@ import litecord.api as api
 import litecord.managers as managers
 
 from .enums import OP
-from .utils import random_digits, _json, _err, get_random_salt, \
+from .utils import random_digits, _err, get_random_salt, \
     pwd_hash, get, delete, maybe_coroutine
 
 from .voice.server import VoiceManager
@@ -473,12 +472,10 @@ class LitecordServer:
         Parses the token to get the user ID and then unsigns it
         using the user's hashed password as a secret key
         """
-        b64 = lambda x: base64.urlsafe_b64decode(x)
-
         userid_encoded = token.split('.')[0]
 
         try:
-            userid = int(b64(userid_encoded))
+            userid = int(base64.urlsafe_b64decode(userid_encoded))
         except (binascii.Error, ValueError):
             return None
 
@@ -487,9 +484,10 @@ class LitecordServer:
         s = TimestampSigner(raw_user['password']['hash'])
 
         try:
-            userid_encoded_ft = s.unsign(token)
+            s.unsign(token)
         except itsdangerous.BadSignature:
             return None
+
         return userid
 
     async def check(self) -> dict:
@@ -504,7 +502,7 @@ class LitecordServer:
         }
 
         t1 = time.monotonic()
-        result = await self.mongo_client.admin.command({'ping': 1})
+        await self.mongo_client.admin.command({'ping': 1})
         t2 = time.monotonic()
 
         mongo_ping_msec = round((t2 - t1) * 1000, 4)
@@ -695,7 +693,7 @@ class LitecordServer:
         routes = list(routes)
 
         found = []
-        for epoint_name, epoint_method, epoint in endpoints:
+        for _, epoint_method, epoint in endpoints:
             _flag = False
 
             for route in routes:
@@ -722,7 +720,11 @@ class LitecordServer:
                     _flag = True
 
         not_found = set([t[2] for t in endpoints]) ^ set(found)
-        log.debug('Endpoints not found: %s', pprint.pformat(not_found))
+        names_notfound = [(ep[0], ep[2]) for ep in endpoints if ep[2] in not_found]
+
+        print('Endpoints not found:')
+        for ep_name, ep_route in names_notfound:
+            print(f'\t - {ep_name!r}, {ep_route!r}')
 
         for scope, count in scopes.most_common():
             found_count = found_scopes[scope]
@@ -860,7 +862,7 @@ class LitecordServer:
             gathered.cancel()
             loop.run_until_complete(gathered)
             gathered.exception()
-        except:
+        except Exception:
             pass
 
         loop.close()
