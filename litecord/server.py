@@ -482,13 +482,15 @@ class LitecordServer:
             return None
 
         raw_user = self.get_raw_user(userid)
+        if raw_user is None:
+            return
 
         s = TimestampSigner(raw_user['password']['hash'])
 
         try:
             s.unsign(token)
         except itsdangerous.BadSignature:
-            return None
+            return
 
         return userid
 
