@@ -431,7 +431,7 @@ class Connection(WebsocketConnection):
             # the following fields are for user accounts
             # and user accounts only.
             'relationships': self.relationships,
-            'user_settings': self.settings,
+            'user_settings': self.user_settings,
             'user_guild_settings': self.guild_settings,
 
             # I don't think we are going to have
@@ -550,7 +550,7 @@ class Connection(WebsocketConnection):
 
         log.info('[ready:new_session] sid=%s, len_guilds=%d', self.session_id, len(guild_list)) 
 
-        self.settings = await self.settings.get_settings(self.user)
+        self.user_settings = await self.settings.get_settings(self.user)
         self.relationships = await self.relations.get_relationships(self.user)
         self.guild_settings = await self.settings.get_guild_settings(self.user)
 
