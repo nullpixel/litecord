@@ -88,6 +88,9 @@ class Connection(WebsocketConnection):
         Connection had a successful `IDENTIFY` or not.
     properties: dict
         Connection properties like OS, browser and the large_threshold.
+    large: int
+        The large threshold where the gateway won't send online members
+        anymore.
     ratelimit_tasks: dict
         Tasks that clean the specified ratelimit bucket in a period of time.
     request_counter: dict
@@ -524,7 +527,7 @@ class Connection(WebsocketConnection):
         prop = {}
         prop['os'] = prop.get('$os')
         prop['browser'] = prop.get('$browser')
-        prop['large'] = large
+        prop['large'] = self.large
         self.properties = prop
 
         # NOTE: Always set user presence before calculating the guild list!
