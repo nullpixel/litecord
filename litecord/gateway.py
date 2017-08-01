@@ -714,7 +714,7 @@ class Connection(WebsocketConnection):
         sent_seq = event_data['sent_seq']
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
-            raise StopConnection(CloseCodes.INVALID_SEQ)
+            await self.invalidate(False)
 
         seqs_to_replay = range(replay_seq, sent_seq + 1)
         total_seqs = len(seqs_to_replay)
