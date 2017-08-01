@@ -17,7 +17,7 @@ async def user_from_request(server, request):
 
     user = server.get_user(user_id)
     if user is None:
-        return web.Response(status=401, text='Unauthorized [user not found]')
+        return web.Response(status=401, text='User not found')
 
     return user
 

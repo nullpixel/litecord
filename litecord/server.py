@@ -418,7 +418,6 @@ class LitecordServer:
 
     def get_user(self, user_id):
         """Get a :class:`User` object using the user's ID."""
-        user_id = int(user_id)
         u = get(self.users, id=user_id)
         log.debug('[get:user] %d -> %r', user_id, u)
         return u
