@@ -60,7 +60,7 @@ class SettingsManager:
             'channel_overrides': [],
         }
 
-        async for guild in self.guild_man.yield_guilds(user_id):
+        async for guild in self.guild_man.yield_guilds(user.id):
             res.append({**default_gsetting, **{'guild_id': str(guild.id)}})
 
         return res
