@@ -359,7 +359,7 @@ class Connection(WebsocketConnection):
 
             jguild = guild.as_json
 
-            if guild.member_count > large:
+            if guild.member_count > self.large:
                 jguild['members'] = [m.as_json for m in guild.online_members]
 
             guild_list.append(jguild)
@@ -480,7 +480,7 @@ class Connection(WebsocketConnection):
             raise StopConnection(CloseCodes.DECODE_ERROR)
 
         token, prop = data['token'], data['properties']
-        large = data.get('large_threshold', 50)
+        self.large = data.get('large_threshold', 50)
         self.compress_flag = data.get('compress', False)
 
         user = await self.check_token(token)

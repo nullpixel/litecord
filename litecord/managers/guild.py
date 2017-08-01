@@ -498,6 +498,7 @@ class GuildManager:
 
         log.info('[new_guild] Created guild %r', guild)
 
+        guild.mark_watcher(owner.id)
         await self.server.presence.status_update(guild, owner)
         await guild.dispatch('GUILD_CREATE', guild.as_json)
 
