@@ -769,6 +769,7 @@ class LitecordServer:
             ('Guild', 'guild_man'),
             ('Presence', 'presence'),
             ('Embed', 'embed'),
+            ('Voice', 'voice'),
             ('Settings', 'settings'),
             ('Relations', 'relations'),
             ('Application', 'apps'),
