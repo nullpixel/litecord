@@ -400,6 +400,8 @@ class LitecordServer:
         """Get a raw user object using the user's ID."""
         user_id = int(user_id)
         u = self.raw_users.get(user_id)
+        if u is None:
+            return
 
         # no one should use the _id field tbh
         try:
