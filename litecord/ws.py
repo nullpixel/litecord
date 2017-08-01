@@ -20,6 +20,7 @@ import websockets
 import earl
 
 from .err import InvalidateSession
+from .enums import CloseReasons
 
 log = logging.getLogger(__name__)
 
