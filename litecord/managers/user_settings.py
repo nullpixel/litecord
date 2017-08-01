@@ -51,16 +51,8 @@ class SettingsManager:
             return []
 
         res = []
-        default_gsetting = {
-            'suppress_everyone': False,
-            'muted': False,
-            'mobile_push': False,
-            'message_notifications': 1,
-            'guild_id': None,
-            'channel_overrides': [],
-        }
 
         async for guild in self.guild_man.yield_guilds(user.id):
-            res.append({**default_gsetting, **{'guild_id': str(guild.id)}})
+            res.append(guild.default_settings)
 
         return res

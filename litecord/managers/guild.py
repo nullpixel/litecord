@@ -501,6 +501,7 @@ class GuildManager:
         guild.mark_watcher(owner.id)
         await self.server.presence.status_update(guild, owner)
         await guild.dispatch('GUILD_CREATE', guild.as_json)
+        await owner.dispatch('USER_GUILD_SETTINGS_UPDATE', guild.default_settings)
 
         return guild
 
@@ -612,6 +613,8 @@ class GuildManager:
 
         await guild.dispatch('GUILD_MEMBER_ADD', payload)
         await new_member.dispatch('GUILD_CREATE', guild.as_json)
+        await user.dispatch('USER_GUILD_SETTINGS_UPDATE', guild.default_settings)
+
         return new_member
 
     async def edit_member(self, member, new_data):

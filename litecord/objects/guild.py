@@ -353,6 +353,17 @@ class Guild(LitecordObject):
         return d
 
     @property
+    def default_settings(self):
+        return {
+            'guild_id': str(self.id),
+            'suppress_everyone': False,
+            'muted': False,
+            'mobile_push': False,
+            'message_notifications': 1,
+            'channel_overrides': [],
+        }
+
+    @property
     def as_invite(self):
         return {
             'id': str(self.id),
