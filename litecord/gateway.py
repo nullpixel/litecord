@@ -122,10 +122,11 @@ class Connection(WebsocketConnection):
         self.session_id = None
         self.compress_flag = False
         self.properties = {}
+        self.guild_ids = []
 
         # ratelimiting tasks that clean the request counter
         self.ratelimit_tasks = {}
-        self.request_counter = {} 
+        self.request_counter = {}
 
         # some flags for the client etc
         self.identified = False
