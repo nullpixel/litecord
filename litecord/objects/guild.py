@@ -188,6 +188,12 @@ class Guild(LitecordObject):
             if channel.type == ChannelType.GUILD_VOICE:
                 yield channel
 
+    @property
+    def text_channels(self):
+        for channel in self.all_channels():
+            if channel.type == ChannelType.GUILD_TEXT:
+                yield channel
+
     def all_members(self):
         """Yield all members from a guild"""
         for member in self.members.values():
@@ -360,7 +366,13 @@ class Guild(LitecordObject):
             'muted': False,
             'mobile_push': False,
             'message_notifications': 1,
-            'channel_overrides': [],
+            'channel_overrides': [
+                {
+                    'channel_id': str(c.id),
+                    'muted': False,
+                    'message_notifications': 3,
+                } for c in self.text_channels
+            ],
         }
 
     @property
