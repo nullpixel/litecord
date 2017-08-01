@@ -15,6 +15,8 @@ import litecord
 logging.basicConfig(level=logging.DEBUG, \
     format='[%(levelname)7s] [%(name)s] %(message)s')
 
+loggers_to_info = ['websockets.protocol']
+
 log = logging.getLogger('litecord')
 
 handler = logging.FileHandler('litecord.log')
@@ -25,14 +27,15 @@ handler.setFormatter(formatter)
 
 log.addHandler(handler)
 
-logger = logging.getLogger('websockets.server')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler())
-
 app = web.Application()
 
 async def index(request):
     return web.Response(text='beep boop this is litecord!')
+
+def shush_loggers():
+    """Set some specific loggers to `INFO` level."""
+    for logger in loggers_to_info:
+        logging.getLogger(logger).setLevel(logging.INFO)
 
 def main():    
     try:
@@ -45,6 +48,7 @@ def main():
     except FileNotFoundError:
         cfgfile = open('litecord_config.sample.json', 'r')
 
+    shush_loggers()
     loop = asyncio.get_event_loop()
     flags = json.load(open(config_path, 'r'))
     app.router.add_get('/', index)
