@@ -557,7 +557,7 @@ class Connection(WebsocketConnection):
         ready_packet = self.ready_payload(guild_list)
 
         if not self.user.bot:
-            user_payload = self.user_ready_payload()
+            user_payload = await self.user_ready_payload()
             ready_packet = {**ready_packet, **user_payload}
 
         await self.dispatch_ready(ready_packet, guild_list)
