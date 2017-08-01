@@ -14,6 +14,7 @@ import inspect
 import logging
 import asyncio
 import zlib
+import pprint
 
 import websockets
 import earl
@@ -137,6 +138,7 @@ class WebsocketConnection:
         int
             The amount of bytes transmitted.
         """
+        log.debug('[ws:send] %s', pprint.pformat(anything))
         anything = await self._encoder(anything)
 
         if compress and self.is_compressable:
@@ -178,7 +180,9 @@ class WebsocketConnection:
         if len(raw) > 4096:
             raise PayloadLengthExceeded()
 
-        return await self._decoder(raw)
+        payload = await self._decoder(raw)
+        log.debug('[ws:recv] %s', pprint.pformat(payload))
+        return payload
 
     async def _process(self, payload):
         """Process a payload
