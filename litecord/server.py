@@ -26,7 +26,7 @@ from .voice.server import VoiceManager
 from .objects import User
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
-
+from .gateway import ConnectionState
 
 log = logging.getLogger(__name__)
 
@@ -186,7 +186,7 @@ class LitecordServer:
         self.raw_users = {}
 
         self.atomic_markers = {}
-        self.sessions = {}
+        self.states = []
 
         self.request_counter = collections.defaultdict(dict)
         self.connections = collections.defaultdict(list)
@@ -207,6 +207,28 @@ class LitecordServer:
             'identify': WSBucket('identify', requests=1, seconds=5, mode=close)
         }
 
+    def get_state(self, session_id):
+        """Get a :class:`ConnectionState` object."""
+        return _get(self.states, session_id=session_id)
+
+    def gen_ssid(self) -> str:
+        """Generate a new Session ID for a :class:`ConnectionState`.
+        
+        Returns
+        -------
+        str
+            On success.
+        :py:meth:`None`
+            On failure.
+        """
+        for i in range(MAX_TRIES):
+            possible = random_sid()
+            state = self.get_state(possible)
+            if state is not None:
+                continue
+            return possible
+        return None
+
     def add_connection(self, user_id: int, conn):
         """Add a connection and tie it to a user.
 
@@ -218,13 +240,14 @@ class LitecordServer:
             Connection object.
         """
         user_id = int(user_id)
-        log.debug('Adding sid=%s to uid=%d', conn.session_id, user_id)
+        state = conn.state
+        log.debug('Linking %r to uid=%d', state, user_id)
 
         if conn.sharded:
-            log.debug('Adding a shard (%d).', conn.shard_id)
+            log.debug('Linking a shard (%d).', conn.shard_id)
 
         self.connections[user_id].append(conn)
-        self.sessions[conn.session_id] = conn
+        self.states[state.session_id] = state
 
     def remove_connection(self, session_id: str):
         """Remove a connection from the connection table.
@@ -241,31 +264,31 @@ class LitecordServer:
         except KeyError: pass
 
         try:
-            conn = self.sessions.pop(session_id)
+            state = _delete(self.states, session_id=session_id)
         except KeyError: return
 
         try:
-            user_id = conn.user.id
+            user_id = state.user.id
         except AttributeError: return
 
-        log.debug('Removing sid=%s from uid=%d', session_id, user_id)
+        log.debug('Unlinking %r from uid=%d', state, user_id)
 
-        ref = self.connections[user_id]
+        ref = list(self.connections[user_id])
         for i, conn in enumerate(ref):
-            if conn.session_id == session_id:
+            if conn.state.session_id == session_id:
                 del ref[i]
                 break
 
-    def get_connections(self, user_id):
+    def get_connections(self, user_id: int):
         """Yield all connections that are connected to a user."""
         for conn in self.connections[user_id]:
             yield conn
 
-    def count_connections(self, user_id):
+    def count_connections(self, user_id: int):
         """Return the amount of connections connected to a user."""
         return len(self.connections[user_id])
 
-    def get_shards(self, user_id: int) -> 'dict':
+    def get_shards(self, user_id: int) -> dict:
         """Get all shards for a user
         
         Returns

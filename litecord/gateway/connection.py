@@ -104,9 +104,6 @@ class Connection(WebsocketConnection):
 
         self._encoder, self._decoder = get_data_handlers(self.options[1])
 
-        # Last sequence sent by the client, last sequence received by it, and a registry of dispatched events are here
-        self.events = None
-
         # Client's heartbeat interval, chose at random between 40 and 42sec
         self.hb_interval = random.randint(HB_MIN_MSEC, HB_MAX_MSEC)
         self.wait_task = None
@@ -169,44 +166,24 @@ class Connection(WebsocketConnection):
             }
         }
 
-    def gen_sessid(self) -> str:
-        """Generate a new Session ID.
-        
-        Tries to generate available session ids, if it reaches MAX_TRIES, returns `None`.
-        """
-        tries = 0
-
-        new_id = random_sid()
-        while new_id in self.server.sessions:
-            if tries >= MAX_TRIES:
-                return None
-
-            new_id = random_sid()
-            tries += 1
-
-        return new_id
-    
     def _register_payload(self, sent_seq, payload):
         """Register a sent payload.
         
-        Ignores certain kinds of payloads and events
+        Calls :meth:`ConnectionState.add` and
+        updates :attr:`ConnectionState.sent_seq`.
         """
-        self.events['sent_seq'] = sent_seq
+        self.state.sent_seq = sent_seq
 
-        op = payload['op']
-        if op not in (OP.DISPATCH, OP.STATUS_UPDATE):
+        if payload['op'] not in (OP.DISPATCH):
             return
 
-        t = payload.get('t')
-        if t in ('READY', 'RESUMED'):
+        if payload.get('t') in ('READY', 'RESUMED'):
             return
 
-        self.events['events'][sent_seq] = payload
+        self.state.add(seq, payload)
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
-
-        Saves the packet in the `LitecordServer`'s event cache(:meth:`LitecordServer.events`).
 
         Parameters
         ----------
@@ -219,20 +196,15 @@ class Connection(WebsocketConnection):
 
         await self.dispatch_lock
 
-        if evt_data is None:
-            evt_data = {}
+        if not self.identified:
+            log.warning('[dispatch] cannot dispatch to not identified')
+            self.dispatch_lock.release()
+            return -1
 
         if hasattr(evt_data, 'as_json'):
             evt_data = evt_data.as_json
 
-        try:
-            sent_seq = self.events['sent_seq']
-        except TypeError:
-            log.warning("[dispatch] can't dispatch event to unidentified connection")
-            self.dispatch_lock.release()
-            return -1
-
-        sent_seq += 1
+        self.state.sent_seq += 1
 
         payload = {
             'op': OP.DISPATCH,
@@ -268,7 +240,7 @@ class Connection(WebsocketConnection):
             log.debug(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
             log.info(f'Heartbeat expired for sid=%s', self.session_id)
-            raise StopConnection(CloseCodes.UNKNOWN_ERROR, 'Heartbeat expired')
+            await self.ws.close(CloseCodes.UNKNOWN_ERROR, 'Heartbeat expired')
         except asyncio.CancelledError:
             log.debug("[heartbeat_wait] cancelled")
 
@@ -280,18 +252,15 @@ class Connection(WebsocketConnection):
         Parameters
         ----------
         data: int or :py:const:`None`
-            Sequence number to be saved in ``Connection.events['recv_seq']``
+            Sequence number to be saved in :attr:`ConnectionState.recv_seq`
         """
         try:
             self.wait_task.cancel()
         except AttributeError: pass
 
-        try:
-            self.events['recv_seq'] = data
-        except AttributeError: pass
-
+        self.state.recv_seq = int(data)
         self.wait_task = self.loop.create_task(self.hb_wait_task())
-        await self.send_op(OP.HEARTBEAT_ACK, {})
+        await self.send_op(OP.HEARTBEAT_ACK, None)
 
     async def check_token(self, token: str) -> tuple:
         """Check if a token is valid and can be used for proper authentication.
@@ -524,7 +493,6 @@ class Connection(WebsocketConnection):
         prop['os'] = prop.get('$os')
         prop['browser'] = prop.get('$browser')
         prop['large'] = self.large
-        self.properties = prop
 
         # NOTE: Always set user presence before calculating the guild list!
         # If we set presence after sending READY, PresenceManager
@@ -536,10 +504,7 @@ class Connection(WebsocketConnection):
         await self.presence.global_update(self)
 
         self.server.add_connection(self.user.id, self)
-        self.events = self.server.event_cache[self.session_id]
-
-        self.events['properties'] = self.properties
-        self.events['shard_id'] = self.shard_id
+        self.state = ConnectionState(session_id, token, user, prop, shard_id)
 
         # At this point, the client can receive events
         # and subscribe to guilds through OP 12 Guild Sync
@@ -547,7 +512,7 @@ class Connection(WebsocketConnection):
 
         guild_list = await self.make_guild_list()
 
-        log.info('[ready:new_session] sid=%s, len_guilds=%d', self.session_id, len(guild_list)) 
+        log.info('[ready:new_session] %r, guilds=%d', self.state, len(guild_list)) 
 
         self.user_settings = await self.settings.get_settings(self.user)
         self.relationships = await self.relations.get_relationships(self.user)
@@ -648,7 +613,7 @@ class Connection(WebsocketConnection):
 
             for seq in seqs_to_replay:
                 try:
-                    evt = event_data['events'][seq]
+                    evt = self.state[seq]
                 except KeyError:
                     continue
 
@@ -689,24 +654,22 @@ class Connection(WebsocketConnection):
             log.warning('Invalid payload, invalidating session', exc_info=True)
             await self.invalidate(False)
 
-        self.token = data['token']
+        token = data['token']
         session_id = data['session_id']
         replay_seq = data['seq']
 
-        try:
-            event_data = self.server.event_cache[session_id]
-        except KeyError:
-            log.warning('[resume] invalidated from session_id not found')
+        state = self.server.get_state(session_id)
+        if state is None:
+            log.warning('[resume] State not found')
             await self.invalidate(False)
 
-        self.session_id = session_id
+        if token != state.token:
+            log.warning('[resume] Invalid token')
+            await self.invalidate(False)
 
-        self.user = await self.check_token(self.token)
-        if self.user is None:
-            log.warning('[resume] invalidated @ check_token')
-            await self.invalidate(session_id=session_id)
+        self.state = state
 
-        sent_seq = event_data['sent_seq']
+        sent_seq = state.sent_seq
         if replay_seq > sent_seq:
             log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
             await self.invalidate(False)
@@ -720,24 +683,19 @@ class Connection(WebsocketConnection):
 
         log.info(f'Replaying {total_seqs} events to {self.user!r}')
 
-        # NOTE: DON'T CALL self.dispatch in this try block. DON'T. EVER.
+        # NOTE: DON'T CALL self.dispatch in this function. DON'T. EVER.
         # it will actually hang the dispatch call indefinetly
         # because the dispatch_lock is well... locked
         # and self.dispatch waits for the lock to be released.
         await self._resume(event_data, seqs_to_replay)
-
-        self.shard_id = event_data['shard_id']
-        self.shard_count = event_data['shard_count']
-        self.sharded = self.shard_count > 1
 
         self.guild_ids = []
         async for guild in self.guild_man.yield_guilds(self.user.id):
             self.guild_ids.append(guild.id)
 
         self.request_counter = self.server.request_counter[self.session_id]
-        self.properties = event_data['properties']
 
-        self.events = self.server.event_cache[self.session_id]
+        self.state = self.server.get_state(session_id)
         self.server.add_connection(self.user.id, self)
 
         self.identified = True
