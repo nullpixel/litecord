@@ -132,10 +132,10 @@ class PresenceManager:
             Raw presence object.
         """
 
-        user = conn.user
+        user = conn.state.user
         self.global_presences[user.id] = Presence(None, user, new_status)
 
-        for gid in conn.guild_ids:
+        for gid in conn.state.guild_ids:
             guild = self.server.guild_man.get_guild(gid)
             await self.status_update(guild, user, new_status)
 

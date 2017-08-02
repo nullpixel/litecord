@@ -6,20 +6,18 @@ gateway.py - Manages a websocket connection
 """
 import logging
 import asyncio
-import uuid
 import random
-import hashlib
 import collections
 
 from voluptuous import Schema, Optional, REMOVE_EXTRA
 
-from ..basics import GATEWAY_VERSION
 from ..enums import OP, CloseCodes
 from ..utils import chunk_list
 from ..err import VoiceError, InvalidateSession
 from ..ratelimits import ws_ratelimit
 
 from ..ws import WebsocketConnection, handler, StopConnection, get_data_handlers
+from .state import ConnectionState, RESUME_MAX_EVENTS
 
 # Maximum amount of tries to generate a session ID.
 MAX_TRIES = 20
@@ -29,9 +27,6 @@ MAX_TRIES = 20
 HB_MIN_MSEC = 40000
 HB_MAX_MSEC = 42000
 
-# The maximum amount of events you can lose before your session gets invalidated.
-RESUME_MAX_EVENTS = 60
-
 log = logging.getLogger(__name__)
 
 SERVERS = {
@@ -39,11 +34,6 @@ SERVERS = {
     'ready': [f'litecord-session-{random.randint(1, 99)}'],
     'resume': [f'litecord-resumer{random.randint(1, 99)}'],
 }
-
-
-def random_sid():
-    """Generate a new random Session ID."""
-    return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()
 
 
 class Connection(WebsocketConnection):
@@ -102,19 +92,14 @@ class Connection(WebsocketConnection):
         self.options = kwargs['config']
         self.server = kwargs['server']
 
+        self.state = None
+        self.session_id = None
+
         self._encoder, self._decoder = get_data_handlers(self.options[1])
 
         # Client's heartbeat interval, chose at random between 40 and 42sec
         self.hb_interval = random.randint(HB_MIN_MSEC, HB_MAX_MSEC)
         self.wait_task = None
-
-        # Things that properly identify the client
-        self.session_id = None
-        self.token = None
-        self.session_id = None
-        self.compress_flag = False
-        self.properties = {}
-        self.guild_ids = []
 
         # ratelimiting tasks that clean the request counter
         self.ratelimit_tasks = {}
@@ -123,9 +108,6 @@ class Connection(WebsocketConnection):
         # some flags for the client etc
         self.identified = False
         self.dispatch_lock = asyncio.Lock()
-
-        # user objects, filled oncce the client is identified
-        self.user = None
 
         # references to objects
         self.guild_man = self.server.guild_man
@@ -151,7 +133,7 @@ class Connection(WebsocketConnection):
     def __repr__(self):
         if getattr(self, 'session_id', None) is None:
             return f'<Connection identified={self.identified}>'
-        return f'<Connection sid={self.esssion_id} u={self.user!r}>'
+        return f'<Connection sid={self.esssion_id} u={self.state.user!r}>'
 
     def get_identifiers(self, module):
         return SERVERS.get(module, ['litecord-general-1'])
@@ -174,7 +156,7 @@ class Connection(WebsocketConnection):
         """
         self.state.sent_seq = sent_seq
 
-        if payload['op'] not in (OP.DISPATCH):
+        if payload['op'] not in (OP.DISPATCH,):
             return
 
         if payload.get('t') in ('READY', 'RESUMED'):
@@ -208,7 +190,7 @@ class Connection(WebsocketConnection):
 
         payload = {
             'op': OP.DISPATCH,
-            's': sent_seq,
+            's': self.state.sent_seq,
             't': evt_name,
             'd': evt_data,
         }
@@ -224,7 +206,7 @@ class Connection(WebsocketConnection):
             amount = await self.send(payload)
 
         log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.compress_flag}')
-        self._register_payload(sent_seq, payload)
+        self._register_payload(self.state.sent_seq, payload)
 
         self.dispatch_lock.release()
         return amount
@@ -321,9 +303,9 @@ class Connection(WebsocketConnection):
         gm = self.guild_man
         guild_list = []
 
-        async for guild in gm.yield_guilds(self.user.id):
+        async for guild in gm.yield_guilds(self.state.user.id):
             if not self.is_atomic:
-                guild.mark_watcher(self.user.id)
+                guild.mark_watcher(self.state.user.id)
 
             jguild = guild.as_json
 
@@ -337,16 +319,16 @@ class Connection(WebsocketConnection):
     async def chk_shard_amount(self):
         """Check for the amount of guilds each shard is """
         gm = self.guild_man
-        self.guild_ids = []
+        self.state.guild_ids = []
         shard_guild = []
 
-        async for guild in gm.yield_guilds(self.user.id):
-            self.guild_ids.append(guild.id)
-            shard_guild.append(gm.get_shard(guild.id, self.shard_count))
+        async for guild in gm.yield_guilds(self.state.user.id):
+            self.state.guild_ids.append(guild.id)
+            shard_guild.append(gm.get_shard(guild.id, self.state.shard_count))
 
         count = collections.Counter(shard_guild)
         for shard_id, guild_count in count.most_common():
-            if shard_id != self.shard_id: continue
+            if shard_id != self.state.shard_id: continue
             if guild_count > 2500:
                 raise StopConnection(CloseCodes.INVALID_SHARD, f'shard {shard_id} is with {guild_count} shards, too many')
 
@@ -358,7 +340,7 @@ class Connection(WebsocketConnection):
         for unavailable guilds and dispatching ``GUILD_CREATE``
         for every guild the bot is.
         """
-        if self.user.bot:
+        if self.state.user.bot:
             f = lambda raw_guild: {'id': raw_guild['id'], 'unavailable': True}
             ready_packet['guilds'] = list(map(f, guild_list))
 
@@ -373,7 +355,7 @@ class Connection(WebsocketConnection):
             '_trace': self.get_identifiers('ready'),
             'v': self.options[0],
 
-            'user': self.user.as_json,
+            'user': self.state.user.as_json,
             'private_channels': [],
 
             'guilds': guild_list,
@@ -384,7 +366,7 @@ class Connection(WebsocketConnection):
         """Get a dictionary with keys that are only
         used in user `READY` payloads.
         """
-        if self.user.bot:
+        if self.state.user.bot:
             raise RuntimeError('Bot requesting a user ready')
 
         f = lambda r: self.presence.get_global_presence(r.u_to.uid)
@@ -458,16 +440,14 @@ class Connection(WebsocketConnection):
         shard = data.get('shard', [0, 1])
         self.check_shard(shard)
 
-        self.shard_id, self.shard_count = shard
-        self.sharded = self.shard_count > 1
+        shard_id, shard_count = shard
+        sharded = shard_count > 1
 
-        self.user = user
-
-        if self.sharded and (not self.user.bot):
+        if sharded and (not user.bot):
             raise StopConnection(CloseCodes.INVALID_SHARD, 'User accounts cannot shard.')
 
-        self.session_id = self.gen_sessid()
-        if self.session_id is None:
+        session_id = self.server.gen_ssid()
+        if session_id is None:
             # NOTE: If we get into a reconnection loop
             # this might be the culprit! check your session ID generation.
 
@@ -479,15 +459,13 @@ class Connection(WebsocketConnection):
             #await self.invalidate(False)
             raise StopConnection(CloseCodes.SESSION_TIMEOUT)
 
-        guild_count = await self.guild_man.guild_count(self.user)
-        if guild_count > 2500 and self.user.bot and (not self.sharded):
+        self.session_id = session_id
+
+        guild_count = await self.guild_man.guild_count(user)
+        if guild_count > 2500 and user.bot and (not sharded):
             raise StopConnection(CloseCodes.SHARDING_REQUIRED, 'Sharding required')
 
-        await self.chk_shard_amount()
-        log.debug('guild ids: %r', self.guild_ids)
-
-        self.request_counter = self.server.request_counter[self.session_id]
-        self.token = token
+        self.request_counter = self.server.request_counter[session_id]
 
         prop = {}
         prop['os'] = prop.get('$os')
@@ -499,12 +477,17 @@ class Connection(WebsocketConnection):
         # falls apart because it tries to get presence data(for READY)
         # for a user that is still connecting (the client right now)
 
+        self.state = ConnectionState(session_id, token, user, prop, shard_id, shard_count)
+        self.state.conn = self
+
+        await self.chk_shard_amount()
+        log.debug('guild ids: %r', self.state.guild_ids)
+
         # TODO: maybe store presences between client logon/logoff
         # like idle and dnd?
         await self.presence.global_update(self)
 
-        self.server.add_connection(self.user.id, self)
-        self.state = ConnectionState(session_id, token, user, prop, shard_id)
+        self.server.add_connection(user.id, self)
 
         # At this point, the client can receive events
         # and subscribe to guilds through OP 12 Guild Sync
@@ -514,13 +497,13 @@ class Connection(WebsocketConnection):
 
         log.info('[ready:new_session] %r, guilds=%d', self.state, len(guild_list)) 
 
-        self.user_settings = await self.settings.get_settings(self.user)
-        self.relationships = await self.relations.get_relationships(self.user)
-        self.guild_settings = await self.settings.get_guild_settings(self.user)
+        self.user_settings = await self.settings.get_settings(user)
+        self.relationships = await self.relations.get_relationships(user)
+        self.guild_settings = await self.settings.get_guild_settings(user)
 
         ready_packet = self.ready_payload(guild_list)
 
-        if not self.user.bot:
+        if not user.bot:
             user_payload = await self.user_ready_payload()
             ready_packet = {**ready_packet, **user_payload}
 
@@ -600,7 +583,7 @@ class Connection(WebsocketConnection):
 
         raise InvalidateSession(flag)
 
-    async def _resume(self, event_data, seqs_to_replay):
+    async def _resume(self, seqs_to_replay):
         """Send all missing events to the connection.
         Blocks any other events from being dispatched.
         
@@ -668,6 +651,7 @@ class Connection(WebsocketConnection):
             await self.invalidate(False)
 
         self.state = state
+        self.state.conn = self
 
         sent_seq = state.sent_seq
         if replay_seq > sent_seq:
@@ -681,22 +665,20 @@ class Connection(WebsocketConnection):
             log.warning('[resume] invalidated from seq delta')
             await self.invalidate(False, session_id=session_id)
 
-        log.info(f'Replaying {total_seqs} events to {self.user!r}')
+        log.info(f'Replaying {total_seqs} events to {self.state.user!r}')
 
         # NOTE: DON'T CALL self.dispatch in this function. DON'T. EVER.
         # it will actually hang the dispatch call indefinetly
         # because the dispatch_lock is well... locked
         # and self.dispatch waits for the lock to be released.
-        await self._resume(event_data, seqs_to_replay)
+        await self._resume(seqs_to_replay)
 
-        self.guild_ids = []
-        async for guild in self.guild_man.yield_guilds(self.user.id):
-            self.guild_ids.append(guild.id)
+        self.state.guild_ids = []
+        async for guild in self.guild_man.yield_guilds(state.user.id):
+            self.state.guild_ids.append(guild.id)
 
         self.request_counter = self.server.request_counter[self.session_id]
-
-        self.state = self.server.get_state(session_id)
-        self.server.add_connection(self.user.id, self)
+        self.server.add_connection(state.user.id, self)
 
         self.identified = True
 
@@ -755,11 +737,11 @@ class Connection(WebsocketConnection):
             if guild is None:
                 continue
 
-            if self.user.id not in guild.members:
+            if self.state.user.id not in guild.members:
                 continue
 
             if self.is_atomic:
-                guild.mark_watcher(self.user.id)
+                guild.mark_watcher(self.state.user.id)
 
             await self.dispatch('GUILD_SYNC', {
                 'id': str(guild_id),
@@ -805,7 +787,7 @@ class Connection(WebsocketConnection):
             log.error('error while requesting VoiceState', exc_info=True)
             return
 
-        log.info(f"{self.user!r} => voice => {channel!r} => {v_state!r}")
+        log.info(f"{self.state.user!r} => voice => {channel!r} => {v_state!r}")
 
         await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
         await self.dispatch('VOICE_SERVER_UPDATE', v_state.server_as_json)
@@ -852,7 +834,7 @@ class Connection(WebsocketConnection):
         if self.ws.open:
             log.warning("Cleaning up a connection while it is open")
 
-        if self.token is not None:
+        if self.state.token is not None:
             try:
                 self.server.remove_connection(self.session_id)
                 log.debug(f'Success cleaning up sid={self.session_id!r}')
@@ -860,8 +842,8 @@ class Connection(WebsocketConnection):
                 log.warning('Error while detaching the connection.', exc_info=True)
 
             # client is only offline if there's no connections attached to it
-            amount_conns = self.server.count_connections(self.user.id)
-            log.info(f"{self.user!r} now with {amount_conns} connections")
+            amount_conns = self.server.count_connections(self.state.user.id)
+            log.info(f"{self.state.user!r} now with {amount_conns} connections")
             if amount_conns < 1:
                 await self.presence.global_update(self, self.presence.offline())
 

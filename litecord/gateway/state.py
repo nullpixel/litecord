@@ -1,5 +1,6 @@
 import collections
 
+RESUME_MAX_EVENTS = 60
 
 class ConnectionState:
     """State of a connection to the gateway over websockets
@@ -31,6 +32,7 @@ class ConnectionState:
 
     """
     def __init__(self, session_id, token, user, properties, shard_id, shard_count):
+        self.conn = None
         self.session_id = session_id
         self.token = token
         self.user = user
@@ -39,6 +41,8 @@ class ConnectionState:
         self.shard_id = shard_id
         self.shard_count = shard_count
         self.sharded = shard_count > 1
+
+        self.guild_ids = []
 
         # sequence stuff
         self.recv_seq = 0

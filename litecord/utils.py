@@ -4,6 +4,7 @@ import asyncio
 import base64
 import os
 import hashlib
+import uuid
 
 import sha3
 import aiohttp
@@ -138,7 +139,7 @@ def get(lst, **kwargs):
             if res == val:
                 return element
 
-    return None
+    return
 
 
 def delete(lst, **kwargs):
@@ -155,6 +156,9 @@ def delete(lst, **kwargs):
             res = getattr(element, attr)
             if res == val:
                 del lst[idx]
+                return element
+
+    return
 
 async def maybe_coroutine(func):
     if asyncio.iscoroutine(func):
@@ -162,3 +166,6 @@ async def maybe_coroutine(func):
     else:
         return func()
 
+def random_sid():
+    """Generate a new random Session ID."""
+    return hashlib.md5(str(uuid.uuid4().fields[-1]).encode()).hexdigest()

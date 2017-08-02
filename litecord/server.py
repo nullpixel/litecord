@@ -19,14 +19,14 @@ import litecord.managers as managers
 
 from .enums import OP
 from .utils import random_digits, _err, get_random_salt, \
-    pwd_hash, get, delete, maybe_coroutine
+    pwd_hash, get, delete, maybe_coroutine, random_sid
 
 from .voice.server import VoiceManager
 
 from .objects import User
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
-from .gateway import ConnectionState
+from .gateway import ConnectionState, MAX_TRIES 
 
 log = logging.getLogger(__name__)
 
@@ -209,7 +209,7 @@ class LitecordServer:
 
     def get_state(self, session_id):
         """Get a :class:`ConnectionState` object."""
-        return _get(self.states, session_id=session_id)
+        return get(self.states, session_id=session_id)
 
     def gen_ssid(self) -> str:
         """Generate a new Session ID for a :class:`ConnectionState`.
@@ -243,11 +243,11 @@ class LitecordServer:
         state = conn.state
         log.debug('Linking %r to uid=%d', state, user_id)
 
-        if conn.sharded:
-            log.debug('Linking a shard (%d).', conn.shard_id)
+        if state.sharded:
+            log.debug('Linking a shard (%d).', state.shard_id)
 
         self.connections[user_id].append(conn)
-        self.states[state.session_id] = state
+        self.states.append(state)
 
     def remove_connection(self, session_id: str):
         """Remove a connection from the connection table.
@@ -264,7 +264,7 @@ class LitecordServer:
         except KeyError: pass
 
         try:
-            state = _delete(self.states, session_id=session_id)
+            state = delete(self.states, session_id=session_id)
         except KeyError: return
 
         try:
@@ -872,7 +872,8 @@ class LitecordServer:
 
         reconnect_tasks = []
         sent = 0
-        for (_, conn) in self.sessions.items():
+        for state in self.states:
+            conn = state.conn
             reconnect_tasks.append(loop.create_task(self.shutdown_conn(conn)))
             sent += 1
 
