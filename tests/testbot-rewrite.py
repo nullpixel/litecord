@@ -2,9 +2,8 @@ import discord
 import asyncio
 import logging
 
-discord.http.Route.BASE = 'https://memework.org:8000/api'
-#discord.http.Route.BASE = 'http://localhost:8000/api'
-#discord.http.Route.BASE = 'http://163.172.191.166:8000/api'
+#discord.http.Route.BASE = 'https://memework.org:8000/api'
+discord.http.Route.BASE = 'http://localhost:8000/api'
 logging.basicConfig(level=logging.DEBUG)
 
 client = discord.Client()
@@ -30,7 +29,7 @@ async def on_message(message):
         await message.channel.send('asd')
 
 # sexhouse
-client.run('MTQ5MjYwMDQ2MzM3.DGDbFw.oJBJSHHFQEk3UUNy8GGdFlBDpw8')
+#client.run('MTQ5MjYwMDQ2MzM3.DGDbFw.oJBJSHHFQEk3UUNy8GGdFlBDpw8')
 
 # local
-#client.run('MTQ5MjYwMDQ2MzM3.DFUWag.15nCARMffeCulxwbrM2uy5eUbF4')
+client.run('MTQ5MjYwMDQ2MzM3.DFUWag.15nCARMffeCulxwbrM2uy5eUbF4')
