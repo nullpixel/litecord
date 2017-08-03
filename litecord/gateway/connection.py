@@ -162,7 +162,7 @@ class Connection(WebsocketConnection):
         if payload.get('t') in ('READY', 'RESUMED'):
             return
 
-        self.state.add(seq, payload)
+        self.state.add(self.state.sent_seq, payload)
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.
@@ -619,7 +619,7 @@ class Connection(WebsocketConnection):
         # I don't think PRESENCES_REPLACE is even supposed to be
         # used in this non-fault-tolerant scenario... but I added it anyways
         # so whatever.
-        if len(presences) > 0:
+        if presences:
             await self.dispatch('PRESENCES_REPLACE', presences)
 
     @handler(OP.RESUME)

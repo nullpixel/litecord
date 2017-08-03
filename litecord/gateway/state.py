@@ -21,7 +21,7 @@ class ConnectionState:
     sharded: bool
         If this state refers to a shard
 
-    events: `collections.deque`[dict]
+    events: `collections.deque[dict]`
         Deque of sent events to the connection. Used for resuming
         This is filled up when the connection receives a dispatched event
 
