@@ -31,17 +31,15 @@ class ConnectionState:
         Last sequence number dispatched to the client.
 
     """
-    def __init__(self, session_id, token, user, properties, shard_id, shard_count):
+    def __init__(self, session_id, token, **kwargs):
         self.conn = None
         self.session_id = session_id
         self.token = token
-        self.user = user
-        self.properties = properties
 
-        self.shard_id = shard_id
-        self.shard_count = shard_count
-        self.sharded = shard_count > 1
+        for arg, val in kwargs.items():
+            setattr(self, arg, val)
 
+        self.sharded = self.shard_count > 1
         self.guild_ids = []
 
         # sequence stuff

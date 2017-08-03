@@ -477,7 +477,10 @@ class Connection(WebsocketConnection):
         # falls apart because it tries to get presence data(for READY)
         # for a user that is still connecting (the client right now)
 
-        self.state = ConnectionState(session_id, token, user, prop, shard_id, shard_count)
+        self.state = ConnectionState(session_id, token, \
+            user=user, properties=prop, \
+            shard_id=shard_id, shard_count=shard_count)
+
         self.state.conn = self
 
         await self.chk_shard_amount()
