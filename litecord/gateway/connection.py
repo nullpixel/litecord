@@ -430,8 +430,8 @@ class Connection(WebsocketConnection):
             raise StopConnection(CloseCodes.DECODE_ERROR)
 
         token, prop = data['token'], data['properties']
-        self.large = data.get('large_threshold', 50)
-        self.compress_flag = data.get('compress', False)
+        large = data.get('large_threshold', 50)
+        compress_flag = data.get('compress', False)
 
         user = await self.check_token(token)
         if user is None:
@@ -479,7 +479,8 @@ class Connection(WebsocketConnection):
 
         self.state = ConnectionState(session_id, token, \
             user=user, properties=prop, \
-            shard_id=shard_id, shard_count=shard_count)
+            shard_id=shard_id, shard_count=shard_count, \
+            large=large, compress=compress_flag)
 
         self.state.conn = self
 
