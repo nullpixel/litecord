@@ -130,6 +130,12 @@ class Connection(WebsocketConnection):
             'seq': int
         }, extra=REMOVE_EXTRA)
 
+        self.req_guild_schema = Schema({
+            'guild_id': str,
+            'query': str,
+            'limit': int,
+        }, extra=REMOVE_EXTRA)
+
     def __repr__(self):
         if getattr(self, 'session_id', None) is None:
             return f'<Connection identified={self.identified}>'
@@ -522,12 +528,12 @@ class Connection(WebsocketConnection):
         if not self.identified:
             raise StopConnection(CloseCodes.NOT_AUTH)
 
-        guild_id = data.get('guild_id')
-        query = data.get('query')
-        limit = data.get('limit')
-
-        if guild_id is None or query is None or limit is None:
+        try:
+            data = self.req_guild_payload(data)
+        except:
             raise StopConnection(CloseCodes.DECODE_ERROR, 'Invalid payload')
+
+        guild_id, query, limit = data['guild_id'], data['query'], data['limit']
 
         if limit > 1000: limit = 1000
         if limit <= 0: limit = 1000
@@ -536,17 +542,22 @@ class Connection(WebsocketConnection):
         if guild is None:
             return
 
-        all_members = [m.as_json for m in guild.members]
+        if self.user.id not in guild.member_ids:
+            return
+
         member_list = []
 
-        # NOTE: this is inneficient as hell
-        # but that's life I guess..
         if len(query) < 1:
-            for member in all_members:
-                if member.user.username.startswith(query):
+            for member in guild.members.values():
+                uname = member.user.username.lower()
+
+                if uname.startswith(qyery):
                     member_list.append(member)
         else:
-            member_list = all_members
+            member_list = [m for m in guild.members.values()]
+
+        # convert it to as_json madness
+        member_list = list(map(lambda o: o.as_json, member_list))
 
         if len(member_list) > 1000:
             # we split the list into chunks of size 1000
@@ -574,14 +585,12 @@ class Connection(WebsocketConnection):
         """
         log.info(f"Invalidated, can resume: {flag}")
         await self.send_op(OP.INVALID_SESSION, flag)
+
+        # flag is False if the session cannot be resumed
+        # anymore, requiring a new session to be created.
         if not flag:
             try:
-                self.server.event_cache.pop(self.session_id or session_id)
-              
-                # TODO: Make this work with ratelimits
-                # since discord sends you OP 9 + ws close
-                if flag is None:
-                    raise StopConnection(CloseCodes.UNKNOWN_ERROR, 'Invalidated session')
+                self.server.remove_state(self.state)
             except Exception:
                 log.warning('Failed to invalidate session', exc_info=True)
 

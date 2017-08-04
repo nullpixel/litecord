@@ -178,13 +178,8 @@ class LitecordServer:
         self.app_coll = self.litecord_db['applications']
         self.webhook_coll = self.litecord_db['webhooks']
 
-        # cache for dispatched packets
-        # used for resuming
-        self.event_cache = collections.defaultdict(empty_ev_cache)
-
         self.users = []
         self.raw_users = {}
-
         self.atomic_markers = {}
         self.states = []
 
@@ -248,6 +243,9 @@ class LitecordServer:
 
         self.connections[user_id].append(conn)
         self.states.append(state)
+
+    def remove_state(self, state):
+        return delete(self.states, session_id=state.session_id)
 
     def remove_connection(self, session_id: str):
         """Remove a connection from the connection table.
