@@ -356,7 +356,12 @@ class Connection(WebsocketConnection):
         else:
             await self.dispatch('READY', ready_packet)
 
-    def ready_payload(self, guild_list):
+    def ready_payload(self, guild_list: 'List[dict]') -> dict:
+        """Get the base READY payload for a client.
+
+        If the client is a bot user, this paayload gets extended
+        by :meth:`Connection.user_ready_payload`.
+        """
         return {
             '_trace': self.get_identifiers('ready'),
             'v': self.options[0],
