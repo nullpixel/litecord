@@ -70,5 +70,3 @@ of hot reloading.
  * Depending on your installation, you might have a `/env` directory,
  **DON'T MESS WITH IT.**, don't install other libraries unless otherwise specified(pls don't break your server instance).
 
-
-test
