@@ -168,7 +168,7 @@ class Connection(WebsocketConnection):
         if payload.get('t') in ('READY', 'RESUMED'):
             return
 
-        self.state.add(self.state.sent_seq, payload)
+        self.state.add(payload)
 
     async def dispatch(self, evt_name, evt_data=None):
         """Send a DISPATCH packet through the websocket.

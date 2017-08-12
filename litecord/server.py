@@ -245,6 +245,9 @@ class LitecordServer:
         self.states.append(state)
 
     def remove_state(self, state):
+        if state is None:
+            return
+
         return delete(self.states, session_id=state.session_id)
 
     def remove_connection(self, session_id: str):
