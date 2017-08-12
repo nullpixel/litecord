@@ -207,7 +207,7 @@ class Connection(WebsocketConnection):
         # This compress_flag is required to be used only on READY
         # because d.js is weird with its compression and ETF at the same time.
         if evt_name == 'READY':
-            amount = await self.send(payload, compress=self.compress_flag)
+            amount = await self.send(payload, compress=self.state.compress)
         else:
             amount = await self.send(payload)
 
