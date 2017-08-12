@@ -226,7 +226,7 @@ class Guild(LitecordObject):
     @property
     def presences(self):
         """Returns a list of :class:`Presence` objects for all online members."""
-        return [self.server.presence.get_presence(self.id, member.id).as_json \
+        return [self.server.presence.get_presence(self.id, member.id) \
             for member in self.online_members]
 
     async def _dispatch(self, evt_name, evt_data) -> int:
@@ -350,7 +350,7 @@ class Guild(LitecordObject):
             # arrays of stuff
             'members': self.iter_json(self.members),
             'channels': self.iter_json(self.channels),
-            'presences': self.presences,
+            'presences': self.iter_json(self.presences),
         }
 
         if self.owner.user.bot:

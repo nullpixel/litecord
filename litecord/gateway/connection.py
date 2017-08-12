@@ -763,7 +763,7 @@ class Connection(WebsocketConnection):
 
             await self.dispatch('GUILD_SYNC', {
                 'id': str(guild_id),
-                'presences': [p for p in guild.presences],
+                'presences': [p.as_json for p in guild.presences],
                 'members': [m.as_json for m in guild.online_members],
             })
 
