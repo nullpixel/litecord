@@ -404,6 +404,9 @@ class GuildManager:
                 self.messages.remove(message)
             except ValueError: pass
 
+            del message
+            return
+
         message._raw.update(raw_message)
         message._update(message.channel, message.author, message._raw)
         return message
