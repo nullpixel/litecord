@@ -315,7 +315,7 @@ class Connection(WebsocketConnection):
 
             jguild = guild.as_json
 
-            if guild.member_count > self.large:
+            if guild.member_count > self.state.large:
                 jguild['members'] = [m.as_json for m in guild.online_members]
 
             guild_list.append(jguild)
