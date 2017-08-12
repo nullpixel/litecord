@@ -76,8 +76,10 @@ class UsersEndpoint:
         new_avatar_hash = await self.server.images.avatar_register(payload.get('avatar'))
         new_raw_user['avatar'] = new_avatar_hash or user._data['avatar']
 
-        await self.server.user_db.update_one({'user_id': str(user.id)}, {'$set': new_raw_user})
-        await self.server.userdb_update()
+        user._raw.update(new_raw_user)
+
+        await self.server.user_coll.update_one({'user_id': str(user.id)}, {'$set': new_raw_user})
+        await self.server.reload_user(user)
 
         return _json(user.as_json)
 
