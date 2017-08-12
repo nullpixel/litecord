@@ -481,7 +481,7 @@ class Connection(WebsocketConnection):
         prop = {}
         prop['os'] = prop.get('$os')
         prop['browser'] = prop.get('$browser')
-        prop['large'] = self.large
+        prop['large'] = large
 
         # NOTE: Always set user presence before calculating the guild list!
         # If we set presence after sending READY, PresenceManager
@@ -852,17 +852,19 @@ class Connection(WebsocketConnection):
         if self.ws.open:
             log.warning("Cleaning up a connection while it is open")
 
-        if self.state.token is not None:
-            try:
-                self.server.remove_connection(self.session_id)
-                log.debug(f'Success cleaning up sid={self.session_id!r}')
-            except Exception:
-                log.warning('Error while detaching the connection.', exc_info=True)
+        if self.state is None:
+            return
 
-            # client is only offline if there's no connections attached to it
-            amount_conns = self.server.count_connections(self.state.user.id)
-            log.info(f"{self.state.user!r} now with {amount_conns} connections")
-            if amount_conns < 1:
-                await self.presence.global_update(self, self.presence.offline())
+        try:
+            self.server.remove_connection(self.session_id)
+            log.debug(f'Success cleaning up sid={self.session_id!r}')
+        except Exception:
+            log.warning('Error while detaching the connection.', exc_info=True)
 
-            self.token = None
+        # client is only offline if there's no connections attached to it
+        amount_conns = self.server.count_connections(self.state.user.id)
+        log.info(f"{self.state.user!r} now with {amount_conns} connections")
+        if amount_conns < 1:
+            await self.presence.global_update(self, self.presence.offline())
+
+        self.state.token = None
