@@ -211,7 +211,7 @@ class Connection(WebsocketConnection):
         else:
             amount = await self.send(payload)
 
-        log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.compress_flag}')
+        log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.state.compress}')
         self._register_payload(self.state.sent_seq, payload)
 
         self.dispatch_lock.release()
