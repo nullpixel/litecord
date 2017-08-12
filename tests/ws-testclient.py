@@ -4,9 +4,10 @@ logging.basicConfig(level=logging.DEBUG)
 loop = asyncio.get_event_loop()
 
 BASE = 'http://localhost:8000/api'
-sess = aiohttp.ClientSession()
+BASE = 'http://litecord.memework.org:8000/api'
 
 async def main():
+    sess = aiohttp.ClientSession()
     gateway = None
     async with sess.get(f'{BASE}/gateway') as r:
         gateway = await r.json()
