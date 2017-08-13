@@ -26,6 +26,16 @@ class UDPVoiceServer:
         """
         message = data.decode()
         log.debug(f'Received {message} from {addr}')
+
+        decrypted = self.decrypt(message)
+        message = opus.decode(message)
+
+        if message.channels != 2:
+            return
+
+        if message.sample_rate != 48000:
+            return
+
         self.transport.sendto(data, addr)
 
 if __name__ == '__main__':

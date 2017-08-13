@@ -29,9 +29,7 @@ class VoiceConnection(WebsocketConnection):
         self.path = kwargs['path']
 
         self.state = None
-
         self.identified = False
-
         self.udp_port = 1234
 
     @handler(VoiceOP.HEARTBEAT)
@@ -65,7 +63,10 @@ class VoiceConnection(WebsocketConnection):
         except KeyError:
             raise StopConnection(4001, 'Invalid protocol data')
 
-        await self.send_op(VoiceOP.SESSION_DESCRIPTION, {})
+        await self.send_op(VoiceOP.SESSION_DESCRIPTION, {
+            'mode': 'xsalsa20_poly1305',
+            'secret_key': [ord(x) for x in 'meme'],
+        })
 
     @handler(VoiceOP.IDENTIFY)
     async def v_identify_handler(self, data):
