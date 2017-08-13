@@ -28,9 +28,15 @@ class VoiceConnection(WebsocketConnection):
         self.v_server = kwargs['server']
         self.path = kwargs['path']
 
+        self.state = None
+
         self.identified = False
 
         self.udp_port = 1234
+
+    @handler(VoiceOP.HEARTBEAT)
+    async def v_hearbeat_handler(self, data):
+        pass
 
     @handler(VoiceOP.SELECT_PROTOCOL)
     async def v_select_proto_handler(self, data):
@@ -85,6 +91,14 @@ class VoiceConnection(WebsocketConnection):
             'modes': ["plain"],
             'heartbeat_interval': 1,
         })
+
+    @handler(VoiceOP.RESUME)
+    async def v_resume_handler(self, data):
+        pass
+
+    @handler(VoiceOP.SPEAKIING)
+    async def v_speaking_handler(self, data):
+        pass
 
     async def cleanup(self):
         print('rip this guy')

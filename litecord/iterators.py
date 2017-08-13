@@ -11,8 +11,7 @@ class AsyncIteratorWrapper:
 
     async def __anext__(self):
         try:
-            value = next(self._it)
+            return next(self._it)
         except StopIteration:
             raise StopAsyncIteration
-        return value
 
