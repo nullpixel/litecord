@@ -781,34 +781,24 @@ class Connection(WebsocketConnection):
         self_deaf = data.get('self_deaf', False)
 
         if guild_id is None or channel_id is None:
-            log.warning("[vsu] missing params")
-            return
+            return log.warning('[vsu] missing params')
 
         guild = self.server.guild_man.get_guild(guild_id)
         if guild is None:
-            log.warning("[vsu] unknown guild")
-            return
+            return log.warning('[vsu] unknown guild')
 
         channel = guild.channels.get(channel_id)
         if channel is None:
-            log.warning("[vsu] unknown channel")
-            return
+            return log.warning('[vsu] unknown channel')
 
-        if channel.str_type != 'voice':
-            log.warning("[vsu] not voice channel")
-            return
+        if channel.type != ChannelTypes.GUILD_VOICE:
+            return log.warning('[vsu] not voice channel')
 
-        # We request a VoiceState from the voice manager
-        try:
-            v_state = await channel.voice_request(self, self_mute, self_deaf)
-        except VoiceError:
-            log.error('error while requesting VoiceState', exc_info=True)
-            return
-
-        log.info(f"{self.state.user!r} => voice => {channel!r} => {v_state!r}")
+        v_state = await guild.voice_manager.link(self, channel)
+        log.info('%r -voice> %r, %r', self.state.user, channel, v_state)
 
         await self.dispatch('VOICE_STATE_UPDATE', v_state.as_json)
-        await self.dispatch('VOICE_SERVER_UPDATE', v_state.server_as_json)
+        await self.dispatch('VOICE_SERVER_UPDATE', guild.region.server.as_json)
 
     @handler(OP.VOICE_SERVER_PING)
     async def v_ping_handler(self, data):

@@ -45,8 +45,10 @@ class VoiceState(LitecordObject):
         self.self_mute = False
         self.supress = False
 
-    def get_json(self, display_sess_id=False) -> dict:
-        res = {
+
+    @property
+    def as_json(self):
+        return {
             'guild_id': str(self.guild.id),
             'channel_id': str(self.channel.id),
             'user_id': str(self.user.id),
@@ -58,10 +60,11 @@ class VoiceState(LitecordObject):
             'supress': self.supress,
         }
 
-        if not display_sess_id:
-            res.pop('session_id')
-
-        return res
+    @property
+    def as_public(self):
+        r = self.as_json
+        r.pop('session_id')
+        return r
 
 
 class VoiceChannelState(LitecordObject):
