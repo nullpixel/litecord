@@ -1,21 +1,27 @@
 import logging, asyncio, websockets, aiohttp
 
 logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger()
 loop = asyncio.get_event_loop()
 
 BASE = 'http://localhost:8000/api'
-BASE = 'http://litecord.memework.org:8000/api'
+BASE = 'https://litecord.memework.org:8000/api'
 
 async def main():
     sess = aiohttp.ClientSession()
     gateway = None
+
+    log.info(f'requesting {BASE}/gateway')
     async with sess.get(f'{BASE}/gateway') as r:
         gateway = await r.json()
 
-    logging.info('gateway: %r', gateway)
+    log.info('gateway: %r', gateway)
     ws = await websockets.connect(gateway['url'])
+    log.info('in loop')
     try:
-        while True: await ws.recv()
+        while True:
+            d = await ws.recv()
+            log.info('data: %s', d)
     except KeyboardInterrupt:
         await ws.close()
 
