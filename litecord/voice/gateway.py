@@ -97,7 +97,7 @@ class VoiceConnection(WebsocketConnection):
     async def v_resume_handler(self, data):
         pass
 
-    @handler(VoiceOP.SPEAKIING)
+    @handler(VoiceOP.SPEAKING)
     async def v_speaking_handler(self, data):
         pass
 
