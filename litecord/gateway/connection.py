@@ -42,44 +42,44 @@ class Connection(WebsocketConnection):
     .. _the documentation about it here: https://discordapp.com/developers/docs/topics/gateway
     .. _WebSocketServerProtocol: https://websockets.readthedocs.io/en/stable/api.html#websockets.server.WebSocketServerProtocol
 
-    This connection only handles A mix of Discord's gateway version 5 and 6,
-    it adheres with the docs which are v5, but handles some stuff from v6(see :py:meth:`Connection.guild_sync_handler`)
+    This connection handles the Gateway API v6,
     you can find `the documentation about it here`_.
 
     Attributes
     ----------
     ws: `WebSocketServerProtocol`_
         The actual websocket connection.
+    loop: `event loop`
+        Event loop.
     options: dict
         Websocket options, encoding, gateway version.
+    server: :class:`LitecordServer`
+        Litecord server instance
+
+    state: :class:`ConnectionState`
+        Connection state instance.
+    session_id: str
+        Connection's session id.
 
     encoder: function
         Encoder function that convers objects to the provided encoding over :attr:`Connection.options`
     decoder: function
         Decoder function that converts messages from the websocket to objects.
 
-    events: dict
-        If the connection is identified, this becomes a reference to
-        `LitecordServer.event_cache[connection.user.id]`.
     hb_interval: int
         Amount, in milliseconds, of the client's heartbeat period.
     wait_task: `asyncio.Task` or None
         Check :meth:`Connection.hb_wait_task` for more details.
-    token: str or None
-        The token this connection is using.
-    session_id: str or None
-        The session ID this connection is using.
-    identified: bool
-        Connection had a successful `IDENTIFY` or not.
-    properties: dict
-        Connection properties like OS, browser and the large_threshold.
-    large: int
-        The large threshold where the gateway won't send online members
-        anymore.
+
     ratelimit_tasks: dict
         Tasks that clean the specified ratelimit bucket in a period of time.
     request_counter: dict
         A request counter for ratelimit buckets.
+
+    identified: bool
+        Connection had a successful `IDENTIFY` or not.
+    properties: dict
+        Connection properties like OS, browser and the the ``large_threshold``.
     
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
