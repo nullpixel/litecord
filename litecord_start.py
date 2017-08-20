@@ -60,14 +60,19 @@ def main():
         server = app.litecord_server
         server.compliance()
 
+        log.debug('Running servers')
         server.http_server = loop.run_until_complete(server.http_server)
         server.ws_server = loop.run_until_complete(server.ws_server)
+
+        log.debug('Running server sentry')
         loop.create_task(litecord.server_sentry(server))
+
+        log.debug('Running loop')
         loop.run_forever()
     except KeyboardInterrupt:
-        log.info("Exiting from a CTRL-C...")
+        log.info('Exiting from a CTRL-C...')
     except:
-        log.error("Oh no! We received an error. Exiting.", exc_info=True)
+        log.exception('Oh no! We received an error. Exiting.')
     finally:
         app.litecord_server.shutdown()
 
