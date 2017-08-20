@@ -1,9 +1,8 @@
 """
 enums.py - Various Enums used by litecord
 """
-from enum import Enum
 
-class OP(Enum):
+class OP:
     """Gateway OP codes."""
     DISPATCH = 0
     HEARTBEAT = 1
@@ -22,7 +21,7 @@ class OP(Enum):
     HEARTBEAT_ACK = 11
     GUILD_SYNC = 12
 
-class CloseCodes(Enum):
+class CloseCodes:
     """Websocket close codes used by the gateway."""
     UNKNOWN_ERROR = 4000
     UNKNOWN_OP = 4001
@@ -50,7 +49,7 @@ CloseReasons = {
     CloseCodes.SHARDING_REQUIRED: 'Sharding required',
 }
 
-class VoiceOP(Enum):
+class VoiceOP:
     """Voice OP codes.
     
     These OP codes are used in the Voice Websocket.
@@ -69,7 +68,7 @@ class VoiceOP(Enum):
     RESUMED = 9
     CLIENT_DISCONNECT = 13
 
-class VoiceWSCloseCodes(Enum):
+class VoiceWSCloseCodes:
     """Close codes used by the Voice WebSocket."""
     UNKNOWN_OP = 4001
     NOT_AUTH = 4003
@@ -85,11 +84,11 @@ class VoiceWSCloseCodes(Enum):
     SERVER_CRASH = 4015
     UNKNOWN_ENC_MODE = 4016
 
-class AppType(Enum):
+class AppType:
     """Application Type."""
     BOT = 0
 
-class ChannelType(Enum):
+class ChannelType:
     """Channel Type."""
     GUILD_TEXT = 0
     DM = 1
@@ -97,7 +96,7 @@ class ChannelType(Enum):
     GROUP_DM = 3
     GUILD_CATEGORY = 4
 
-class MessageType(Enum):
+class MessageType:
     """Message Type.
     
     ``DEFAULT`` is the one that users can usually send.
