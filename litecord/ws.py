@@ -17,7 +17,11 @@ import zlib
 import pprint
 
 import websockets
-import earl
+
+try:
+    import earl
+except ImportError:
+    print('Running withouth ETF support')
 
 from .err import InvalidateSession
 from .enums import CloseReasons, CloseCodes
