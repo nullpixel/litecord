@@ -1,9 +1,3 @@
-"""
-gateway.py - Manages a websocket connection
-
-    This file is considered one of the most important, since it loads
-    LitecordServer and tells it to initialize the databases.
-"""
 import logging
 import asyncio
 import random
@@ -30,9 +24,9 @@ HB_MAX_MSEC = 42000
 log = logging.getLogger(__name__)
 
 SERVERS = {
-    'hello': [f'litecord-hello-{random.randint(1, 99)}'],
-    'ready': [f'litecord-session-{random.randint(1, 99)}'],
-    'resume': [f'litecord-resumer{random.randint(1, 99)}'],
+    'hello': [f'litecord-hello-{random.randint(1, 99)}' for i in range(5)],
+    'ready': [f'litecord-session-{random.randint(1, 99)}' for i in range (5)],
+    'resume': [f'litecord-resumer{random.randint(1, 99)}' for i in range(5)],
 }
 
 
@@ -139,10 +133,11 @@ class Connection(WebsocketConnection):
     def __repr__(self):
         if getattr(self, 'session_id', None) is None:
             return f'<Connection identified={self.identified}>'
+
         return f'<Connection sid={self.esssion_id} u={self.state.user!r}>'
 
-    def get_identifiers(self, module):
-        return SERVERS.get(module, ['litecord-general-1'])
+    def get_identifiers(self, module: str) -> str:
+        return SERVERS.get(module, ['litecord-anything'])
 
     def basic_hello(self) -> dict:
         """Returns a JSON serializable OP 10 Hello packet."""
@@ -156,9 +151,9 @@ class Connection(WebsocketConnection):
 
     def _register_payload(self, sent_seq, payload):
         """Register a sent payload.
-        
-        Calls :meth:`ConnectionState.add` and
-        updates :attr:`ConnectionState.sent_seq`.
+
+        Calls :meth:`ConnectionState.add`.
+        Overwrites :attr:`ConnectionState.sent_seq`.
         """
         self.state.sent_seq = sent_seq
 
@@ -178,14 +173,14 @@ class Connection(WebsocketConnection):
         evt_name: str
             Follows the same pattern as Discord's event names.
         evt_data: any
-            Any JSON serializable object.
-            If this has an `as_json` property, it gets called.
+            Any JSON serializable object, ``None`` by default.
+            If this has an `as_json` property, it gets used.
         """
 
         await self.dispatch_lock
 
         if not self.identified:
-            log.warning('[dispatch] cannot dispatch to not identified')
+            log.warning('[dispatch] cannot dispatch to non-identified')
             self.dispatch_lock.release()
             return -1
 
@@ -218,8 +213,8 @@ class Connection(WebsocketConnection):
         return amount
 
     @property
-    def is_atomic(self):
-        """Returns boolean."""
+    def is_atomic(self) -> bool:
+        """Returns if this connection represents an Atomic Discord client."""
         return self.server.atomic_markers.get(self.session_id, False)
 
     async def hb_wait_task(self):
@@ -235,7 +230,10 @@ class Connection(WebsocketConnection):
     @handler(OP.HEARTBEAT)
     async def heartbeat_handler(self, data):
         """Handle OP 1 Heartbeat packets.
-        Sends a OP 11 Heartbeat ACK packet.
+        Replies with OP 11 Heartbeat ACK packet.
+
+        Creates an `asyncio.Task` with :meth:`Connection.hb_wait_task`
+        so the connection gets closed if they don't hearbeat on time.
 
         Parameters
         ----------
@@ -250,15 +248,15 @@ class Connection(WebsocketConnection):
         self.wait_task = self.loop.create_task(self.hb_wait_task())
         await self.send_op(OP.HEARTBEAT_ACK, None)
 
-    async def check_token(self, token: str) -> tuple:
+    async def check_token(self, token: str) -> 'User':
         """Check if a token is valid and can be used for proper authentication.
         
         Returns
         -------
-        tuple
-            with 3 items:
-            - A boolean describing the success of the operation,
-            - A :class:`User` object(:py:meth:`None` if operation failed).
+        :class:`User`
+            If the token is valid
+        None
+            If the token is not valid or it references a non-existing user.
         """
         token_user_id = await self.server.token_find(token)
         if token_user_id is None:
@@ -272,7 +270,7 @@ class Connection(WebsocketConnection):
 
         return user
 
-    def check_shard(self, shard):
+    def check_shard(self, shard: list):
         """Checks the validity of the shard payload.
         
         Raises
@@ -298,9 +296,17 @@ class Connection(WebsocketConnection):
         if shard_id > shard_count:
             raise StopConnection(ccs, 'Invalid shard payload(id > count).')
 
-    async def make_guild_list(self):
+    async def make_guild_list(self) -> list:
         """Generate the guild list to be sent over the READY event.
         
+        If the guild is large enough(from :attr:`ConnectionState.large`)
+        this only puts the online members in the guild object.
+
+        If the connection doesn't represent an `Atomic Discord` connection,
+        the client gets subscribed to all guilds the user is in.
+
+        (Actual guild subscribing on Atomic is done by :attr:`Connection.guild_sync_handler`)
+
         Returns
         -----------
         List[dict]
@@ -323,9 +329,21 @@ class Connection(WebsocketConnection):
         return guild_list
 
     async def chk_shard_amount(self):
-        """Check for the amount of guilds each shard is """
+        """Check for the amount of guilds each shard is.
+        
+        This fills :attr:`ConnecionState.guild_ids` with all
+        the Guild IDs this user is in.
+
+        Raises
+        ------
+        StopConnection
+            If the shard being checked has more than 2500 guilds.
+        """
+
         gm = self.guild_man
         self.state.guild_ids = []
+
+        #: List of shard IDs
         shard_guild = []
 
         async for guild in gm.yield_guilds(self.state.user.id):
@@ -334,27 +352,36 @@ class Connection(WebsocketConnection):
 
         count = collections.Counter(shard_guild)
         for shard_id, guild_count in count.most_common():
-            if shard_id != self.state.shard_id: continue
+
+            # We don't really check for the other shards amount, just
+            # the one we are currently in
+            # since checking for the others *could* cause them to crash as well.
+            if shard_id != self.state.shard_id:
+                continue
+
             if guild_count > 2500:
                 raise StopConnection(CloseCodes.INVALID_SHARD, f'shard {shard_id} is with {guild_count} shards, too many')
 
-    async def dispatch_ready(self, ready_packet, guild_list):
+    async def dispatch_ready(self, ready_packet: dict, guild_list: list):
         """Dispatch the `READY` event to a client.
         
         If the connection is from a bot, and not a selfbot(user),
         this makes guild streaming, which is overwriting the guild data in `READY`
-        for unavailable guilds and dispatching ``GUILD_CREATE``
-        for every guild the bot is.
+        for unavailable guilds and dispatching ``GUILD_CREATE`` events
+        for every guild the bot is in.
         """
+
         if self.state.user.bot:
             f = lambda raw_guild: {'id': raw_guild['id'], 'unavailable': True}
             ready_packet['guilds'] = list(map(f, guild_list))
 
             await self.dispatch('READY', ready_packet)
+
             for raw_guild in guild_list:
                 await self.dispatch('GUILD_CREATE', raw_guild)
-        else:
-            await self.dispatch('READY', ready_packet)
+            return
+
+        await self.dispatch('READY', ready_packet)
 
     def ready_payload(self, guild_list: 'List[dict]') -> dict:
         """Get the base READY payload for a client.
@@ -373,15 +400,17 @@ class Connection(WebsocketConnection):
             'session_id': self.session_id,
         }
 
-    async def user_ready_payload(self):
+    async def user_ready_payload(self) -> dict:
         """Get a dictionary with keys that are only
         used in user `READY` payloads.
         """
         if self.state.user.bot:
             raise RuntimeError('Bot requesting a user ready')
 
-        f = lambda r: self.presence.get_global_presence(r.u_to.uid)
+        f = lambda r: self.presence.get_glpresence(r.u_to.uid)
         friend_presences = list(map(f, self.relationships))
+
+        # TODO: async iterator on User.relationships
 
         #friend_presences = []
         #async for rel_entry in self.user.relationships:
@@ -426,10 +455,16 @@ class Connection(WebsocketConnection):
         """Handle an OP 2 Identify sent by the client.
 
         Checks if the token given in the packet is valid, and if it is,
-        dispatched a READY event.
+        dispatches a READY event.
 
         Information on the input payload is at:
         https://discordapp.com/developers/docs/topics/gateway#gateway-identify
+
+        Raises
+        ------
+        StopConnection
+            On any invalidation of the current state of the connection
+            or the payload.
         """
         if self.identified:
             raise StopConnection(CloseCodes.ALREADY_AUTH)
@@ -437,7 +472,7 @@ class Connection(WebsocketConnection):
         try:
             data = self.identify_schema(data)
         except Exception as err:
-            log.warning(f'Erroneous IDENTIFY: {err!r}')
+            log.warning(f'Invalid IDENTIFY: {err!r}')
             raise StopConnection(CloseCodes.DECODE_ERROR)
 
         token, prop = data['token'], data['properties']

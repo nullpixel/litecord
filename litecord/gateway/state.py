@@ -62,7 +62,7 @@ class ConnectionState:
             return
 
     def add(self, payload):
-        """Add a payload to the state's queue"""
+        """Add a payload to the state's cache."""
         self.events.append(payload)
 
     def clean(self):
