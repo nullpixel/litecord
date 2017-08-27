@@ -16,23 +16,25 @@ log = logging.getLogger(__name__)
 
 
 class GuildManager:
-    """Manager class for guilds, channels, roles, messages and invites..
-
-    .. _LitecordServer: server.html
-    .. _AsyncIOMotorCollection: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
+    """Manager class for guilds, channels, roles, messages and invites.
 
     Attributes
     ----------
-    server: [`LitecordServer`_]
+    server: :class:`LitecordServer`
         Server instance.
-    guild_coll: [`AsyncIOMotorCollection`_]
-        Guild collection.
-    message_coll: [`AsyncIOMotorCollection`_]
-        Message collection.
-    guilds: list 
-        All available :class:`Guild` objects.
-    channels: list
-        All available :class:`Channel` objects.
+
+    raw_members : list[dict]
+        Raw member cache.
+    roles : list[:class:`Role`]
+        Role cache.
+    channels : list[:class:`GuildTextChannel` or :class:`GuildVoiceChannel`]
+        Channel cache.
+    guilds : list[:class:`Guild`]
+        Guild cache.
+    invites : list[:class:`Invite`]
+        Invite cache.
+    messages : list[:class:`Message`]
+        Message cache.
     """
     def __init__(self, server):
         self.server = server
@@ -1008,6 +1010,8 @@ class GuildManager:
         """Give the shard count for a user.
         The value changes with the user joining/leaving guilds.
 
+        This function allocates around 1200 guilds for each shard.
+
         Parameters
         ----------
         user: :class:`User`
@@ -1018,7 +1022,6 @@ class GuildManager:
         int
             The recommended amount of shards to start the connection.
         """
-        # 1200 guilds per shard should be allright
         return max((await self.guild_count(user)) / 1200, 1)
 
     def get_shard(self, guild_id: int, shard_count: int) -> int:
@@ -1028,8 +1031,8 @@ class GuildManager:
         return (guild_id << MAGIC) % shard_count
 
     async def init_members(self):
-        """Load member data from the member collection into
-        :class:`GuildManager`
+        """Load raw member data from the member collection into
+        the :attr:`GuildManager.raw_members`
         """
 
         cursor = self.member_coll.find()
@@ -1043,7 +1046,9 @@ class GuildManager:
         log.debug('raw_members: %r', self.raw_members)
 
     async def init_roles(self):
-        """Load role data into the :class:`GuildManager`"""
+        """Load raw role data as role objects
+        and fill :attr:`GuildManager` with it.
+        """
 
         cursor = self.role_coll.find()
         role_count = 0
@@ -1057,7 +1062,7 @@ class GuildManager:
         log.info('[guild] loaded %d roles', role_count)
 
     async def init_channels(self):
-        """Load channel data into the :class:`GuildManager`"""
+        """Load channel data into :attr:`GuildManager.channels`"""
 
         cursor = self.channel_coll.find()
         chan_count = 0
@@ -1082,7 +1087,11 @@ class GuildManager:
         log.info('[guild] loaded %d channels', chan_count)
 
     async def init_guilds(self):
-        """Load guild data into the :class:`GuildManager`."""
+        """Load guild data into :attr:`GuildManager.guilds`.
+        
+        This creates raw member objects if the member
+        the guild is being loaded doesn't exist(in the raw member cache).
+        """
 
         cursor = self.guild_coll.find()
         guild_count = 0
