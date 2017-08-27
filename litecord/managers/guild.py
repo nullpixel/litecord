@@ -1006,10 +1006,6 @@ class GuildManager:
 
     async def shard_count(self, user):
         """Give the shard count for a user.
-
-        Since Litecord does not support sharding nor clients
-        in a lot of guilds, this usually returns the `amazing` value of 1.
-
         The value changes with the user joining/leaving guilds.
 
         Parameters

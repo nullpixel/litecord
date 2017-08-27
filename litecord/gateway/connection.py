@@ -359,7 +359,7 @@ class Connection(WebsocketConnection):
     def ready_payload(self, guild_list: 'List[dict]') -> dict:
         """Get the base READY payload for a client.
 
-        If the client is a bot user, this paayload gets extended
+        If the client is a bot user, this payload gets extended
         by :meth:`Connection.user_ready_payload`.
         """
         return {
