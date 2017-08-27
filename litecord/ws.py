@@ -45,6 +45,7 @@ class Handler:
 
     def __call__(self, func):
         self.func = func
+        self.__doc__ = func.__doc__
         return self
 
     def __repr__(self):
