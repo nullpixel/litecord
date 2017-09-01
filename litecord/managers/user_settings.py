@@ -46,6 +46,7 @@ class SettingsManager:
                 'friend_source_flags': {
                     'all': True,
                 },
+
                 'explicit_content_filter': 1,
                 'enable_tts_command': False,
                 'developer_mode': False,

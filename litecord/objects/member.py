@@ -115,7 +115,7 @@ class Member(LitecordObject):
         return {
             'user': self.user.as_json,
             'nick': self.nick,
-            'roles': self.roles,
+            'roles': [r.id for r in self.roles],
             'joined_at': dt_to_json(self.joined_at),
             'deaf': self.voice_deaf,
             'mute': self.voice_mute,

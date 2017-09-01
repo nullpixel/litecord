@@ -21,12 +21,16 @@ MAX_TRIES = 20
 HB_MIN_MSEC = 40000
 HB_MAX_MSEC = 42000
 
+# Amount of server identifiers to be generated
+SERVER_AMOUNT = 5
+
 log = logging.getLogger(__name__)
 
 SERVERS = {
-    'hello': [f'litecord-hello-{random.randint(1, 99)}' for i in range(5)],
-    'ready': [f'litecord-session-{random.randint(1, 99)}' for i in range (5)],
-    'resume': [f'litecord-resumer{random.randint(1, 99)}' for i in range(5)],
+    'main': [f'gateway-main-{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
+    'hello': [f'litecord-hello-{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
+    'ready': [f'litecord-session-{random.randint(1, 99)}' for i in range (SERVER_AMOUNT)],
+    'resume': [f'litecord-resumer{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
 }
 
 
@@ -136,8 +140,14 @@ class Connection(WebsocketConnection):
 
         return f'<Connection sid={self.esssion_id} u={self.state.user!r}>'
 
-    def get_identifiers(self, module: str) -> str:
-        return SERVERS.get(module, ['litecord-anything'])
+    def get_identifiers(self, module: str) -> list:
+        """Get a server identifier for a module."""
+        main = random.choice(SERVERS['main'])
+        current = SERVERS.get(module)
+        if not current:
+            return [main]
+
+        return [random.choice(current), main]
 
     def basic_hello(self) -> dict:
         """Returns a JSON serializable OP 10 Hello packet."""
@@ -430,7 +440,7 @@ class Connection(WebsocketConnection):
 
             # Only you can access those
             # They are handled under another endpoint
-            'notes': [],
+            'notes': {},
             'friend_suggestion_count': 0,
 
             # Assuming this is used for relationships

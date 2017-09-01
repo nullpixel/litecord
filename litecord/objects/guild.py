@@ -331,6 +331,7 @@ class Guild(LitecordObject):
             'embed_channel_id': None,
 
             'verification_level': 0, # TODO
+            'explicit_content_filter': 2,
             'default_message_notifications': -1, # TODO
             'roles': self.iter_json(self.roles),
             'emojis': self.emojis,
@@ -342,10 +343,20 @@ class Guild(LitecordObject):
             # usually clients ignore this, so we don't need to worry
 
             'joined_at': dt_to_json(self.created_at),
+
+            # TODO: make as_json custom per user
+            # so we can implement this as we can.
             'large': self.member_count > 250,
             'unavailable': False,
+
+            # TODO: maybe make member_count a property we
+            # can get async-y?
+            # guild_man.member_coll.count({'guild_id': str(self.id)})
+            # will help a ton on this.
             'member_count': self.member_count,
+
             'voice_states': [],
+            #'voice_states': self.voice_states,
 
             # arrays of stuff
             'members': self.iter_json(self.members),

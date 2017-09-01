@@ -149,7 +149,9 @@ class TextGuildChannel(BaseGuildChannel):
         cursor = self.server.message_coll.find({'channel_id': self.id}).sort('message_id')
 
         async for raw_message in cursor:
-            if len(res) > limit: break
+            if len(res) > limit:
+                break
+
             m_id = raw_message['message_id']
 
             m = self.guild_man.get_message(m_id)
