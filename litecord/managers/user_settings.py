@@ -30,7 +30,30 @@ class SettingsManager:
 
         settings = await self.settings_coll.find_one({'user_id': user.id})
         if settings is None:
-            settings = {}
+            settings = {
+                'timezone_offset': 0,
+                'theme': 'dark',
+                'status': 'online',
+                'show_current_game': False,
+                'restricted_guilds': [],
+                'render_reactions': True,
+                'render_embeds:': True,
+                'message_display_compact': True,
+                'locale': 'en-US',
+                'inline_embed_media': False,
+                'inline_attachment_media': False,
+                'guild_positions': [],
+                'friend_source_flags': {
+                    'all': True,
+                },
+                'explicit_content_filter': 1,
+                'enable_tts_command': False,
+                'developer_mode': False,
+                'detect_platform_accounts': False,
+                'default_guilds_restricted': False,
+                'convert_emoticons': True,
+                'afk_timeout': 600,
+            }
         return settings
 
     async def get_guild_settings(self, user):
