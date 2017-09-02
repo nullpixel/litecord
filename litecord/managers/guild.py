@@ -974,11 +974,10 @@ class GuildManager:
         """
 
         if not invite.sane:
-            log.warning(f"Insane invite {invite.code} to {invite.channel.guild.name}")
+            log.warning(f'Insane invite {invite!r} to {invite.guild!r}')
             return False
 
-        success = invite.use()
-        if not success:
+        if not invite.use():
             return False
 
         await invite.update()
@@ -998,9 +997,9 @@ class GuildManager:
         """
 
         res = await self.invite_coll.delete_one({'code': invite.code})
-        log.info(f"Removed {res.deleted_count} invites")
+        log.info(f'Removed {res.deleted_count} invites')
 
-        return await self.reload_invite(invite)
+        await self.reload_invite(invite)
 
     async def guild_count(self, user) -> int:
         """Get the guild count for a user"""

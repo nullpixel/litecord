@@ -39,7 +39,7 @@ class Invite(LitecordObject):
         If not, this becomes :py:const:`None`.
     """
 
-    __slots__ = ('_raw', 'code', 'channel_id', 'channel', 'inviter_id', 'inviter'
+    __slots__ = ('_raw', 'code', 'channel_id', 'channel', 'guild', 'inviter_id', 'inviter'
         'temporary', 'uses', 'iso_timestamp', 'infinite', 'expiry_timestamp')
 
     def __init__(self, server, raw):
@@ -67,15 +67,17 @@ class Invite(LitecordObject):
         self.channel = server.guild_man.get_channel(self.channel_id)
         if self.channel is None:
             log.warning('Orphan invite (channel)')
-            self._update_detach(raw)
+            self._update_detached(raw)
             return
+
+        self.guild = self.channel.guild
 
         self.inviter_id = int(raw['inviter_id'])
         self.inviter = guild.members.get(self.inviter_id)
         if self.inviter is None:
             log.warning('Orphan invite (inviter)')
 
-        self._update_detach(raw)
+        self._update_detached(raw)
 
     @property
     def valid(self):
