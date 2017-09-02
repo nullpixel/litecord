@@ -84,6 +84,20 @@ class VoiceWSCloseCodes:
     SERVER_CRASH = 4015
     UNKNOWN_ENC_MODE = 4016
 
+VoiceCloseReasons = {
+    VoiceWSCloseCodes.UNKNOWN_OP: 'Unknown OP code sent',
+    VoiceWSCloseCodes.NOT_AUTH: 'Not authenticated..',
+    VoiceWSCloseCodes.AUTH_FAILED: 'Authentication failed',
+    VoiceWSCloseCodes.ALREADY_AUTH: 'Already Authenticated',
+    VoiceWSCloseCodes.INVALID_SESSION: 'Invalid session provided',
+    VoiceWSCloseCodes.SESSION_TIMEOUT: 'Session Timeout',
+    VoiceWSCloseCodes.SERVER_NOT_FOUND: 'Server not found to connect',
+    VoiceWSCloseCodes.UNKNOWN_PROTOCOL: 'Unknown Protocol',
+    VoiceWSCloseCodes.DISCONNECTED: 'Disconnected from Voice',
+    VoiceWSCloseCodes.SERVER_CRASH: 'Server crashed',
+    VoiceWSCloseCodes.UNKNOWN_ENC_CODE: 'Unknown encryption',
+}
+
 class AppType:
     """Application Type."""
     BOT = 0
