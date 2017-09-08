@@ -3,8 +3,17 @@ import collections
 RESUME_MAX_EVENTS = 60
 
 class ConnectionState:
-    """State of a connection to the gateway over websockets
+    """State of a connection to the gateway.
+
+    This was made to detach meaningful state from the actual
+    :class:`Connection` object. Since the connection will be
+    closed sooner or later, its state will be lost on disconnect.
     
+    When reconnecing, we'll need to restore the old state to the connection,
+    and the old approach(of making a dict as the state) was a bad idea in my opinion.
+
+    All :class:`Connection` code that requires connection state uses :class:`ConnectionState`.
+
     Attributes
     ----------
     session_id: str
