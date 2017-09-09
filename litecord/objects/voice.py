@@ -13,14 +13,14 @@ class VoiceGuildChannel(BaseGuildChannel):
         Maximum number of users that can enter the channel.
     """
 
-    __slots__ = ('bitrate', 'user_limit')
+    __slots__ = ('bitrate', 'user_limit', 'parent', 'parent_id')
 
-    def __init__(self, server, raw, guild=None):
-        super().__init__(guild, raw)
-        self._update(guild, raw)
+    def __init__(self, server, parent, raw, guild=None):
+        super().__init__(guild, parent, raw)
+        self._update(guild, parent, raw)
 
-    def _update(self, guild, raw):
-        super()._update(guild, raw)
+    def _update(self, guild, parent, raw):
+        super()._update(guild, parent, raw)
         self.bitrate = raw.get('bitrate', 69)
         self.user_limit = raw.get('user_limit', 0)
 
@@ -36,6 +36,8 @@ class VoiceGuildChannel(BaseGuildChannel):
 
             'bitrate': self.bitrate,
             'user_limit': self.user_limit,
+
+            'parent_id': str(self.parent_id),
         }
 
 class VoiceRegion(LitecordObject):

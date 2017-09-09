@@ -1,3 +1,4 @@
+import collections
 import logging
 
 from .base import LitecordObject
@@ -5,6 +6,9 @@ from ..enums import ChannelType
 from ..snowflake import _snowflake
 
 log = logging.getLogger(__name__)
+
+
+BareCategory = collections.namedtuple('BareCategory', 'id')
 
 
 class BaseChannel(LitecordObject):
@@ -54,16 +58,24 @@ class BaseVoiceChannel(BaseChannel):
         self.user_limit = raw['user_limit']
 
 class BaseGuildChannel(BaseChannel):
-    def __init__(self, guild, raw):
+    """Base guild channel.
+    
+    Provides abstractions to work with channels
+    that have members in a guild.
+    """
+    def __init__(self, guild, parent, raw):
         super().__init__(raw)
-        BaseGuildChannel._update(self, guild, raw)
+        BaseGuildChannel._update(self, guild, parent, raw)
 
-    def _update(self, guild, raw):
+    def _update(self, guild, parent, raw):
         super()._update(raw)
         self._raw = raw
         self.name = raw['name']
         self.guild = guild
+        self.parent = parent
+
         self.guild_id = raw['guild_id']
+        self.parent_id = raw.get('parent_id')
         self.position = raw['position']
         self.perm_overwrites = raw.get('perm_overwrites', [])
 
@@ -115,14 +127,15 @@ class TextGuildChannel(BaseGuildChannel):
 
     __slots__ = ('topic', 'last_message_id', 'pins')
 
-    def __init__(self, server, raw, guild=None):
-        super().__init__(guild, raw)
+    def __init__(self, server, parent, raw, guild=None):
+        super().__init__(guild, parent, raw)
         self.server = server
         self.last_message_id = 0
-        self._update(guild, raw)
+        self._update(guild, parent, raw)
 
-    def _update(self, guild, raw):
-        super()._update(guild, raw)
+    def _update(self, guild, parent, raw):
+        super()._update(guild, parent, raw)
+
         self.topic = raw['topic']
         self.pins = raw['pinned_ids']
         self.nsfw = raw.get('nsfw', False)
@@ -265,6 +278,7 @@ class TextGuildChannel(BaseGuildChannel):
             'topic': self.topic,
             'last_message_id': str(self.last_message_id),
             'nsfw': self.nsfw,
+            'parent_id': str(self.parent_id),
         }
 
 class GuildCategory(BaseGuildChannel):
@@ -272,14 +286,13 @@ class GuildCategory(BaseGuildChannel):
     
     *This is not fully implemented*.
     """
-    def __init__(self, guild, parent: BaseGuildChannel, raw):
+    def __init__(self, server, guild, raw):
         super().__init__(guild, raw)
-        self._update(guild, parent, raw)
+        self.server = server
+        self._update(guild, raw)
 
-    def _update(self, guild, parent, raw):
+    def _update(self, guild, raw):
         super()._update(guild, raw)
-        self.parent = parent
-        self.parent_id = raw.get('parent_id')
         self.nsfw = raw.get('nsfw', False)
 
     @property
@@ -289,11 +302,9 @@ class GuildCategory(BaseGuildChannel):
             'guild_id': str(self.guild_id),
             'name': self.name,
             'position': self.position,
-            'type': 4,
+            'type': self.type,
             'permission_overwrites': self.perm_overwrites,
             'nsfw': self.nsfw,
-
-            # ????
-            'parent_id': str(self.parent_id),
+            'parent_id': None,
         }
 

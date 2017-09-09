@@ -6,7 +6,7 @@ import time
 from collections import defaultdict
 
 from ..objects import Guild, TextGuildChannel, VoiceGuildChannel, \
-    Message, Invite, Role, BareGuild, BaseTextChannel
+    Message, Invite, Role, BareGuild, BareCategory, BaseTextChannel
 from ..snowflake import get_snowflake, get_invite_code
 from ..utils import get
 from ..enums import ChannelType
@@ -67,7 +67,7 @@ class GuildManager:
         """Get a :class:`Channel` object by its ID."""
         try:
             channel_id = int(channel_id)
-        except ValueError: return
+        except (ValueError, TypeError): return
 
         channel = get(self.channels, id=channel_id)
         if channel is None:
@@ -91,7 +91,7 @@ class GuildManager:
         """Get a :class:`Role` by its ID."""
         try:
             role_id = int(role_id)
-        except ValueError: return
+        except (ValueError, TypeError): return
         r = get(self.roles, id=role_id)
         log.debug('[get_role] %d -> %r', role_id, r)
         return r
@@ -100,7 +100,7 @@ class GuildManager:
         """Get a :class:`Message` object by its ID."""
         try:
             message_id = int(message_id)
-        except ValueError: return
+        except (ValueError, TypeError): return
         m = get(self.messages, id=message_id)
         log.debug('[get_message] %d -> %r', message_id, m)
         return m
@@ -493,7 +493,7 @@ class GuildManager:
         await self.role_coll.insert_one(raw_default_role)
         self.roles.append(default_role)
 
-        default_channel = TextGuildChannel(self.server, raw_default_channel, bg)
+        default_channel = TextGuildChannel(self.server, None, raw_default_channel, bg)
         await self.channel_coll.insert_one(raw_default_channel)
         self.channels.append(default_channel)
 
@@ -797,14 +797,11 @@ class GuildManager:
             The newly created channel.
         """
 
-        if payload['type'] not in ['text', 'voice']:
+        if payload['type'] not in (ChannelType.GUILD_TEXT, \
+                ChannelType.GUILD_VOICE, ChannelType.GUILD_CATEGORY):
             raise Exception('Invalid channel type')
 
         t = payload.get('type')
-        if t == 'text':
-            payload['type'] = ChannelType.GUILD_TEXT
-        elif t == 'voice':
-            payload['type'] = ChannelType.GUILD_VOICE
 
         raw_channel = {**payload, **{
             'channel_id': get_snowflake(),
@@ -816,6 +813,9 @@ class GuildManager:
             'topic': '',
             'pinned_ids': [],
             'nsfw': False,
+
+            # guild category thing
+            'parent_id': None,
         }}
 
         result = await self.channel_coll.insert_one(raw_channel)
@@ -825,13 +825,19 @@ class GuildManager:
 
         result = await self.guild_coll.update_one({'guild_id': guild.id}, \
             {'$set': {'channel_ids': guild._raw['channel_ids']}})
+
         log.info('Updated %d guilds', result.modified_count)
 
         ch_type = raw_channel['type']
+
         if ch_type == ChannelType.GUILD_TEXT:
-            channel = TextGuildChannel(self.server, raw_channel, guild)
+            channel = TextGuildChannel(self.server, None, raw_channel, guild)
+
         elif ch_type == ChannelType.GUILD_VOICE:
-            channel = VoiceGuildChannel(self.server, raw_channel, guild)
+            channel = VoiceGuildChannel(self.server, None, raw_channel, guild)
+
+        elif ch_type == ChannelType.GUILD_CATEGORY:
+            channel = GuildCategory(self.server, guild, raw_channel)
 
         self.channels.append(channel)
 
@@ -1073,12 +1079,21 @@ class GuildManager:
 
             bg = BareGuild(raw_channel['guild_id'])
 
+            parent_id = raw_channel.get('parent_id')
+            parent = self.get_channel(parent_id)
+
+            if not parent:
+                parent = BareCategory(parent_id)
+
             if ch_type == ChannelType.GUILD_TEXT:
-                channel = TextGuildChannel(self.server, raw_channel, bg)
+                channel = TextGuildChannel(self.server, parent, raw_channel, bg)
             elif ch_type == ChannelType.GUILD_VOICE:
-                channel = VoiceGuildChannel(self.server, raw_channel, bg)
+                channel = VoiceGuildChannel(self.server, parent, raw_channel, bg)
+
+            elif ch_type == ChannelType.GUILD_CATEGORY:
+                channel = GuildCategory(self.server, bg, raw_channel)
             else:
-                raise Exception(f'Invalid type for channel: {ch_type}')
+                raise RuntimeError(f'Invalid type for channel: {ch_type}')
 
             self.channels.append(channel)
             chan_count += 1

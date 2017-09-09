@@ -95,7 +95,7 @@ VoiceCloseReasons = {
     VoiceWSCloseCodes.UNKNOWN_PROTOCOL: 'Unknown Protocol',
     VoiceWSCloseCodes.DISCONNECTED: 'Disconnected from Voice',
     VoiceWSCloseCodes.SERVER_CRASH: 'Server crashed',
-    VoiceWSCloseCodes.UNKNOWN_ENC_CODE: 'Unknown encryption',
+    VoiceWSCloseCodes.UNKNOWN_ENC_MODE: 'Unknown encryption',
 }
 
 class AppType:
