@@ -267,3 +267,33 @@ class TextGuildChannel(BaseGuildChannel):
             'nsfw': self.nsfw,
         }
 
+class GuildCategory(BaseGuildChannel):
+    """A Guilg category for channels.
+    
+    *This is not fully implemented*.
+    """
+    def __init__(self, guild, parent: BaseGuildChannel, raw):
+        super().__init__(guild, raw)
+        self._update(guild, parent, raw)
+
+    def _update(self, guild, parent, raw):
+        super()._update(guild, raw)
+        self.parent = parent
+        self.parent_id = raw.get('parent_id')
+        self.nsfw = raw.get('nsfw', False)
+
+    @property
+    def as_json(self):
+        return {
+            'id': str(self.id),
+            'guild_id': str(self.guild_id),
+            'name': self.name,
+            'position': self.position,
+            'type': 4,
+            'permission_overwrites': self.perm_overwrites,
+            'nsfw': self.nsfw,
+
+            # ????
+            'parent_id': str(self.parent_id),
+        }
+
