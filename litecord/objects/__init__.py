@@ -10,3 +10,4 @@ from .voice import *
 from .application import *
 from .webhook import *
 from .embed import *
+from .emoji import *
