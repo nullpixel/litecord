@@ -20,6 +20,7 @@ class EmojiEndpoint:
         #self.server.add_post('guilds/{guild_id}/emojis', self.h_create_emoji)
         #self.server.add_patch('guilds/{guild_id}/emojis/{emoji_id}', self.h_edit_emoji)
         #self.server.add_delete('guilds/{guild_id}/emojis/{emoji_id}', self.h_delete_emoji)
+        pass
 
     @auth_route
     async def h_get_emojis(self, user, request):

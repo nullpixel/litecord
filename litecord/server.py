@@ -817,9 +817,9 @@ class LitecordServer:
 
             class_ = getattr(api, attr)
             if inspect.isclass(class_):
-                log.debug(class_)
                 inst = class_(self)
                 self.endpoint_objs.append(inst)
+                log.debug('[api] loaded %s', attr)
                 loaded += 1
 
         log.info('[load_endpoints] Loaded %d endpoint objects', loaded)
