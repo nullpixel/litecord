@@ -1007,6 +1007,55 @@ class GuildManager:
 
         await self.reload_invite(invite)
 
+    async def create_role(self, guild, role_payload):
+        """Create a role in a guild.
+        
+        Dispatches respective events.
+        """
+
+        role = Role(guild, role_payload)
+
+        await guild.dispatch('GUILD_ROLE_CREATE', {
+            'guild_id': str(guild.id),
+            'role': role.as_json,
+        })
+
+    async def edit_role(self, role, new_role_data):
+        pass
+
+    async def delete_role(self, role):
+        """Delete a role from a guild.
+        
+        Dispatches events to respective clients.
+
+        Parameters
+        ----------
+        role: :class:`Role`
+            The role to be deleted.
+        """
+        res = await self.role_coll.delete_one({'role_id': role.id})
+        log.info('Deleted %d roles', res.deleted_count)
+
+        await self.reload_role(role)
+        await role.dispatch('ROLE_DELETE', {
+            'role_id': str(role.id),
+            'guild_id': str(role.guild_id),
+        })
+
+    async def add_role(self, member, role):
+        """Add a role to a member.
+        
+        Dispatches events to respective clients.
+        """
+        pass
+
+    async def remove_role(self, member, role):
+        """Remove a role from a member.
+        
+        Dispatches events to respective clients.
+        """
+        pass
+
     async def guild_count(self, user) -> int:
         """Get the guild count for a user"""
         return await self.member_coll.count({'user_id': user.id})
