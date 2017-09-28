@@ -361,7 +361,7 @@ class Guild(LitecordObject):
             # arrays of stuff
             'members': self.iter_json(self.members),
             'channels': self.iter_json(self.channels),
-            'presences': self.iter_json(self.presences),
+            'presences': [p.as_json for p in self.presences],
         }
 
         if self.owner.user.bot:
