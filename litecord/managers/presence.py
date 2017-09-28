@@ -1,9 +1,3 @@
-'''
-presence.py - presence management
-
-Sends PRESENCE_UPDATE to clients when needed
-'''
-
 import asyncio
 import collections
 import logging
@@ -16,7 +10,8 @@ from ..objects import Presence, User
 log = logging.getLogger(__name__)
 
 class PresenceManager:
-    """Manage presence objects/updates."""
+    """Manage presence objects/updates.
+    """
     def __init__(self, server):
         self.server = server
         self.presence_coll = server.presence_coll
