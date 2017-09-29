@@ -322,21 +322,24 @@ class Guild(LitecordObject):
             'owner_id': str(self.owner_id),
             'region': self.region,
 
-            # voice things aka NOT USABLE
-            'afk_channel_id': '00000000000',
-            'afk_timeout': None,
+            # TODO: call afk_channel_id from guild settings
+            # object(also todo: make guild settings object)
+            'afk_channel_id': '00',
+
+            # 5 minutes default
+            'afk_timeout': 300000,
 
             # TODO: how are these supposed to even work?
             'embed_enabled': None,
             'embed_channel_id': None,
 
-            'verification_level': 0, # TODO
+            'verification_level': 0,
             'explicit_content_filter': 2,
-            'default_message_notifications': -1, # TODO
+            'default_message_notifications': 0,
             'roles': self.iter_json(self.roles),
             'emojis': self.emojis,
             'features': self.features,
-            'mfa_level': -1, # TODO
+            'mfa_level': 0,
 
             # those fields are only in the GUILD_CREATE event
             # but we can send them anyways :')
