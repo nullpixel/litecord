@@ -54,6 +54,7 @@ class SettingsManager:
                 'default_guilds_restricted': False,
                 'convert_emoticons': True,
                 'afk_timeout': 600,
+                'default_guilds_restricted': False,
             }
         return settings
 

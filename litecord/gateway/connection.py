@@ -185,13 +185,24 @@ class Connection(WebsocketConnection):
         evt_data: any
             Any JSON serializable object, ``None`` by default.
             If this has an `as_json` property, it gets used.
+
+        Returns
+        -------
+        int
+            The amount of data transferred. `-1` if error.
         """
 
         await self.dispatch_lock
 
+        # Connections can have a session ID but
+        # they might be non-identified causing
+        # this to issue problems.
         if not self.identified:
             log.warning('[dispatch] cannot dispatch to non-identified')
             self.dispatch_lock.release()
+            
+            # Removing the connection should help.
+            self.server.remove_conenction(self.session_id)
             return -1
 
         if hasattr(evt_data, 'as_json'):
