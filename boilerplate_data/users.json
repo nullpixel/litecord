@@ -1,14 +1,16 @@
 [
     {
-        "user_id": "149260046337",
+        "user_id": "162819866682851329",
         "username": "Luna",
         "email": "luna@localhost",
         "discriminator": "1337",
+        "premium": true,
         "password": {
             "plain": "fuck",
             "hash": "",
             "salt": ""
         },
+        "flags": 7,
         "avatar": "",
         "bot": false,
         "verified": true,
@@ -16,45 +18,34 @@
     },
     
     {
-        "user_id": "149260046338",
+        "user_id": "153244623219851266",
         "email": "jack@null.net",
         "username": "Jack",
-        "discriminator": "0000",
+        "discriminator": "0001",
+        "premium": true,
         "password": {
-            "plain": "child",
+            "plain": "iamded",
             "hash": "",
             "salt": ""
         },
+        "flags": 7,
         "avatar": "",
         "bot": false,
         "verified": true
     },
     
     {
-        "user_id": "149260046339",
-        "username": "lold",
-        "email": "iamtheworst@programmer.net",
-        "discriminator": "0000",
-        "password": {
-            "plain": "thonk",
-            "hash": "",
-            "salt": ""
-        },
-        "avatar": "",
-        "bot": false,
-        "verified": true
-    },
-    
-    {
-        "user_id": "152162811905",
+        "user_id": "196769986071625728",
         "username": "heatingdevice",
         "email": "heating@memework.org",
         "discriminator": "0420",
+        "premium": true,
         "password": {
             "plain": "password",
             "hash": "",
             "salt": ""
         },
+        "flags": 6,
         "avatar": "",
         "bot": false,
         "verified": true,
@@ -62,15 +53,17 @@
     },
     
     {
-        "user_id": "152329949185",
+        "user_id": "108429628560924672",
         "username": "Alex",
         "email": "alex@localhost",
         "discriminator": "4299",
+        "premium": true,
         "password": {
             "plain": "LivesInAlaska",
             "hash": "",
             "salt": ""
         },
+        "flags": 7,
         "avatar": "",
         "bot": false,
         "verified": true,
@@ -78,18 +71,72 @@
     },
 
     {
-        "user_id": "164669048833",
+        "user_id": "116930717241311236",
         "username": "luke",
         "email": "me@lukej.me",
         "discriminator": "0001",
+        "premium": true,
         "password": {
             "plain": "FUCKnik",
             "hash": "",
             "salt": ""
         },
+        "flags": 4,
         "avatar": "",
         "bot": false,
         "verified": true,
         "admin": true
-    }
+    },
+    {
+        "user_id": "97104885337575424",
+        "username": "slice",
+        "email": "slice@slice.ws",
+        "premium": true,
+        "discriminator": "0001",
+        "password": {
+            "plain": "gay",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": true
+    },
+    {
+        "user_id": "138428648901312512",
+        "username": "adryd",
+        "email": "me@adryd.com",
+        "premium": true,
+        "discriminator": "0001",
+        "password": {
+            "plain": "",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": true
+    },
+    {
+        "user_id": "286302338161836033",
+        "username": "comet",
+        "email": "cobert@adryd.com",
+        "premium": true,
+        "discriminator": "0001",
+        "password": {
+            "plain": "",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": true,
+        "verified": true,
+        "admin": true
+    },
+    
 ]
