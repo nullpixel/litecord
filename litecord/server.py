@@ -645,7 +645,7 @@ class LitecordServer:
         }
 
         async def options_handler(request):
-            #headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
             return web.Response(status=200, body='', headers=headers)
 
         return options_handler
