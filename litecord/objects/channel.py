@@ -6,6 +6,7 @@ import pymongo
 from .base import LitecordObject
 from ..enums import ChannelType
 from ..snowflake import _snowflake
+from .message import Message
 
 log = logging.getLogger(__name__)
 
@@ -189,7 +190,7 @@ class TextGuildChannel(BaseGuildChannel):
             m = self.guild_man.get_message(message_id)
 
             if m is None:
-                self.pins.remove(message)
+                self.pins.remove(m)
                 update = True
                 continue
 
