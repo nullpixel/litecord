@@ -10,9 +10,10 @@ from ..utils import _json, _err
 
 log = logging.getLogger(__name__)
 
+
 class EmbedManager:
     """The embed manager.
-    
+
     This class manages embed endpoints, used by clients
     to draw an embed from an unknown website.
 
@@ -37,7 +38,7 @@ class EmbedManager:
 
     async def h_get_embed(self, request):
         """GET /embed.
-        
+
         Convert an URL to an embed object.
 
         Returns
@@ -107,11 +108,12 @@ class EmbedManager:
 
     async def url_to_embed(self, url: str) -> Embed:
         """Convert a URL to an Embed object
-        
+
         Parameters
         ---------
         url: str
-            The URL that is going to be converted into an :class:`Embed` object.
+            The URL that is going to be converted into
+            an :class:`Embed` object.
 
         Returns
         -------

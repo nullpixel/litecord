@@ -1,8 +1,9 @@
 
 class SettingsManager:
     """User settings manager.
-    
-    Provides functions for users to change their settings and retrieve them back.
+
+    Provides functions for users to change their
+    settings and retrieve them back.
 
     Attributes
     ----------
@@ -19,7 +20,7 @@ class SettingsManager:
 
     async def get_settings(self, user):
         """Get a settings object from a User ID.
-        
+
         Parameters
         ----------
         user_id: :class:`User`
@@ -55,7 +56,8 @@ class SettingsManager:
                 'afk_timeout': 600,
             }
 
-            await self.settings_coll.insert_one({**settings, **{'user_id': user.id}})
+            await self.settings_coll.insert_one({**settings,
+                                                 **{'user_id': user.id}})
 
         try:
             settings.pop('_id')
@@ -68,13 +70,14 @@ class SettingsManager:
         """Update an user's settings."""
         old_settings = await user.get_settings()
         new_settings = {**old_settings, **payload}
-        await self.settings_coll.update_one({'user_id': user.id}, {'$set': new_settings})
+        await self.settings_coll.update_one({'user_id': user.id},
+                                            {'$set': new_settings})
         return new_settings
-        
+
     async def get_guild_settings(self, user):
         """Get a User Guild Settings object to be used
         in READY payloads.
-        
+
         Parameters
         ----------
         user_id: :class:`User`

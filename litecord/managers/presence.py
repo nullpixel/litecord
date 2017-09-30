@@ -1,13 +1,11 @@
-import asyncio
 import collections
 import logging
 import time
 
-import websockets
-
-from ..objects import Presence, User
+from ..objects import Presence
 
 log = logging.getLogger(__name__)
+
 
 class PresenceManager:
     """Manage presence objects/updates.
@@ -63,8 +61,8 @@ class PresenceManager:
     async def count_all(self):
         """Return a count for all available presence objects."""
 
-        return sum([await self.presence_count(guild_id) for guild_id in \
-            self.server.guild_man.guilds.keys()])
+        return sum([await self.presence_count(guild_id) for guild_id in
+                    self.server.guild_man.guilds.keys()])
 
     async def status_update(self, guild, user, new_status=None):
         """Update a user's status in a guild.
@@ -104,7 +102,9 @@ class PresenceManager:
 
         user_presence = guild_presences[user_id]
 
-        differences = set(user_presence.game.values()) ^ set(new_status.values())
+        s1 = set(user_presence.game.values())
+        s2 = set(new_status.values())
+        differences = s1 ^ s2
         log.debug(f"presence for {user!r} has {len(differences)} diffs")
 
         if len(differences) > 0:
@@ -157,4 +157,3 @@ class PresenceManager:
             'user_id': user_id,
             'timestamp': typing_timestamp,
         })
-

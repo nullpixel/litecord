@@ -7,9 +7,10 @@ from ..enums import AppType
 
 log = logging.getLogger(__name__)
 
+
 class ApplicationManager:
     """Manage Litecord Applications.
-    
+
     Attributes
     ----------
     server: :class:`LitecordServer`
@@ -24,7 +25,8 @@ class ApplicationManager:
     async def get_app(self, app_id):
         """Get an application"""
         raw_app = await self.app_coll.find_one({'app_id': int(app_id)})
-        if raw_app is None: return
+        if raw_app is None:
+            return
 
         owner = self.server.get_user(raw_app['owner_id'])
         return Application(owner, raw_app)
@@ -32,17 +34,18 @@ class ApplicationManager:
     async def get_apps(self, user):
         """Get a list of applications"""
         cur = self.app_coll.find({'owner_id': user.id})
-        return [Application(user, raw) for raw in await cur.to_list(length=None)]
+        return [Application(user, raw) for raw
+                in await cur.to_list(length=None)]
 
     async def create_bot(self, owner, app):
         """Create a bot user.
-        
+
         Bot users are different in the sense
         that they don't have a password tied to them
         but they have a salt tied to them so
         token generation properly works.
         """
-        app_id = get_snowflake() 
+        app_id = get_snowflake()
         app['app_id'] = app_id
         app['owner_id'] = owner.id
         app['type'] = AppType.BOT
@@ -75,4 +78,3 @@ class ApplicationManager:
         await self.app_coll.insert_one(app)
 
         return Application(owner, app)
-

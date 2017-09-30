@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 AVATAR_MIMETYPES = [
     'image/jpeg', 'image/jpg', 'image/png',
-    #'image/gif'
+    # 'image/gif'
 ]
 
 
@@ -84,14 +84,16 @@ class Images:
         return (await self.raw_add_image(data, 'attachment'))
 
     async def avatar_retrieve(self, avatar_hash):
-        img = await self.image_db.find_one({'type': 'avatar', 'hash': avatar_hash})
+        img = await self.image_db.find_one({'type': 'avatar',
+                                            'hash': avatar_hash})
         try:
             return img.get('data')
         except:
             return None
 
     async def image_retrieve(self, img_hash):
-        img = await self.image_db.find_one({'type': 'attachment', 'hash': img_hash})
+        img = await self.image_db.find_one({'type': 'attachment',
+                                            'hash': img_hash})
         try:
             return img.get('data')
         except:
