@@ -25,8 +25,9 @@ class ChannelsEndpoint:
 
         self.channel_edit_base = Schema({
             'name': All(str, Length(min=2, max=100)),
-            'position': int
-        })
+            'position': int,
+            Optional('nsfw'): bool,
+        }, required=True)
 
         self.textchan_editschema = self.channel_edit_base.extend({
             'topic': All(str, Length(min=0, max=1024))
