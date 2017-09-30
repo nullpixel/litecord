@@ -106,12 +106,12 @@
     },
     {
         "user_id": "138428648901312512",
-        "username": "adryd",
+        "username": "Adryd",
         "email": "me@adryd.com",
         "premium": true,
         "discriminator": "0001",
         "password": {
-            "plain": "",
+            "plain": "123",
             "hash": "",
             "salt": ""
         },

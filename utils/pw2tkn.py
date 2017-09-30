@@ -11,9 +11,10 @@ import requests
 import sys
 import json
 
-API_URL = 'https://memework.org:8000/api'
+#API_URL = 'https://memework.org:8000/api'
 #API_URL = 'http://0.0.0.0:8000/api'
 #API_URL = 'http://163.172.191.166:8000/api'
+API_URL = 'https://litecord.adryd.com/api'
 
 def main(args):
     email = args[1]
