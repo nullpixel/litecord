@@ -120,23 +120,5 @@
         "bot": false,
         "verified": true,
         "admin": true
-    },
-    {
-        "user_id": "286302338161836033",
-        "username": "comet",
-        "email": "cobert@adryd.com",
-        "premium": true,
-        "discriminator": "0001",
-        "password": {
-            "plain": "",
-            "hash": "",
-            "salt": ""
-        },
-        "flags": 7,
-        "avatar": "",
-        "bot": true,
-        "verified": true,
-        "admin": true
-    },
-    
+    }
 ]

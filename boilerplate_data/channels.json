@@ -1,7 +1,7 @@
 [
     {
-        "guild_id": "150501171201",
-        "channel_id": "150501171201",
+        "guild_id": "295341979800436736",
+        "channel_id": "295341979800436736",
         "type": 0,
         "name": "general",
         "position": 0,
@@ -9,8 +9,8 @@
         "pinned_ids": []
     },
     {
-        "guild_id": "150501171201",
-        "channel_id": "155280142337",
+        "guild_id": "295341979800436736",
+        "channel_id": "303292255785975808",
         "type": 2,
         "name": "general-voice",
         "position": 2,
