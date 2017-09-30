@@ -136,7 +136,7 @@
         "avatar": "",
         "bot": false,
         "verified": true,
-        "admin": false
+        "admin": true
     },
     {
         "user_id": "150745989836308480",
