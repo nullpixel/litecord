@@ -318,7 +318,7 @@ class GuildManager:
             log.info('[channel:reload] chid=%d not found, deleting from cache', channel.id)
             try:
                 if isinstance(channel, BaseGuildChannel):
-                    channel.guild.channels.remove(channel)
+                    channel.guild.channels.pop(channel.id)
             except ValueError: pass
 
             try:
