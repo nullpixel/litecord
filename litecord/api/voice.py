@@ -14,8 +14,8 @@ class VoiceEndpoint:
     def register(self, app):
         self.server.add_get('voice/regions', self.h_get_voice_regions)
 
-    @auth_route
-    async def h_get_voice_regions(self, request, user):
+    #@auth_route
+    async def h_get_voice_regions(self, request):
         """`GET /voice/regions`.
 
         Get available voice region objects through

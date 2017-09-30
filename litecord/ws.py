@@ -148,11 +148,15 @@ class WebsocketConnection:
         anything = await self._encoder(anything)
 
         if compress and self.is_compressable:
-            anything = zlib.compress(anything.encode())
+            if isinstance(anything, bytes):
+                anything = zlib.compress(anything)
+            else:
+                anything = zlib.compress(anything.encode())
 
         try:
             await self.ws.send(anything)
-        except Exception: return 0
+        except Exception:
+            return 0
 
         return len(anything)
 
