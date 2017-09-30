@@ -636,14 +636,14 @@ class LitecordServer:
     def make_options_handler(self, method):
         """Returns a handler for `OPTIONS`."""
         headers = {
-            'Access-Control-Allow-Origin': 'http://127.0.0.1',
-            'Access-Control-Allow-Methods': method,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD, PATCH, DELETE, PUT, TRACE',
             'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Super-Properties',
         }
 
         async def options_handler(request):
-            headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
+            #headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
             return web.Response(status=200, body='', headers=headers)
 
         return options_handler
@@ -651,8 +651,16 @@ class LitecordServer:
     def add_empty(self, route, method):
         self.app.router.add_route('OPTIONS', route, self.make_options_handler(method))
 
-    def add_get(self, route_path, route_handler):
+    def fix_fucking_cors(self, handler):
+        async def inner_handler(request):
+            response = await handler(request)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
+        return innder_handler
+        
+    def add_get(self, route_path, handler):
         _r = self.app.router
+        route_handler = self.fix_fucking_cors(handler)
 
         self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
@@ -660,8 +668,9 @@ class LitecordServer:
             _r.add_get(route, route_handler)
             self.add_empty(route, 'GET')
 
-    def add_post(self, route_path, route_handler):
+    def add_post(self, route_path, handler):
         _r = self.app.router
+        route_handler = self.fix_fucking_cors(handler)
 
         self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
@@ -669,8 +678,9 @@ class LitecordServer:
             _r.add_post(route, route_handler)
             self.add_empty(route, 'POST')
 
-    def add_put(self, route_path, route_handler):
+    def add_put(self, route_path, handler):
         _r = self.app.router
+        route_handler = self.fix_fucking_cors(handler)
 
         self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
@@ -678,8 +688,9 @@ class LitecordServer:
             _r.add_put(route, route_handler)
             self.add_empty(route, 'PUT')
 
-    def add_patch(self, route_path, route_handler):
+    def add_patch(self, route_path, handler):
         _r = self.app.router
+        route_handler = self.fix_fucking_cors(handler)
 
         self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]
@@ -687,8 +698,9 @@ class LitecordServer:
             _r.add_patch(route, route_handler)
             self.add_empty(route, 'PATCH')
 
-    def add_delete(self, route_path, route_handler):
+    def add_delete(self, route_path, handler):
         _r = self.app.router
+        route_handler = self.fix_fucking_cors(handler)
 
         self.endpoints += 1
         routes = [f'{prefix}/{route_path}' for prefix in API_PREFIXES]

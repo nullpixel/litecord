@@ -10,3 +10,4 @@ from .gateway import *
 from .webhook import *
 from .emoji import *
 from .mock import *
+from .settings import *

@@ -29,7 +29,7 @@ class SettingsManager:
             return {}
 
         settings = await self.settings_coll.find_one({'user_id': user.id})
-        if settings is None:
+        if not settings:
             settings = {
                 'timezone_offset': 0,
                 'theme': 'dark',
@@ -56,8 +56,18 @@ class SettingsManager:
                 'afk_timeout': 600,
                 'default_guilds_restricted': False,
             }
+
+            await self.settings_coll.insert_one({**settings, **{'user_id': user.id}})
+
         return settings
 
+    async def update_settings(self, user, payload: dict):
+        """Update an user's settings."""
+        old_settings = await user.get_settings()
+        new_settings = {**old_settings, **payload}
+        await self.settings_coll.update_one({'user_id': user.id}, {'$set': new_settings})
+        return new_settings
+        
     async def get_guild_settings(self, user):
         """Get a User Guild Settings object to be used
         in READY payloads.
