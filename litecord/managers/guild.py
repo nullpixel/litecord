@@ -330,7 +330,7 @@ class GuildManager:
         channel._raw.update(raw_channel)
 
         if isinstance(channel, BaseGuildChannel):
-            channel._update(channel.guild, channel._raw)
+            channel._update(channel.guild, channel.parent, channel._raw)
         elif isinstance(channel, GroupDMChannel):
             channel._update(channel.owner, channel._raw)
         elif isinstance(channel, DMChannel):
