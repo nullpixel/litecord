@@ -443,10 +443,13 @@ class LitecordServer:
         log.debug('[get:raw_user] %d -> %r', user_id, keys)
         return u
 
-    def get_user(self, user_id):
+    def get_user(self, user_id: int):
         """Get a :class:`User` object using the user's ID."""
+        if not user_id:
+            return None
+
         u = get(self.users, id=user_id)
-        log.debug('[get:user] %d -> %r', user_id, u)
+        log.debug('[get:user] %r -> %r', user_id, u)
         return u
 
     async def get_raw_user_email(self, email):
