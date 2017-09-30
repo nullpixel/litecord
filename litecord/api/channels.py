@@ -22,14 +22,14 @@ class ChannelsEndpoint:
 
     Attributes
     ----------
-    cache: Dict[list]
+    nonces: Dict[list]
         Cache for used nonces.
     """
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
 
-        self.cache = collections.defaultdict(list)
+        self.nonces = collections.defaultdict(list)
 
         self.channel_edit_base = Schema({
             'name': All(str, Length(min=2, max=100)),
