@@ -294,7 +294,7 @@ class GuildCategory(BaseGuildChannel):
     *This is not fully implemented*.
     """
     def __init__(self, server, guild, raw):
-        super().__init__(guild, raw)
+        super().__init__(guild, None, raw)
         self.server = server
         self._update(guild, raw)
 
