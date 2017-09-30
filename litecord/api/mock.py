@@ -2,7 +2,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from aiohttp import web as weeb
+from aiohttp import web
 
 from ..utils import _err, _json
 from ..decorators import auth_route
