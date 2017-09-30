@@ -74,23 +74,25 @@ def pwd_hash(plain, salt):
     return hashlib.sha3_512(f'{plain}{salt}'.encode()).hexdigest()
 
 
-def _err(msg='', errno=None, status_code=500):
+def _err(msg='', errno=None, status_code=403):
     """Error object."""
+    headers = {aiohttp.hdrs.CONTENT_TYPE: 'application/json'}
+
     status_code = ERRNO_TO_HTTPERR.get(errno, status_code)
     err_msg = ERR_TRANSLATOR.get(errno, None)
 
     log.debug(f"Erroring msg={msg!r} errno={errno!r} status={status_code!r} err_msg={err_msg!r}")
 
     if errno is not None:
-        return web.Response(status=status_code, text=json.dumps({
+        return web.Response(status=status_code, headers=headers, body=json.dumps({
             'code': errno,
             'message': err_msg
-        }))
+        }).encode())
 
-    return web.Response(status=status_code, text=json.dumps({
+    return web.Response(status=status_code, headers=headers, body=json.dumps({
         'code': 0,
         'message': msg
-    }))
+    }).encode())
 
 
 def dt_to_json(dt):
