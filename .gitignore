@@ -1,5 +1,7 @@
 # certificates
 /ssl
+cert.pem
+keyfile.key
 
 # jetbrains
 /.idea
