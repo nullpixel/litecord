@@ -220,7 +220,7 @@ class ChannelsEndpoint:
             message_list = [m for m in message_list if (m.id > after)]
 
         j = [m.as_json for m in message_list]
-        return _json(list(reversed(j)))
+        return _json(j)
 
     @auth_route
     async def h_delete_message(self, request, user):
