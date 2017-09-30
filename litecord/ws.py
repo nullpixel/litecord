@@ -21,7 +21,7 @@ import websockets
 try:
     import earl
 except ImportError:
-    print('Running withouth ETF support')
+    print('Running without ETF support')
 
 from .err import InvalidateSession
 from .enums import CloseReasons, CloseCodes

@@ -1,3 +1,6 @@
+# certificates
+/ssl
+
 # jetbrains
 /.idea
 

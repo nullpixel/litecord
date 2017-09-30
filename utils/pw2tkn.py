@@ -12,9 +12,9 @@ import sys
 import json
 
 #API_URL = 'https://memework.org:8000/api'
-#API_URL = 'http://0.0.0.0:8000/api'
+API_URL = 'https://localhost:8000/api'
 #API_URL = 'http://163.172.191.166:8000/api'
-API_URL = 'https://litecord.adryd.com/api'
+#API_URL = 'https://litecord.adryd.com/api'
 
 def main(args):
     email = args[1]
@@ -25,7 +25,7 @@ def main(args):
         "password": password
     }
     _payload = json.dumps(payload)
-    _resp = requests.post(f'{API_URL}/auth/login', data=_payload)
+    _resp = requests.post(f'{API_URL}/auth/login', data=_payload, verify=False)
     print(_resp)
     resp = _resp.json()
 

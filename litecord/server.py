@@ -636,12 +636,10 @@ class LitecordServer:
     def make_options_handler(self, method):
         """Returns a handler for `OPTIONS`."""
         headers = {
-            #'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Origin': 'http://127.0.0.1',
-            #'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD, PATCH, DELETE, PUT, TRACE',
-            'Access-Control-Allow-Methods': method,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD, PATCH, DELETE, PUT, TRACE',
             'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Super-Properties, ',
         }
 
         async def options_handler(request):
@@ -656,9 +654,9 @@ class LitecordServer:
     def fix_fucking_cors(self, handler):
         async def inner_handler(request):
             response = await handler(request)
-            response.headers['Access-Control-Allow-Origin'] = self.flags['server_url']
+            response.headers['Access-Control-Allow-Origin'] = '*'
             return response
-        return handler
+        return inner_handler
         
     def add_get(self, route_path, handler):
         _r = self.app.router
