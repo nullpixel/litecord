@@ -814,7 +814,7 @@ class GuildManager:
             'pinned_ids': [],
             'nsfw': False,
 
-            # guild category thing
+            # TODO: do the guild category thing
             'parent_id': None,
         }}
 

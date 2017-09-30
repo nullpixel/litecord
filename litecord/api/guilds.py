@@ -45,7 +45,7 @@ class GuildsEndpoint:
 
         self.channel_create_schema = Schema({
             'name': All(str, Length(min=2, max=100)),
-            _o('type'): str,
+            _o('type'): int,
             _o('bitrate'): int,
             _o('user_limit'): int,
             _o('permission_overwrites'): list,
@@ -371,9 +371,8 @@ class GuildsEndpoint:
         payload = await request.json()
         raw_channel = self.channel_create_schema(payload)
 
-        raw_channel['type'] = raw_channel.get('type', 'text')
         t = raw_channel['type']
-        if t == 'voice':
+        if t == ChannelType.GUILD_VOICE:
             raw_channel['bitrate'] = raw_channel.get('bitrate', 69)
             raw_channel['user_limit'] = raw_channel.get('user_limit', 0)
 
