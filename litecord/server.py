@@ -641,7 +641,7 @@ class LitecordServer:
             #'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD, PATCH, DELETE, PUT, TRACE',
             'Access-Control-Allow-Methods': method,
             'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Super-Properties',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
         }
 
         async def options_handler(request):
