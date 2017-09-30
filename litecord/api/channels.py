@@ -7,7 +7,7 @@ from aiohttp import web
 from voluptuous import Schema, Optional, All, Length, Range, REMOVE_EXTRA
 
 from ..utils import _err, _json
-from ..snowflake import get_snowflake
+from ..snowflake import get_snowflake, snowflake_time
 from ..ratelimits import ratelimit
 from ..decorators import auth_route
 from ..snowflake import get_snowflake
@@ -350,11 +350,11 @@ class ChannelsEndpoint:
         """
         channel_id = request.match_info['channel_id']
         chan = self.guild_man.get_channel(channel_id)
-        if channel is None:
+        if chan is None:
             return _err(errno=10003)
         
         if chan.guild.owner_id != user.id:
-            return _err(status=40001)
+            return _err(errno=40001)
 
         payload = await request.json()
 
@@ -376,11 +376,11 @@ class ChannelsEndpoint:
         """
         channel_id = request.match_info['channel_id']
         chan = self.guild_man.get_channel(channel_id)
-        if channel is None:
+        if chan is None:
             return _err(errno=10003)
 
         if chan.guild.owner_id != user.id:
-            return _err(status=40001)
+            return _err(errno=40001)
 
         await chan.delete()
         return _json(chan.as_json)
