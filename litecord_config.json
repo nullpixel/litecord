@@ -1,4 +1,5 @@
 {
+    "server_url": "localhost:8000",
     "server": {
         "http": ["", 8000, "localhost"],
         "ws": ["", 12000, "localhost"],

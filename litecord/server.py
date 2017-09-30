@@ -654,7 +654,7 @@ class LitecordServer:
     def fix_fucking_cors(self, handler):
         async def inner_handler(request):
             response = await handler(request)
-            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Origin'] = self.flags['server_url']
             return response
         return inner_handler
         
