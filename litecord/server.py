@@ -656,7 +656,7 @@ class LitecordServer:
             response = await handler(request)
             response.headers['Access-Control-Allow-Origin'] = self.flags['server_url']
             return response
-        return inner_handler
+        return handler
         
     def add_get(self, route_path, handler):
         _r = self.app.router
