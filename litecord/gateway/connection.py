@@ -199,10 +199,10 @@ class Connection(WebsocketConnection):
         # this to issue problems.
         if not self.identified:
             log.warning('[dispatch] cannot dispatch to non-identified')
-            self.dispatch_lock.release()
-            
             # Removing the connection should help.
-            self.server.remove_conenction(self.session_id)
+            self.server.remove_connection(self.session_id)
+            self.dispatch_lock.release()
+
             return -1
 
         if hasattr(evt_data, 'as_json'):

@@ -130,16 +130,16 @@ class User(LitecordObject):
 
         """
         log.debug(f"Dispatching {evt_name} to {self.id}")
-        _conns = list(self.connections)
-        if len(_conns) < 1:
+        connections = list(self.connections)
+        if len(connections) < 1:
             return False
 
-        for conn in _conns:
+        for conn in connections:
             try:
                 await conn.dispatch(evt_name, evt_data)
-                log.debug(f"Dispatched to {conn.session_id!r}")
+                log.debug('Dispatched to %r', conn.session_id)
             except:
-                log.debug(f"Failed to dispatch event to {conn.session_id!r}")
+                log.exception('Failed to dispatch event to %r', conn.session_id)
 
         return True
 
