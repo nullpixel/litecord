@@ -6,7 +6,8 @@ import time
 from collections import defaultdict
 
 from ..objects import Guild, TextGuildChannel, VoiceGuildChannel, \
-    Message, Invite, Role, BareGuild, BareCategory, BaseTextChannel, BaseGuildChannel
+    Message, Invite, Role, BareGuild, BareCategory, BaseTextChannel, \
+    BaseGuildChannel, GuildCategory
 from ..snowflake import get_snowflake, get_invite_code
 from ..utils import get
 from ..enums import ChannelType
