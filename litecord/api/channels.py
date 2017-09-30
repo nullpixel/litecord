@@ -57,6 +57,11 @@ class ChannelsEndpoint:
         self.server.add_post('channels/{channel_id}/typing', self.h_post_typing)
 
         self.server.add_put('channels/{channel_id}', self.h_edit_channel)
+
+        self.server.add_get('channels/{channel_id}/pins', self.h_get_pins)
+        self.server.add_put('channels/{channel_id}/pins/{message_id}', self.h_add_pin)
+        self.server.add_delete('channels/{channel_id}/pins/{message_id}', self.h_remove_pin)
+
         self.server.add_patch('channels/{channel_id}', self.h_edit_channel)
         self.server.add_delete('channels/{channel_id}', self.h_delete_channel)
 
@@ -368,3 +373,73 @@ class ChannelsEndpoint:
         await chan.delete()
         return _json(chan.as_json)
 
+    @auth_route
+    async def h_get_pins(self, request, user):
+        """`GET /channels/{channel_id}/pins`
+
+        Returns all pinned messages in the channel as an array of message objects.
+        """
+        channel_id = request.match_info['channel_id']
+        channel = self.guild_man.get_channel(channel_id)
+        if channel is None:
+            return _err(errno=10003)
+
+        return _json(await channel.get_pins())
+
+    @auth_route
+    async def h_add_pin(self, request, user):
+        """`PUT /channels/{channel_id}/pins/{message_id}`
+
+        Pins a message.
+        Returns 204 empty response on success, fires a CHANNEL_PINS_UPDATE event.
+        TODO: Add perms to this
+        """
+        channel_id = request.match_info['channel_id']
+        message_id = request.match_info['message_id']
+
+        channel = self.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=10003)
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        message = channel.get_message(message_id)
+        if message is None:
+            return _err(errno=10008)
+
+        if message.channel_id != channel.id:
+            return _err(errno=50019)
+
+        await channel.add_pin(message_id)
+        return web.Response(status=204)
+
+    @auth_route
+    async def h_remove_pin(self, request, user):
+        """`DELETE /channels/{channel_id}/pins/{message_id}`
+
+        Removes a pinned message.
+        Returns 204 empty response on success, fires a CHANNEL_PINS_UPDATE event.
+        TODO: Add perms to this
+        """
+        channel_id = request.match_info['channel_id']
+        message_id = request.match_info['message_id']
+
+        channel = self.guild_man.get_channel(channel_id)
+
+        if channel is None:
+            return _err(errno=10003)
+
+        if user.id not in channel.guild.members:
+            return _err(errno=40001)
+
+        message = channel.get_message(message_id)
+        if message is None:
+            return _err(errno=10008)
+
+        if message.channel_id != channel.id:
+            return _err(errno=50019)
+
+        await channel.remove_pin(message_id)
+        return web.Response(status=204)

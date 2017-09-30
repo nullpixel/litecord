@@ -181,6 +181,44 @@ class TextGuildChannel(BaseGuildChannel):
         log.debug('[tx_chan:last_messages] Got %d messages', len(res))
         return res
 
+    async def add_pin(self, message_id: int):
+        if message_id in self.pins:
+            return
+            
+        before = len(self.pins)
+        self.pins.append(message_id)
+
+        result = await self.guild_man.channel_coll.update_one({'channel_id': self.id}, \
+            {'$set': {'pinned_ids': self.pins}})
+        
+        log.info('Updated %d channel with %d to %d pins', \
+                result.modified_count, before, len(self.pins))
+        
+        await self.guild_man.reload_channel(self)
+        await self.dispatch('CHANNEL_PINS_UPDATE', {
+            'channel_id': self.id
+        })
+        return
+
+    async def remove_pin(self, message_id: int):
+        if message_id not in self.pins:
+            return
+
+        before = len(self.pins)
+        self.pins.remove(message_id)
+
+        result = await self.guild_man.channel_coll.update_one({'channel_id': self.id}, \
+            {'$set': {'pinned_ids': self.pins}})
+        
+        log.info('Updated %d channel with %d to %d pins', \
+                result.modified_count, before, len(self.pins))
+        
+        await self.guild_man.reload_channel(self)
+        await self.dispatch('CHANNEL_PINS_UPDATE', {
+            'channel_id': self.id
+        })
+        return
+ 
     async def get_pins(self, limit=None):
         update = False
         pinned_messages = []
@@ -194,11 +232,11 @@ class TextGuildChannel(BaseGuildChannel):
                 update = True
                 continue
 
-            pinned_messages.append(m)
+            pinned_messages.append(m.as_json)
 
         if update:
             result = await self.guild_man.channel_coll.update_one({'channel_id': self.id}, \
-                {'$set': {'pins': self.pins}})
+                {'$set': {'pinned_ids': self.pins}})
 
             log.info('Updated %d channel with %d to %d pins', \
                 result.modified_count, len(cpy), len(self.pins))
