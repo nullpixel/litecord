@@ -41,6 +41,7 @@ class AuthEndpoints:
 
     def register(self):
         self.server.add_post('auth/login', self.h_login)
+        self.server.add_post('auth/register', self.h_add_user)
         self.server.add_post('auth/users/add', self.h_add_user)
 
         # create a bot, list all bots
@@ -101,7 +102,7 @@ class AuthEndpoints:
         return _json({"token": token})
 
     async def h_add_user(self, request):
-        """`POST:/users/add`.
+        """`POST:/auth/register`.
 
         Creates a user.
         Input: A JSON object::
