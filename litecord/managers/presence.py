@@ -89,6 +89,11 @@ class PresenceManager:
         if new_status is None:
             new_status = {}
 
+        if new_status.get('status') == 'invisible':
+            new_status['status'] = 'offline'
+        elif new_status.get('status') == 'afk':
+            new_status['status'] = 'idle'
+
         user_id = user.id
         guild_id = guild.id
 
