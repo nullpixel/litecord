@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import collections
 
 from aiohttp import web
 from voluptuous import Schema, Optional, All, Length, Range, REMOVE_EXTRA
@@ -17,10 +18,18 @@ log = logging.getLogger(__name__)
 BULK_DELETE_LIMIT = 1209600
 
 class ChannelsEndpoint:
-    """Handle channel/message related endpoints."""
+    """Handle channel/message related endpoints.
+
+    Attributes
+    ----------
+    cache: Dict[list]
+        Cache for used nonces.
+    """
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
+
+        self.cache = collections.defaultdict(list)
 
         self.channel_edit_base = Schema({
             'name': All(str, Length(min=2, max=100)),
@@ -36,9 +45,9 @@ class ChannelsEndpoint:
             'user_limit': All(int, Range(min=0, max=99)),
         })
 
-        self.register(server.app)
+        self.register()
 
-    def register(self, app):
+    def register(self):
         self.server.add_get('channels/{channel_id}', self.h_get_channel)
 
         self.server.add_get('channels/{channel_id}/messages', self.h_get_messages)
@@ -127,10 +136,18 @@ class ChannelsEndpoint:
                 return _err(errno=50006)
 
             if len(content) > 2000:
-                return web.response(status=400)
+                return web.Response(status=400)
         except:
             return _err('no useful content provided')
 
+        used_nonces = self.nonces[user.id]
+        try:
+            current_nonce = payload['nonces']
+            if current_nonce in used_nonces:
+                return _err('nonce already used', status_code=409)
+        except KeyError:
+            pass
+        
         _data = {
             'message_id': get_snowflake(),
             'author_id': user.id,
