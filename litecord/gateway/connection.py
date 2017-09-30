@@ -5,12 +5,13 @@ import collections
 
 from voluptuous import Schema, Optional, REMOVE_EXTRA
 
-from ..enums import OP, CloseCodes
+from ..enums import OP, CloseCodes, ChannelType
 from ..utils import chunk_list
-from ..err import VoiceError, InvalidateSession
+from ..err import InvalidateSession
 from ..ratelimits import ws_ratelimit
 
-from ..ws import WebsocketConnection, handler, StopConnection, get_data_handlers
+from ..ws import WebsocketConnection, handler, \
+    StopConnection, get_data_handlers
 from .state import ConnectionState, RESUME_MAX_EVENTS
 
 # Maximum amount of tries to generate a session ID.
@@ -27,18 +28,19 @@ SERVER_AMOUNT = 5
 log = logging.getLogger(__name__)
 
 SERVERS = {
-    'main': [f'gateway-main-{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
-    'hello': [f'litecord-hello-{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
-    'ready': [f'litecord-session-{random.randint(1, 99)}' for i in range (SERVER_AMOUNT)],
-    'resume': [f'litecord-resumer{random.randint(1, 99)}' for i in range(SERVER_AMOUNT)],
+    'main': [f'gateway-main-{random.randint(1, 99)}'
+             for i in range(SERVER_AMOUNT)],
+    'hello': [f'litecord-hello-{random.randint(1, 99)}'
+              for i in range(SERVER_AMOUNT)],
+    'ready': [f'litecord-session-{random.randint(1, 99)}'
+              for i in range(SERVER_AMOUNT)],
+    'resume': [f'litecord-resumer{random.randint(1, 99)}'
+               for i in range(SERVER_AMOUNT)],
 }
 
 
 class Connection(WebsocketConnection):
     """Represents a websocket connection to Litecord.
-
-    .. _the documentation about it here: https://discordapp.com/developers/docs/topics/gateway
-    .. _WebSocketServerProtocol: https://websockets.readthedocs.io/en/stable/api.html#websockets.server.WebSocketServerProtocol
 
     This connection handles the Gateway API v6,
     you can find `the documentation about it here`_.
@@ -60,7 +62,8 @@ class Connection(WebsocketConnection):
         Connection's session id.
 
     encoder: function
-        Encoder function that convers objects to the provided encoding over :attr:`Connection.options`
+        Encoder function that convers objects to the provided
+            encoding over :attr:`Connection.options`
     decoder: function
         Decoder function that converts messages from the websocket to objects.
 
@@ -78,7 +81,7 @@ class Connection(WebsocketConnection):
         Connection had a successful `IDENTIFY` or not.
     properties: dict
         Connection properties like OS, browser and the the ``large_threshold``.
-    
+
     user: :class:`User`
         Becomes a user object if the connection is properly identified.
 
@@ -227,7 +230,8 @@ class Connection(WebsocketConnection):
         else:
             amount = await self.send(payload)
 
-        log.info(f'[dispatch] {evt_name}, {amount} bytes, compress: {self.state.compress}')
+        log.info('[dispatch] {evt_name}, {amount} bytes, compress: '
+                 f'{self.state.compress}')
         self._register_payload(self.state.sent_seq, payload)
 
         self.dispatch_lock.release()
@@ -239,9 +243,11 @@ class Connection(WebsocketConnection):
         return self.server.atomic_markers.get(self.session_id, False)
 
     async def hb_wait_task(self):
-        """This task automatically closes clients that didn't heartbeat in time."""
+        """This task automatically closes clients that
+        didn't heartbeat in time."""
         try:
-            log.debug(f'Waiting for heartbeat {(self.hb_interval / 1000) + 3}s')
+            log.debug('Waiting for heartbeat '
+                      f'{(self.hb_interval / 1000) + 3}s')
             await asyncio.sleep((self.hb_interval / 1000) + 3)
             log.info(f'Heartbeat expired for sid=%s', self.session_id)
             await self.ws.close(CloseCodes.UNKNOWN_ERROR, 'Heartbeat expired')
@@ -263,7 +269,8 @@ class Connection(WebsocketConnection):
         """
         try:
             self.wait_task.cancel()
-        except AttributeError: pass
+        except AttributeError:
+            pass
 
         self.state.recv_seq = int(data)
         self.wait_task = self.loop.create_task(self.hb_wait_task())
@@ -271,7 +278,7 @@ class Connection(WebsocketConnection):
 
     async def check_token(self, token: str) -> 'User':
         """Check if a token is valid and can be used for proper authentication.
-        
+
         Returns
         -------
         :class:`User`
@@ -293,7 +300,7 @@ class Connection(WebsocketConnection):
 
     def check_shard(self, shard: list):
         """Checks the validity of the shard payload.
-        
+
         Raises
         ------
         StopConnection
@@ -319,14 +326,15 @@ class Connection(WebsocketConnection):
 
     async def make_guild_list(self) -> list:
         """Generate the guild list to be sent over the READY event.
-        
+
         If the guild is large enough(from :attr:`ConnectionState.large`)
         this only puts the online members in the guild object.
 
         If the connection doesn't represent an `Atomic Discord` connection,
         the client gets subscribed to all guilds the user is in.
 
-        (Actual guild subscribing on Atomic is done by :attr:`Connection.guild_sync_handler`)
+        (Actual guild subscribing on Atomic is
+        done by :attr:`Connection.guild_sync_handler`)
 
         Returns
         -----------
@@ -351,7 +359,7 @@ class Connection(WebsocketConnection):
 
     async def chk_shard_amount(self):
         """Check for the amount of guilds each shard is.
-        
+
         This fills :attr:`ConnecionState.guild_ids` with all
         the Guild IDs this user is in.
 
@@ -376,25 +384,29 @@ class Connection(WebsocketConnection):
 
             # We don't really check for the other shards amount, just
             # the one we are currently in
-            # since checking for the others *could* cause them to crash as well.
+            # since checking for the others *could* cause
+            # them to crash as well.
             if shard_id != self.state.shard_id:
                 continue
 
             if guild_count > 2500:
-                raise StopConnection(CloseCodes.INVALID_SHARD, f'shard {shard_id} is with {guild_count} shards, too many')
+                raise StopConnection(CloseCodes.INVALID_SHARD,
+                                     f'shard {shard_id} is with {guild_count} '
+                                     'shards, too many')
 
     async def dispatch_ready(self, ready_packet: dict, guild_list: list):
         """Dispatch the `READY` event to a client.
-        
+
         If the connection is from a bot, and not a selfbot(user),
-        this makes guild streaming, which is overwriting the guild data in `READY`
-        for unavailable guilds and dispatching ``GUILD_CREATE`` events
-        for every guild the bot is in.
+        this makes guild streaming, which is overwriting
+        the guild data in `READY` for unavailable guilds and
+        dispatching ``GUILD_CREATE`` events for every guild the bot is in.
         """
 
         if self.state.user.bot:
-            f = lambda raw_guild: {'id': raw_guild['id'], 'unavailable': True}
-            ready_packet['guilds'] = list(map(f, guild_list))
+            def make_unavailable(raw_guild):
+                return {'id': raw_guild['id'], 'unavailable': True}
+            ready_packet['guilds'] = list(map(make_unavailable, guild_list))
 
             await self.dispatch('READY', ready_packet)
 
@@ -428,13 +440,15 @@ class Connection(WebsocketConnection):
         if self.state.user.bot:
             raise RuntimeError('Bot requesting a user ready')
 
-        f = lambda r: self.presence.get_glpresence(r.u_to.uid)
-        friend_presences = list(map(f, self.relationships))
+        def global_presence(relationship):
+            return self.presence.get_glpresence(relationship.u_to.uid)
+        friend_presences = list(map(global_presence,
+                                    self.relationships))
 
         # TODO: async iterator on User.relationships
 
-        #friend_presences = []
-        #async for rel_entry in self.user.relationships:
+        # friend_presences = []
+        # async for rel_entry in self.user.relationships:
         #    presence = self.presence.get_glpresence(rel_entry.u_to.id)
         #    friend_presences.append(presence)
 
@@ -502,7 +516,8 @@ class Connection(WebsocketConnection):
 
         user = await self.check_token(token)
         if user is None:
-            raise StopConnection(CloseCodes.AUTH_FAILED, 'Authentication failed...')
+            raise StopConnection(CloseCodes.AUTH_FAILED,
+                                 'Authentication failed...')
 
         shard = data.get('shard', [0, 1])
         self.check_shard(shard)
@@ -511,7 +526,8 @@ class Connection(WebsocketConnection):
         sharded = shard_count > 1
 
         if sharded and (not user.bot):
-            raise StopConnection(CloseCodes.INVALID_SHARD, 'User accounts cannot shard.')
+            raise StopConnection(CloseCodes.INVALID_SHARD,
+                                 'User accounts cannot shard.')
 
         session_id = self.server.gen_ssid()
         if session_id is None:
@@ -520,17 +536,18 @@ class Connection(WebsocketConnection):
 
             # possible order of events for the loop:
             #  > client identifies
-            #  > gateway closes with 4009 
+            #  > gateway closes with 4009
             #  > client reconnects
 
-            #await self.invalidate(False)
+            # await self.invalidate(False)
             raise StopConnection(CloseCodes.SESSION_TIMEOUT)
 
         self.session_id = session_id
 
         guild_count = await self.guild_man.guild_count(user)
         if guild_count > 2500 and user.bot and (not sharded):
-            raise StopConnection(CloseCodes.SHARDING_REQUIRED, 'Sharding required')
+            raise StopConnection(CloseCodes.SHARDING_REQUIRED,
+                                 'Sharding required')
 
         self.request_counter = self.server.request_counter[session_id]
 
@@ -544,10 +561,11 @@ class Connection(WebsocketConnection):
         # falls apart because it tries to get presence data(for READY)
         # for a user that is still connecting (the client right now)
 
-        self.state = ConnectionState(session_id, token, \
-            user=user, properties=prop, \
-            shard_id=shard_id, shard_count=shard_count, \
-            large=large, compress=compress_flag)
+        self.state = ConnectionState(session_id, token,
+                                     user=user, properties=prop,
+                                     shard_id=shard_id,
+                                     shard_count=shard_count,
+                                     large=large, compress=compress_flag)
 
         self.state.conn = self
 
@@ -566,7 +584,8 @@ class Connection(WebsocketConnection):
 
         guild_list = await self.make_guild_list()
 
-        log.info('[ready:new_session] %r, guilds=%d', self.state, len(guild_list)) 
+        log.info('[ready:new_session] %r, guilds=%d',
+                 self.state, len(guild_list))
 
         self.user_settings = await self.settings.get_settings(user)
         self.relationships = await self.relations.get_relationships(user)
@@ -584,7 +603,7 @@ class Connection(WebsocketConnection):
     async def req_guild_handler(self, data):
         """Handle OP 8 Request Guild Members.
 
-        Dispatches GUILD_MEMBERS_CHUNK (https://discordapp.com/developers/docs/topics/gateway#guild-members-chunk).
+        Dispatches GUILD_MEMBERS_CHUNK.
         """
         if not self.identified:
             raise StopConnection(CloseCodes.NOT_AUTH)
@@ -596,8 +615,10 @@ class Connection(WebsocketConnection):
 
         guild_id, query, limit = data['guild_id'], data['query'], data['limit']
 
-        if limit > 1000: limit = 1000
-        if limit <= 0: limit = 1000
+        if limit > 1000:
+            limit = 1000
+        if limit <= 0:
+            limit = 1000
 
         guild = self.guild_man.get_guild(guild_id)
         if guild is None:
@@ -612,7 +633,7 @@ class Connection(WebsocketConnection):
             for member in guild.members.values():
                 uname = member.user.username.lower()
 
-                if uname.startswith(qyery):
+                if uname.startswith(query):
                     member_list.append(member)
         else:
             member_list = [m for m in guild.members.values()]
@@ -660,7 +681,7 @@ class Connection(WebsocketConnection):
     async def _resume(self, seqs_to_replay):
         """Send all missing events to the connection.
         Blocks any other events from being dispatched.
-        
+
         Used for resuming.
         """
 
@@ -689,7 +710,7 @@ class Connection(WebsocketConnection):
         # as fault-tolerant as Discord is, Litecord sure
         # doesn't crash on any error, but if the server
         # crash, eventually everything crashes(single point of failure).
-        
+
         # I don't think PRESENCES_REPLACE is even supposed to be
         # used in this non-fault-tolerant scenario... but I added it anyways
         # so whatever.
@@ -729,7 +750,8 @@ class Connection(WebsocketConnection):
 
         sent_seq = state.sent_seq
         if replay_seq > sent_seq:
-            log.warning(f'[resume] invalidated from replay_seq > sent_seq {replay_seq} {sent_seq}')
+            log.warning('[resume] invalidated from replay_seq > sent_seq'
+                        f'{replay_seq} {sent_seq}')
             await self.invalidate(False)
 
         seqs_to_replay = range(replay_seq, sent_seq + 1)
@@ -795,7 +817,8 @@ class Connection(WebsocketConnection):
         """Handle OP 12 Guild Sync.
 
         This is an undocumented OP on Discord's API docs.
-        This OP is sent by the client to request member and presence information.
+        This OP is sent by the client to request
+        member and presence information.
         """
 
         if not self.identified:
@@ -828,13 +851,14 @@ class Connection(WebsocketConnection):
         """Handle OP 4 Voice State Update.
 
         Requests VoiceServer to generate a VoiceState for the connection.
-        Dispatches VOICE_STATE_UPDATE and VOICE_SERVER_UPDATE events to the connection.
+        Dispatches VOICE_STATE_UPDATE and VOICE_SERVER_UPDATE
+        events to the connection.
         """
 
         guild_id = data.get('guild_id')
         channel_id = data.get('channel_id')
-        self_mute = data.get('self_mute', False)
-        self_deaf = data.get('self_deaf', False)
+        # self_mute = data.get('self_mute', False)
+        # self_deaf = data.get('self_deaf', False)
 
         if guild_id is None or channel_id is None:
             return log.warning('[vsu] missing params')
@@ -847,7 +871,7 @@ class Connection(WebsocketConnection):
         if channel is None:
             return log.warning('[vsu] unknown channel')
 
-        if channel.type != ChannelTypes.GUILD_VOICE:
+        if channel.type != ChannelType.GUILD_VOICE:
             return log.warning('[vsu] not voice channel')
 
         v_state = await guild.voice_manager.link(self, channel)
@@ -870,7 +894,7 @@ class Connection(WebsocketConnection):
         payload: dict
             https://discordapp.com/developers/docs/topics/gateway#gateway-op-codespayloads
         """
-        return await self._process(payload) 
+        return await self._process(payload)
 
     async def run(self):
         """Starts basic handshake with the client

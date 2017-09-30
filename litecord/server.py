@@ -6,7 +6,6 @@ import collections
 import base64
 import binascii
 import pathlib
-import pprint
 import inspect
 
 import motor.motor_asyncio
@@ -26,7 +25,7 @@ from .voice.server import VoiceManager
 from .objects import User
 from .err import ConfigError, RequestCheckError
 from .ratelimits import WSBucket, GatewayRatelimitModes
-from .gateway import ConnectionState, MAX_TRIES 
+from .gateway import MAX_TRIES
 
 log = logging.getLogger(__name__)
 
@@ -73,8 +72,6 @@ def empty_ev_cache():
 class LitecordServer:
     """Main class for the Litecord server.
 
-    .. _AsyncIOMotorClient: https://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_client.html
-
     Arguments
     ---------
     flags : dict
@@ -91,7 +88,8 @@ class LitecordServer:
     accept_clients: bool
         If the server accepts new clients through REST or the Gateway.
     endpoints: int
-        Amount of declared endpoints on the server(:meth:`Litecord.compliance` fills it)
+        Amount of declared endpoints on the server
+        (:meth:`Litecord.compliance` fills it)
     good: `asyncio.Event`
         Set when the server has a "good" cache, if it is filled
         with all the information from the collections it needs.
@@ -102,7 +100,7 @@ class LitecordServer:
         MongoDB Client.
     event_cache: dict
         Relates user IDs to the last events they received. Used for resuming.
-    
+
     users: list[:class:`User`]
         Cache of user objects.
     raw_users: dict
@@ -160,7 +158,8 @@ class LitecordServer:
 
         # mongodb stuff
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient()
-        self.litecord_db = self.mongo_client[self.flags.get('mongo_name', 'litecord')]
+        self.litecord_db = self.mongo_client[self.flags.get('mongo_name',
+                                                            'litecord')]
 
         # jesus christ the amount of collections
         self.message_coll = self.litecord_db['messages']
@@ -197,8 +196,10 @@ class LitecordServer:
         ignore = GatewayRatelimitModes.IGNORE_PACKET
 
         self.buckets = {
-            'all': WSBucket('all', requests=global_req, seconds=global_sec, mode=close),
-            'presence_updates': WSBucket('presence_updates', requests=5, seconds=60, mode=ignore),
+            'all': WSBucket('all', requests=global_req, seconds=global_sec,
+                            mode=close),
+            'presence_updates': WSBucket('presence_updates', requests=5,
+                                         seconds=60, mode=ignore),
             'identify': WSBucket('identify', requests=1, seconds=5, mode=close)
         }
 
@@ -208,7 +209,7 @@ class LitecordServer:
 
     def gen_ssid(self) -> str:
         """Generate a new Session ID for a :class:`ConnectionState`.
-        
+
         Returns
         -------
         str
@@ -252,7 +253,7 @@ class LitecordServer:
 
     def remove_connection(self, session_id: str):
         """Remove a connection from the connection table.
-        
+
         Parameters
         ----------
         session_id: str
@@ -262,15 +263,18 @@ class LitecordServer:
 
         try:
             self.request_counter.pop(session_id)
-        except KeyError: pass
+        except KeyError:
+            pass
 
         try:
             state = delete(self.states, session_id=session_id)
-        except KeyError: return
+        except KeyError:
+            return
 
         try:
             user_id = state.user.id
-        except AttributeError: return
+        except AttributeError:
+            return
 
         log.debug('Unlinking %r from uid=%d', state, user_id)
 
@@ -291,7 +295,7 @@ class LitecordServer:
 
     def get_shards(self, user_id: int) -> dict:
         """Get all shards for a user
-        
+
         Returns
         -------
         dict
@@ -320,7 +324,7 @@ class LitecordServer:
                 # assume list of str -> list of int
                 if 'ids' in k:
                     element[k] = [int(v) for v in element[k]]
-                    
+
                 # assume str -> int
                 elif 'id' in k:
                     element[k] = int(element[k])
@@ -332,7 +336,7 @@ class LitecordServer:
 
     async def boilerplate_init(self):
         """Load boilerplate data.
-        
+
         If the ``boilerplate.update`` config flag is set to ``True`` for each
         field, this function overwrites the boilerplate data with the
         current data, ignores if set to ``False``.
@@ -346,13 +350,14 @@ class LitecordServer:
                 try:
                     data = json.load(f)
                 except Exception:
-                    log.warning(f'[boilerplate] No boilerplate data found for field: {key!r}')
-            
+                    log.warning('[boilerplate] No boilerplate data '
+                                f'found for field: {key!r}')
+
             await self.fill_boilerplate(key, data, b_flags)
 
     async def load_users(self):
         """Load the user collection into the server's cache.
-        
+
         While loading, it can generate a salt and hash for the password
         if the data is not provided.
         """
@@ -373,12 +378,14 @@ class LitecordServer:
 
             # generate password if good
             if len(password['hash']) < 1:
-                password['hash'] = pwd_hash(password['plain'], password['salt'])
+                password['hash'] = pwd_hash(password['plain'],
+                                            password['salt'])
                 # we are trying to be secure here ok
                 password.pop('plain')
 
             query = {'user_id': uid}
-            await self.user_coll.update_one(query, {'$set': {'password': password}})
+            await self.user_coll.update_one(query, {'$set':
+                                                    {'password': password}})
 
             # add to cache
             self.users.append(User(self, raw_user))
@@ -397,11 +404,13 @@ class LitecordServer:
             # non-existing
             try:
                 self.users.remove(user)
-            except ValueError: pass
+            except ValueError:
+                pass
 
             try:
                 self.raw_users.pop(user.id)
-            except KeyError: pass
+            except KeyError:
+                pass
 
             del user
             return
@@ -433,7 +442,8 @@ class LitecordServer:
         # no one should use the _id field tbh
         try:
             u.pop('_id')
-        except KeyError: pass
+        except KeyError:
+            pass
 
         try:
             keys = u.keys()
@@ -499,7 +509,7 @@ class LitecordServer:
 
     async def token_find(self, token: str) -> int:
         """Return a user ID from a token.
-        
+
         Parses the token to get the user ID and then unsigns it
         using the user's hashed password as a secret key
         """
@@ -525,7 +535,7 @@ class LitecordServer:
 
     async def check(self) -> dict:
         """Returns a dictionary with self-checking data.
-        
+
         Used to determine the state of the server with:
          - Mongo ping
         """
@@ -582,10 +592,12 @@ class LitecordServer:
         """
         auth_header = request.headers.get('Authorization')
         if auth_header is None:
-            raise RequestCheckError(_err('No header provided', status_code=401))
+            raise RequestCheckError(_err('No header provided',
+                                         status_code=401))
 
         if len(auth_header) < 1:
-            raise RequestCheckError(_err('Malformed header', status_code=401))
+            raise RequestCheckError(_err('Malformed header',
+                                         status_code=401))
 
         try:
             token_type, token_value = auth_header.split()
@@ -594,12 +606,14 @@ class LitecordServer:
             token_value = auth_header
 
         if token_type != 'Bot':
-            raise RequestCheckError(_err('Invalid token type', status_code=401))
+            raise RequestCheckError(_err('Invalid token type',
+                                         status_code=401))
 
         try:
             user_id = await self.token_find(token_value)
         except itsdangerous.BadSignature:
-            raise RequestCheckError(_err(f'Invalid token', status_code=401))
+            raise RequestCheckError(_err(f'Invalid token',
+                                         status_code=401))
 
         return token_value, user_id
 
@@ -610,7 +624,8 @@ class LitecordServer:
             'username': username
         })
         raw_user_list = await cursor.to_list(length=None)
-        used_discrims = [raw_user['discriminator'] for raw_user in raw_user_list]
+        used_discrims = [raw_user['discriminator']
+                         for raw_user in raw_user_list]
 
         # only 9500 discrims per user
         # because I want to.
@@ -624,7 +639,8 @@ class LitecordServer:
                 used_discrims.index(discrim)
                 discrim = str(await random_digits(4))
             except ValueError:
-                log.info(f'[get:discrim] Generated discrim {discrim!r} for {username!r}')
+                log.info('[get:discrim] Generated discrim '
+                         f'{discrim!r} for {username!r}')
                 return discrim
 
     async def make_counts(self) -> dict:
@@ -646,13 +662,14 @@ class LitecordServer:
         }
 
         async def options_handler(request):
-            headers['Access-Control-Allow-Origin'] = request.headers['Origin'] 
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
             return web.Response(status=200, body='', headers=headers)
 
         return options_handler
 
     def add_empty(self, route, method):
-        self.app.router.add_route('OPTIONS', route, self.make_options_handler(method))
+        self.app.router.add_route('OPTIONS', route,
+                                  self.make_options_handler(method))
 
     def fix_fucking_cors(self, handler):
         async def inner_handler(request):
@@ -660,7 +677,7 @@ class LitecordServer:
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response
         return inner_handler
-        
+
     def add_get(self, route_path, handler):
         _r = self.app.router
         route_handler = self.fix_fucking_cors(handler)
@@ -719,7 +736,8 @@ class LitecordServer:
         scopes = collections.Counter()
         found_scopes = collections.Counter()
 
-        raw = (pathlib.Path(__file__).resolve().parents[0] / 'discord-endpoints.txt').read_text()
+        raw = (pathlib.Path(__file__).resolve().parents[0] /
+               'discord-endpoints.txt').read_text()
         for line in raw.split('\n'):
             for method_find in methods:
                 method = line.find(method_find)
@@ -765,7 +783,8 @@ class LitecordServer:
                     _flag = True
 
         not_found = set([t[2] for t in endpoints]) ^ set(found)
-        names_notfound = [(ep[0], ep[2]) for ep in endpoints if ep[2] in not_found]
+        names_notfound = [(ep[0], ep[2])
+                          for ep in endpoints if ep[2] in not_found]
 
         print('Endpoints not found:')
         for ep_name, ep_route in names_notfound:
@@ -774,13 +793,15 @@ class LitecordServer:
         for scope, count in scopes.most_common():
             found_count = found_scopes[scope]
 
-            log.info('scope %s: %d total, %d found', \
-                scope, count, found_count)
+            log.info('scope %s: %d total, %d found',
+                     scope, count, found_count)
 
         total = len(endpoints)
         found_count = len(found)
-        log.info('From %d listed endpoints, %d total, %d found, %.2f%% compliant', \
-            total, self.endpoints, found_count, (found_count / total) * 100)
+        log.info('From %d listed endpoints, %d total, %d found, '
+                 '%.2f%% compliant',
+                 total, self.endpoints, found_count,
+                 (found_count / total) * 100)
         return
 
     async def load_manager(self, manager):
@@ -802,7 +823,6 @@ class LitecordServer:
             log.warning('[load_manager] load hook not found')
         else:
             await maybe_coroutine(load_hook())
-
 
     async def load_managers(self):
         _managers = [
@@ -827,7 +847,8 @@ class LitecordServer:
         log.info('Loaded %d managers', loaded)
 
     def load_endpoints(self):
-        """Load all endpoint objects into :attr:`LitecordServer.endpoint_objs`"""
+        """Load all endpoint objects into
+        :attr:`LitecordServer.endpoint_objs`"""
         loaded = 0
         for attr in dir(api):
             if 'ndpoint' not in attr:
