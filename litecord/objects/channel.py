@@ -299,7 +299,7 @@ class GuildCategory(BaseGuildChannel):
         self._update(guild, raw)
 
     def _update(self, guild, raw):
-        super()._update(guild, raw)
+        super()._update(guild, None, raw)
         self.nsfw = raw.get('nsfw', False)
 
     @property
