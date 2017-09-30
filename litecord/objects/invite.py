@@ -1,3 +1,5 @@
+import datetime
+
 from .base import LitecordObject
 
 
@@ -46,8 +48,10 @@ class Invite(LitecordObject):
         super().__init__(server)
         self._raw = raw
 
-        self.code = _raw['code']
-        self.channel_id = int(_raw['channel_id'])
+        self.code = self._raw['code']
+        self.channel_id = int(self._raw['channel_id'])
+        
+        self._update(self._raw)
 
     def _update_detached(self, raw):
         self.temporary = raw.get('temporary', False)
@@ -64,7 +68,7 @@ class Invite(LitecordObject):
                 "%Y-%m-%dT%H:%M:%S.%f")
 
     def _update(self, raw):
-        self.channel = server.guild_man.get_channel(self.channel_id)
+        self.channel = self.server.guild_man.get_channel(self.channel_id)
         if self.channel is None:
             log.warning('Orphan invite (channel)')
             self._update_detached(raw)
@@ -73,7 +77,7 @@ class Invite(LitecordObject):
         self.guild = self.channel.guild
 
         self.inviter_id = int(raw['inviter_id'])
-        self.inviter = guild.members.get(self.inviter_id)
+        self.inviter = self.guild.members.get(self.inviter_id)
         if self.inviter is None:
             log.warning('Orphan invite (inviter)')
 

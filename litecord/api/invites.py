@@ -104,7 +104,12 @@ class InvitesEndpoint:
             payload = await request.json()
         except:
             return _err('error parsing JSON')
-
+        
+        try:
+            payload['max_age'] = int(payload['max_age'])
+        except (ValueError, TypeErrror):
+            return _err('invalid max_age type')
+        
         invite_payload = self.invite_create_schema(payload)
 
         invite = await self.guild_man.create_invite(channel, user, invite_payload)
