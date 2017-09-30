@@ -317,11 +317,14 @@ class LitecordServer:
                 continue
 
             for k in element:
-                if 'id' in k:
-                    try:
-                        element[k] = int(element[k])
-                    except (TypeError, ValueError):
-                        log.debug('[boilerplate] failed to convert field %r to int', k)
+                # assume list of str -> list of int
+                if 'ids' in k:
+                    element[k] = [int(v) for v in element[k]]
+                    
+                # assume str -> int
+                elif 'id' in k:
+                    element[k] = int(element[k])
+
             await coll.replace_one(query, element, True)
             tot += 1
 
