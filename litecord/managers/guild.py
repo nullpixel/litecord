@@ -883,7 +883,7 @@ class GuildManager:
         None
         """
         guild = channel.guild
-        guild._raw['channel_ids'].remmove(channel.id)
+        guild._raw['channel_ids'].remove(channel.id)
         new_channel_ids = guild._raw['channel_ids']
 
         await self.guild_coll.update_one({'guild_id': channel.guild.id},
