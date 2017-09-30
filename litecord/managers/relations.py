@@ -4,6 +4,7 @@ from ..snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
+
 class RelationsManager:
     """Relationship manager.
 
