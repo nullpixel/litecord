@@ -411,7 +411,10 @@ class ChannelsEndpoint:
 
         if message.channel_id != channel.id:
             return _err(errno=50019)
-
+        
+        if len(await channel.get_pins()) == 50:
+            return _err('exceeded channel pin limit')
+        
         await channel.add_pin(message_id)
         return web.Response(status=204)
 
