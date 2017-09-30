@@ -414,7 +414,7 @@ class Connection(WebsocketConnection):
             '_trace': self.get_identifiers('ready'),
             'v': self.options[0],
 
-            'user': self.state.user.as_json,
+            'user': self.state.user.as_json_private,
             'private_channels': [],
 
             'guilds': guild_list,

@@ -37,7 +37,7 @@ class SettingsManager:
                 'show_current_game': False,
                 'restricted_guilds': [],
                 'render_reactions': True,
-                'render_embeds:': True,
+                'render_embeds': True,
                 'message_display_compact': True,
                 'locale': 'en-US',
                 'inline_embed_media': False,
@@ -46,19 +46,18 @@ class SettingsManager:
                 'friend_source_flags': {
                     'all': True,
                 },
-
                 'explicit_content_filter': 1,
                 'enable_tts_command': False,
-                'developer_mode': False,
+                'developer_mode': True,
                 'detect_platform_accounts': False,
                 'default_guilds_restricted': False,
                 'convert_emoticons': True,
                 'afk_timeout': 600,
-                'default_guilds_restricted': False,
             }
 
             await self.settings_coll.insert_one({**settings, **{'user_id': user.id}})
 
+        settings.pop('_id')
         return settings
 
     async def update_settings(self, user, payload: dict):

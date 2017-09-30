@@ -21,6 +21,7 @@ class UsersEndpoint:
 
     def register(self):
         self.server.add_get('users/{user_id}', self.h_users)
+        self.server.add_get('users/{user_id}/profile', self.h_users_profile)
         self.server.add_patch('users/@me', self.h_patch_me)
         self.server.add_get('users/@me/settings', self.h_get_me_settings)
         self.server.add_get('users/@me/guilds', self.h_users_me_guild)
@@ -30,6 +31,34 @@ class UsersEndpoint:
         # dm when
         #self.server.add_get('users/@me/channels', self.h_get_dm)
         #self.server.add_post('users/@me/channels', self.h_open_dm)
+
+    @auth_route
+    async def h_users_profile(self, request, user):
+        """Handle `GET /users/{user_id}`.
+
+        Grab the profile of a specific user.
+        """
+        user_id = request.match_info['user_id']
+        log.debug(f'grabbing profile for {user_id}')
+
+        if user.bot:
+            return _err(errno=40001)  # no lol
+
+        words = ('memework', 'makes', 'the', 'dreamwork')
+
+        accounts = [{
+            'id': index + 1,
+            'name': word,
+            'type': 'twitch',
+            'verified': True,
+        } for index, word in enumerate(words)]
+
+        return _json({
+            'user': user.as_json,
+            'connected_accounts': accounts,
+            'premium_since': '2000-01-01T01:00:00+00:00',
+            'mutual_guilds': []  # TODO: do this
+        })
 
     @auth_route
     async def h_users(self, request, user):

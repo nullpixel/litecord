@@ -33,6 +33,10 @@ class User(LitecordObject):
         Flag that shows if the user is an admin user.
     bot: bool
         If this is a bot user.
+    flags: int
+        The flags of this user. Usually used to indicate staff and partner.
+    verified: bool
+        Used to show that a user has verified via e-mail.
     """
 
     __slots__ = ('_raw', 'id', 'username', 'discriminator', 'avatar_hash',
@@ -50,6 +54,8 @@ class User(LitecordObject):
         self.email = raw.get('email')
         self.admin = raw.get('admin', False)
         self.bot = raw.get('bot', False)
+        self.flags = raw.get('flags', 7)
+        self.verified = raw.get('verified', True)
 
     def __str__(self):
         return f'{self.username}#{self.discriminator}'
@@ -93,6 +99,8 @@ class User(LitecordObject):
             'avatar': self.avatar_hash,
             'bot': self.bot,
             'mfa_enabled': False,
+            'flags': self.flags,
+            'verified': self.verified
         }
 
     @property
