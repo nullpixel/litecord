@@ -16,8 +16,7 @@ class GatewayEndpoint:
         self.guild_man = server.guild_man
 
         self.gw_down = lambda: web.Response(status=404, text='Gateway it not accepting any new clients.')
-        self.gw_Starting = lambda: web.Response(status=503, text='Gateway is still starting')
-
+        self.gw_starting = lambda: web.Response(status=503, text='Gateway is still starting')
 
         self.litecord_version = subprocess.check_output("git rev-parse HEAD", \
             shell=True).decode('utf-8').strip()
