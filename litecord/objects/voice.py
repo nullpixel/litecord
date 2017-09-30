@@ -17,6 +17,7 @@ class VoiceGuildChannel(BaseGuildChannel):
 
     def __init__(self, server, parent, raw, guild=None):
         super().__init__(guild, parent, raw)
+        self.server = server
         self._update(guild, parent, raw)
 
     def _update(self, guild, parent, raw):
