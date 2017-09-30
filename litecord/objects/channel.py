@@ -1,6 +1,8 @@
 import collections
 import logging
 
+import pymongo
+
 from .base import LitecordObject
 from ..enums import ChannelType
 from ..snowflake import _snowflake
@@ -159,7 +161,7 @@ class TextGuildChannel(BaseGuildChannel):
             Ordered(by time) list of message objects.
         """
         res = []
-        cursor = self.server.message_coll.find({'channel_id': self.id}).sort('message_id')
+        cursor = self.server.message_coll.find({'channel_id': self.id}).sort('message_id', pymongo.DESCENDING)
 
         async for raw_message in cursor:
             if len(res) > limit:
