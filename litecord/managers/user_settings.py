@@ -57,7 +57,11 @@ class SettingsManager:
 
             await self.settings_coll.insert_one({**settings, **{'user_id': user.id}})
 
-        settings.pop('_id')
+        try:
+            settings.pop('_id')
+        except KeyError:
+            pass
+
         return settings
 
     async def update_settings(self, user, payload: dict):
