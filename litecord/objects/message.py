@@ -71,6 +71,7 @@ class Message(LitecordObject):
         self.author = author
         self.guild = channel.guild
 
+        self.nonce = raw.get('nonce')
         self.created_at = self.to_timestamp(self.id)
 
         self.content = raw['content']
@@ -140,6 +141,7 @@ class Message(LitecordObject):
             'embeds': self.embeds,
             'reactions': reactions,
             'pinned': self.pinned,
-            'type': self.type
+            'type': self.type,
             #'webhook_id': '',
+            'nonce': self.nonce,
         }

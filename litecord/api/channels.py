@@ -18,18 +18,10 @@ log = logging.getLogger(__name__)
 BULK_DELETE_LIMIT = 1209600
 
 class ChannelsEndpoint:
-    """Handle channel/message related endpoints.
-
-    Attributes
-    ----------
-    nonces: Dict[list]
-        Cache for used nonces.
-    """
+    """Handle channel/message related endpoints."""
     def __init__(self, server):
         self.server = server
         self.guild_man = server.guild_man
-
-        self.nonces = collections.defaultdict(list)
 
         self.channel_edit_base = Schema({
             'name': All(str, Length(min=2, max=100)),
@@ -140,22 +132,12 @@ class ChannelsEndpoint:
         except:
             return _err('no useful content provided')
 
-        used_nonces = self.nonces[user.id]
-        try:
-            current_nonce = payload['nonces']
-            if current_nonce in used_nonces:
-                return _err('nonce already used', status_code=409)
-
-            used_nonces.append(current_nonce)
-        except KeyError:
-            log.warning('No nonce sent!')
-            pass
-        
         _data = {
             'message_id': get_snowflake(),
             'author_id': user.id,
             'channel_id': channel.id,
             'content': content,
+            'nonce': payload.get('nonce'),
         }
 
         new_message = await self.guild_man.new_message(channel, user, _data)
