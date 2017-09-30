@@ -11,6 +11,7 @@ from ..snowflake import get_snowflake, snowflake_time
 from ..ratelimits import ratelimit
 from ..decorators import auth_route
 from ..snowflake import get_snowflake
+from ..objects import BaseTextChannel, BaseVoiceChannel
 
 log = logging.getLogger(__name__)
 
@@ -341,10 +342,9 @@ class ChannelsEndpoint:
 
         payload = await request.json()
 
-        if isinstance(chan, TextChannel):
-            # check against text schema
+        if isinstance(chan, BaseTextChannel):
             payload = self.textchan_editschema(payload)
-        elif isinstance(chan, VoiceChannel):
+        elif isinstance(chan, BaseVoiceChannel):
             payload = self.voicechan_editschema(payload)
 
         new_chan = await chan.edit(payload)
