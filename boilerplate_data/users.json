@@ -120,5 +120,39 @@
         "bot": false,
         "verified": true,
         "admin": true
+    },
+    {
+        "user_id": "140527820500762624",
+        "username": "nullpixel",
+        "email": "jamie@memework.org",
+        "premium": true,
+        "discriminator": "1337",
+        "password": {
+            "plain": "securepass",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": false
+    },
+    {
+        "user_id": "150745989836308480",
+        "username": "Cynthia",
+        "email": "lumodder@gmail.com",
+        "premium": true,
+        "discriminator": "0069",
+        "password": {
+            "plain": "Fl3xcr$ft",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": true
     }
 ]
