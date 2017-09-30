@@ -636,7 +636,8 @@ class LitecordServer:
     def make_options_handler(self, method):
         """Returns a handler for `OPTIONS`."""
         headers = {
-            'Access-Control-Allow-Origin': '*',
+            #'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': 'http://127.0.0.1',
             #'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD, PATCH, DELETE, PUT, TRACE',
             'Access-Control-Allow-Methods': method,
             'Access-Control-Allow-Credentials': 'true',
