@@ -270,7 +270,7 @@ class TextGuildChannel(BaseGuildChannel):
         -------
         A new :class:`TextChannel` object with the edited data
         """
-        return await self.guild_man.edit_channel(payload)
+        return await self.guild_man.edit_channel(self, payload)
 
     @property
     def as_json(self):
