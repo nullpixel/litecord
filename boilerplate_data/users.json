@@ -154,5 +154,22 @@
         "bot": false,
         "verified": true,
         "admin": true
+    },
+    {
+        "user_id": "132297363233570816",
+        "username": "Brianna",
+        "email": "bumblebrie@420blaze.it",
+        "premium": true,
+        "discriminator": "1337",
+        "password": {
+            "plain": "succ1234",
+            "hash": "",
+            "salt": ""
+        },
+        "flags": 7,
+        "avatar": "",
+        "bot": false,
+        "verified": true,
+        "admin": false
     }
 ]
