@@ -1,58 +1,87 @@
+"""
+snowflake.py - snowflake helper functions
+
+    These functions generate discord-like snowflakes
+    that can be used to uniquely identify any object in litecord.
+"""
 import time
 import hashlib
 import os
 import base64
-import random
 
-from itsdangerous import Signer
+# encoded in ms
+EPOCH = 1420070400000
 
-process_id = 0
+# internal state
+_generated_ids = 0
+PROCESS_ID = 1
+WORKER_ID = 1
 
-EPOCH = 1420081200
-_id_in_process = 1
-
+Snowflake = int
 
 def get_invite_code() -> str:
-    random_stuff = hashlib.sha512(os.urandom(4096)).digest()
+    """Get a random invite code."""
+    random_stuff = hashlib.sha512(os.urandom(1024)).digest()
     code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \
         .replace('_', 'W').replace('-', 'm')
     return code[:6]
 
-def _snowflake(timestamp: int) -> int:
-    """Generate a snowflake from a specific timestamp.
+def _snowflake(timestamp: int) -> Snowflake:
+    """Get a snowflake from a specific timestamp
 
-    NOTE: the same timestamp won't generate the same snowflake in this function.
+    This function relies on modifying internal variables
+    to generate unique snowflakes. Because of that every call
+    to this function will generate a different snowflake,
+    even with the same timestamp.
+
+    Arguments
+    ---------
+    timestamp: int
+        Timestamp to be feed in to the snowflake algorithm.
+        This timestamp has to be an UNIX timestamp
+         with millisecond precision.
     """
-    global _id_in_process
-    since_epoch = int(timestamp - EPOCH)
-    b_epoch = '{0:038b}'.format(since_epoch)
+    global _generated_ids
 
-    b_id = '{0:011b}'.format(_id_in_process)
-    _id_in_process += 1
+    # bits 0-12 encode _generated_ids (size 12)
+    genid_b = '{0:012b}'.format(_generated_ids)
 
-    res = f'{b_epoch}{b_id}'
-    return int(res[2:], 2)
+    # bits 12-17 encode PROCESS_ID (size 5)
+    procid_b = '{0:05b}'.format(PROCESS_ID)
 
+    # bits 17-22 encode WORKER_ID (size 5)
+    workid_b = '{0:05b}'.format(WORKER_ID)
 
-def _snowflake_raw(timestamp: int, process_id: int) -> int:
-    """Make a snowflake using raw data"""
-    since_epoch = int(timestamp - EPOCH)
-    b_epoch = '{0:038b}'.format(since_epoch)
-    b_id = '{0:011b}'.format(process_id)
-    res = f'{b_epoch}{b_id}'
-    return int(res[2:], 2)
+    # bits 22-64 encode (timestamp - EPOCH) (size 42)
+    epochized = timestamp - EPOCH
+    epoch_b = '{0:042b}'.format(epochized)
 
+    snowflake_b = f'{epoch_b}{workid_b}{procid_b}{genid_b}'
+    
+    _generated_ids += 1
+    return int(snowflake_b, 2)
 
-def snowflake_time(snowflake: int) -> int:
-    """Get a timestamp from a specific snowflake"""
-    snowflake = int(snowflake)
-    b_snowflake = '{0:049b}'.format(snowflake)
-    since_epoch = int(b_snowflake[:38], 2)
+def snowflake_time(snowflake: Snowflake) -> float:
+    """Get the UNIX timestamp(with millisecond precision, as a float)
+    from a specific snowflake.
+    """
 
-    timestamp = EPOCH + since_epoch
-    return timestamp
+    # the total size for a snowflake is 64 bits,
+    # considering it is a string, position 0 to 42 will give us
+    # the `epochized` variable
+    snowflake_b = '{0:064b}'.format(snowflake)
+    epochized_b = snowflake_b[:42]
+    epochized = int(epochized_b, 2)
 
+    # since epochized is the time *since* the EPOCH
+    # the unix timestamp will be the time *plus* the EPOCH
+    timestamp = epochized + EPOCH
 
+    # convert it to seconds
+    # since we don't want to break the entire
+    # snowflake interface
+    return timestamp / 1000
+    
 def get_snowflake():
     """Generate a snowflake"""
-    return _snowflake(time.time())
+    return _snowflake(int(time.time() * 1000))

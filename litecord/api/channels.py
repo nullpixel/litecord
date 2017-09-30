@@ -145,7 +145,10 @@ class ChannelsEndpoint:
             current_nonce = payload['nonces']
             if current_nonce in used_nonces:
                 return _err('nonce already used', status_code=409)
+
+            used_nonces.append(current_nonce)
         except KeyError:
+            log.warning('No nonce sent!')
             pass
         
         _data = {

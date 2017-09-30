@@ -208,7 +208,11 @@ class TextGuildChannel(BaseGuildChannel):
         """Get all messages from the timestamp to latest"""
         # TODO: THIS IS INNEFICIENT. WE NEED TO YIELD IDFK HOW
         # BECAUSE THIS IS ASYNCIO AAAA
+
+        # convert to millisecond timestamp
+        timestamp *= 1000
         as_snowflake = _snowflake(timestamp)
+
         mc = self.server.message_coll
         cur = mc.find({'channel_id': self.id, 'message_id': {'$gt': as_snowflake}}).sort('message_id')
         return (await cur.to_list(length=None))

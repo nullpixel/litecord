@@ -13,8 +13,8 @@ from .objects import *
 from .ws import *
 from .enums import *
 
-from .snowflake import get_snowflake, snowflake_time, \
-    _snowflake_raw, get_invite_code
+from .snowflake import _snowflake, snowflake_time, \
+    get_invite_code, get_snowflake
 
 from .ratelimits import ratelimit, ws_ratelimit
 from .decorators import admin_endpoint, auth_route
